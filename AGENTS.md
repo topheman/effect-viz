@@ -60,6 +60,8 @@ type TraceEvent =
 
 You can read the project intent [here](.cursor/prompts/PROJECT_INTENT.md).
 
+A [memory file](MEMORY.md) is available where you store the progress of our learning.
+
 ## Tech stack
 
 This project is based on a custom template relying on the following stack:
