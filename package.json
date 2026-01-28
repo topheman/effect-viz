@@ -1,0 +1,79 @@
+{
+  "name": "topheman/vite-react-ts-template",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "A starter template for frontend projects.",
+  "author": "Christophe Rosset",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/topheman/vite-react-ts-template"
+  },
+  "homepage": "https://github.com/topheman/vite-react-ts-template",
+  "bugs": {
+    "url": "https://github.com/topheman/vite-react-ts-template/issues"
+  },
+  "keywords": [
+    "vite",
+    "react",
+    "typescript",
+    "tailwindcss",
+    "testing",
+    "linting",
+    "formatting"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck:app": "tsc --noEmit -p ./tsconfig.app.json",
+    "typecheck:node": "tsc --noEmit -p ./tsconfig.node.json",
+    "typecheck": "npm run typecheck:app && npm run typecheck:node",
+    "prepare": "husky",
+    "bootstrap": "./scripts/bootstrap.ts"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.3.1",
+    "@commitlint/config-conventional": "^20.3.1",
+    "@eslint/js": "^9.39.1",
+    "@tailwindcss/vite": "^4.1.17",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "babel-plugin-react-compiler": "^1.0.0",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-better-tailwindcss": "^3.7.11",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "eslint-plugin-testing-library": "^7.13.5",
+    "globals": "^16.5.0",
+    "husky": "^9.1.7",
+    "jsdom": "^27.2.0",
+    "lint-staged": "^16.2.7",
+    "prettier": "3.6.2",
+    "tailwindcss": "^4.1.17",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.46.4",
+    "vite": "npm:rolldown-vite@7.2.5",
+    "vitest": "^4.0.13"
+  },
+  "overrides": {
+    "vite": "npm:rolldown-vite@7.2.5"
+  }
+}
