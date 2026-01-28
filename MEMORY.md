@@ -10,8 +10,13 @@
 - [x] App wrapped with TraceStoreProvider
 - [x] ExecutionLog wired to display events with color coding
 
-### In Progress
-- [ ] User task: Implement `withTrace()` using Service + Layer pattern
+### Completed (cont.)
+- [x] `withTrace()` implemented using Service + Layer pattern
+- [x] `TraceEmitter` service with `emit` method
+- [x] `makeTraceEmitterLayer` to bridge Effect to React
+
+### Next
+- [ ] Wire up to UI and test with a sample Effect
 
 ## Design Decisions
 - Using **Service + Layer** pattern for TraceEmitter (not callbacks)

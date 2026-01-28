@@ -7,17 +7,20 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { VisualizerPanel } from "@/components/visualizer/VisualizerPanel";
+import { useEventHandlers } from "@/hooks/useEventHandlers";
 
 import { Header } from "./Header";
 import { PlaybackControls, type PlaybackState } from "./PlaybackControls";
 
 export function MainLayout() {
+  const { handlePlay } = useEventHandlers();
+
   const [code, setCode] = useState<string | undefined>();
   const [playbackState, setPlaybackState] = useState<PlaybackState>("idle");
 
-  const handlePlay = () => {
+  const onPlay = () => {
     setPlaybackState("running");
-    // TODO: Start Effect execution
+    handlePlay();
   };
 
   const handlePause = () => {
@@ -82,7 +85,7 @@ export function MainLayout() {
 
       <PlaybackControls
         state={playbackState}
-        onPlay={handlePlay}
+        onPlay={onPlay}
         onPause={handlePause}
         onStep={handleStep}
         onStepOver={handleStepOver}
