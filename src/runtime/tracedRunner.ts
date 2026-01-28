@@ -1,4 +1,4 @@
-import { Context, Effect, Layer } from "effect";
+import { Cause, Context, Effect, Exit, Layer } from "effect";
 
 import type { TraceEvent } from "@/types/trace";
 
@@ -36,10 +36,15 @@ export const emitStart = (
   id: string,
   label: string,
 ): Effect.Effect<void, never, TraceEmitter> => {
-  // TODO 1: Access the TraceEmitter service and call emit
-  // Hint: Use Effect.flatMap(TraceEmitter, (emitter) => ...)
-  // Hint: Or use Effect.gen(function* () { const emitter = yield* TraceEmitter; ... })
-  return Effect.void;
+  return Effect.gen(function* () {
+    const { emit } = yield* TraceEmitter;
+    yield* emit({
+      type: "effect:start",
+      id,
+      label,
+      timestamp: Date.now(),
+    });
+  });
 };
 
 /**
@@ -52,8 +57,17 @@ export const emitEnd = (
   value?: unknown,
   error?: unknown,
 ): Effect.Effect<void, never, TraceEmitter> => {
-  // TODO 2: Access the TraceEmitter service and call emit
-  return Effect.void;
+  return Effect.gen(function* () {
+    const { emit } = yield* TraceEmitter;
+    yield* emit({
+      type: "effect:end",
+      id,
+      result,
+      value,
+      error,
+      timestamp: Date.now(),
+    });
+  });
 };
 
 // =============================================================================
@@ -76,22 +90,17 @@ export const withTrace = <A, E, R>(
   label: string,
 ): Effect.Effect<A, E, R | TraceEmitter> => {
   const id = crypto.randomUUID();
+  return Effect.gen(function* () {
+    yield* emitStart(id, label);
 
-  // TODO 3: Implement using Effect.gen or Effect.flatMap
-  //
-  // Pseudo-code:
-  // 1. yield* emitStart(id, label)
-  // 2. const exit = yield* Effect.exit(effect)  // Captures success OR failure
-  // 3. Check Exit.isSuccess(exit) or Exit.isFailure(exit)
-  // 4. yield* emitEnd(id, result, value?, error?)
-  // 5. yield* exit  // Re-raise the exit (returns value or fails with error)
-  //
-  // Hints:
-  // - Effect.exit(effect) runs the effect and captures the Exit
-  // - yield* exit will "replay" the exit (succeed or fail)
-  // - Import { Exit, Cause } from "effect" for Exit utilities
-
-  return effect; // Remove this - placeholder
+    return yield* effect.pipe(
+      Effect.onExit((exit) =>
+        Exit.isSuccess(exit)
+          ? emitEnd(id, "success", exit.value)
+          : emitEnd(id, "failure", undefined, Cause.squash(exit.cause)),
+      ),
+    );
+  });
 };
 
 // =============================================================================
@@ -120,6 +129,6 @@ export const makeTraceEmitterLayer = (
   //   })
 
   return Layer.succeed(TraceEmitter, {
-    emit: () => Effect.void, // Replace this
+    emit: (event) => Effect.sync(() => onEmit(event)),
   });
 };
