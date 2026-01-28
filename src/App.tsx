@@ -1,10 +1,13 @@
 import { MainLayout } from "@/components/layout/MainLayout";
+import { FiberStoreProvider } from "@/stores/fiberStore";
 import { TraceStoreProvider } from "@/stores/traceStore";
 
 function App() {
   return (
     <TraceStoreProvider>
-      <MainLayout />
+      <FiberStoreProvider>
+        <MainLayout />
+      </FiberStoreProvider>
     </TraceStoreProvider>
   );
 }

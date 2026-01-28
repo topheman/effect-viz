@@ -1,41 +1,41 @@
 # EffectFlow - Tutor Memory
 
 ## Current Phase
-**Phase 1**: Lazy Evaluation and Success/Failure
+**Phase 2**: Fibers, Fork/Join, Interruption
 
-## Progress
+## Completed Phases
 
-### Completed
-- [x] TraceStore created (`src/stores/traceStore.tsx`)
-- [x] App wrapped with TraceStoreProvider
-- [x] ExecutionLog wired to display events with color coding
+### Phase 1: Lazy Evaluation and Success/Failure
+- [x] TraceStore (`src/stores/traceStore.tsx`)
+- [x] ExecutionLog wired with color-coded events
+- [x] `TraceEmitter` service + `makeTraceEmitterLayer`
+- [x] `withTrace()` using Service + Layer pattern
+- [x] Play button wired via `useEventHandlers` hook
 
-### Completed (cont.)
-- [x] `withTrace()` implemented using Service + Layer pattern
-- [x] `TraceEmitter` service with `emit` method
-- [x] `makeTraceEmitterLayer` to bridge Effect to React
+## Phase 2 Progress
 
-### Next
-- [ ] Wire up to UI and test with a sample Effect
+### In Progress
+- [ ] Concept lesson: Fibers and concurrency
+- [ ] Extend trace events for fibers
+- [ ] Implement fiber tracking in traced runner
+- [ ] Wire FiberTreeView to visualize fiber hierarchy
 
 ## Design Decisions
-- Using **Service + Layer** pattern for TraceEmitter (not callbacks)
-- Introduces the R channel (Requirements) early in learning
-- `TraceEmitter` service with `emit(event)` method
-- `makeTraceEmitterLayer` bridges Effect world to React state
-
-### Next Steps
-- [ ] Concept lesson: Effect as a lazy data structure
-- [ ] Implement `runWithTrace()` - first instrumented runner
+- **Service + Layer** pattern for TraceEmitter
+- R channel (Requirements) introduced early
+- `makeTraceEmitterLayer` bridges Effect to React
 
 ## Key Files
-- `src/types/trace.ts` - TraceEvent type definitions
-- `src/stores/traceStore.tsx` - Event state management
-- `src/components/visualizer/ExecutionLog.tsx` - Event display (to be wired)
+- `src/types/trace.ts` - TraceEvent definitions
+- `src/stores/traceStore.tsx` - Event state
+- `src/runtime/tracedRunner.ts` - Instrumented runner
+- `src/hooks/useEventHandlers.ts` - Play button handler
+- `src/components/visualizer/ExecutionLog.tsx` - Event log
+- `src/components/visualizer/FiberTreeView.tsx` - Fiber tree (TODO)
 
 ## Learning Phases
-1. **Phase 1**: Lazy evaluation, success/failure channels (current)
-2. **Phase 2**: Fibers, fork/join, interruption
+1. ~~**Phase 1**: Lazy evaluation, success/failure~~ (complete)
+2. **Phase 2**: Fibers, fork/join, interruption (current)
 3. **Phase 3**: Scheduling, delays, suspended fibers
 4. **Phase 4**: Errors, retries, supervision
 5. **Phase 5**: Scopes, resources, finalizers

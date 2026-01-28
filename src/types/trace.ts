@@ -101,3 +101,34 @@ export function isSleepEvent(
 ): event is SleepStartEvent | SleepEndEvent {
   return event.type === "sleep:start" || event.type === "sleep:end";
 }
+
+// =============================================================================
+// Fiber State (for visualization)
+// =============================================================================
+
+/**
+ * Possible states a fiber can be in.
+ * Used by the FiberTreeView to show fiber lifecycle.
+ */
+export type FiberState = "running" | "suspended" | "completed" | "interrupted";
+
+/**
+ * Information about a fiber for visualization.
+ * This is derived from TraceEvents but structured for the tree view.
+ */
+export interface FiberInfo {
+  /** Unique fiber identifier */
+  id: string;
+  /** Parent fiber ID (undefined for root fiber) */
+  parentId?: string;
+  /** Current state of the fiber */
+  state: FiberState;
+  /** Human-readable label (optional) */
+  label?: string;
+  /** When the fiber was forked */
+  startTime: number;
+  /** When the fiber ended (if completed/interrupted) */
+  endTime?: number;
+  /** Child fiber IDs */
+  children: string[];
+}
