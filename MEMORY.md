@@ -11,8 +11,13 @@
 - [x] ExecutionLog wired to display events with color coding
 
 ### In Progress
-- [ ] Concept lesson: Effect as lazy data structure
-- [ ] User task: Implement `runWithTrace()`
+- [ ] User task: Implement `withTrace()` using Service + Layer pattern
+
+## Design Decisions
+- Using **Service + Layer** pattern for TraceEmitter (not callbacks)
+- Introduces the R channel (Requirements) early in learning
+- `TraceEmitter` service with `emit(event)` method
+- `makeTraceEmitterLayer` bridges Effect world to React state
 
 ### Next Steps
 - [ ] Concept lesson: Effect as a lazy data structure
