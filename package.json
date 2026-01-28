@@ -1,18 +1,18 @@
 {
-  "name": "topheman/vite-react-ts-template",
+  "name": "topheman/effect-flow",
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "description": "A starter template for frontend projects.",
+  "description": "Effect runtime visualizer",
   "author": "Christophe Rosset",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/topheman/vite-react-ts-template"
+    "url": "https://github.com/topheman/effect-flow"
   },
-  "homepage": "https://github.com/topheman/vite-react-ts-template",
+  "homepage": "https://github.com/topheman/effect-flow",
   "bugs": {
-    "url": "https://github.com/topheman/vite-react-ts-template/issues"
+    "url": "https://github.com/topheman/effect-flow/issues"
   },
   "keywords": [
     "vite",

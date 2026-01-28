@@ -1,4 +1,4 @@
-# vite-react-ts-template
+# topheman/effect-flow
 
 This is a starter template for frontend projects. It includes a robust set of features I've been using in my own [projects](https://topheman.github.io/me/).
 
@@ -55,3 +55,7 @@ This template is configured to deploy to GitHub Pages when you push to the `mast
 You can customize the deployment by editing the [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) file.
 
 To enable the deployment to GitHub Pages, in your repository settings, go to "Pages" and switch to "GitHub Actions" as the source.
+
+## Resources
+
+This project is based on the [topheman/vite-react-ts-template](https://github.com/topheman/vite-react-ts-template) template.
