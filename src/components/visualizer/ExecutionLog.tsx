@@ -8,19 +8,37 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useTraceStore } from "@/stores/traceStore";
-import type { TraceEvent } from "@/types/trace";
+import type {
+  EffectStartEvent,
+  FiberForkEvent,
+  TraceEvent,
+} from "@/types/trace";
 
 /** Format a trace event into a human-readable string */
-function formatEvent(event: TraceEvent): string {
+function formatEvent(event: TraceEvent, events: TraceEvent[]): string {
   switch (event.type) {
     case "effect:start":
       return `Effect started: ${event.label}`;
-    case "effect:end":
-      return `Effect ${event.result}: ${event.id}`;
+    case "effect:end": {
+      const startEffect = events.find(
+        (e) => e.type === "effect:start" && e.id === event.id,
+      ) as EffectStartEvent | undefined;
+      if (!startEffect) {
+        return `Effect ended: ${event.id}`;
+      }
+      return `Effect ended: ${startEffect.label}`;
+    }
     case "fiber:fork":
-      return `Fiber forked: ${event.fiberId}${event.parentId ? ` (parent: ${event.parentId})` : ""}`;
-    case "fiber:end":
-      return `Fiber ended: ${event.fiberId}`;
+      return `Fiber forked: ${event.fiberId}${event.parentId ? ` (parent: ${event.parentId})` : ""} ${event.label ? `${event.label}` : ""}`;
+    case "fiber:end": {
+      const forkFiber = events.find(
+        (e) => e.type === "fiber:fork" && e.fiberId === event.fiberId,
+      ) as FiberForkEvent | undefined;
+      if (!forkFiber) {
+        return `Fiber ended: ${event.fiberId} : ""}`;
+      }
+      return `Fiber ended: ${event.fiberId}${forkFiber.parentId ? ` (parent: ${forkFiber.parentId})` : ""} ${forkFiber.label ? `${forkFiber.label}` : ""}`;
+    }
     case "fiber:interrupt":
       return `Fiber interrupted: ${event.fiberId}`;
     case "sleep:start":
@@ -99,7 +117,7 @@ export function ExecutionLog() {
               >
                 <span className="text-muted-foreground">[{index + 1}]</span>{" "}
                 <span className={getEventColor(event)}>
-                  {formatEvent(event)}
+                  {formatEvent(event, events)}
                 </span>
               </div>
             ))}
