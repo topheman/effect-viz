@@ -9,7 +9,12 @@ import {
 export function TimelineView() {
   return (
     <Card className="flex h-full flex-col">
-      <CardHeader className="shrink-0 pb-3">
+      <CardHeader
+        className={`
+          shrink-0 pb-0
+          md:pb-3
+        `}
+      >
         <CardTitle className="text-base">Timeline</CardTitle>
         <CardDescription>
           Visualize concurrency, delays, and scheduling

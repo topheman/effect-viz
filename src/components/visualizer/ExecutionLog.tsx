@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { useTraceStore } from "@/stores/traceStore";
 import type {
   EffectStartEvent,
@@ -83,9 +84,18 @@ export function ExecutionLog() {
 
   return (
     <Card className="flex h-full flex-col">
-      <CardHeader className="shrink-0 pb-3">
+      <CardHeader
+        className={`
+          shrink-0 pb-0
+          md:pb-3
+        `}
+      >
         <CardTitle className="text-base">Execution Log</CardTitle>
-        <CardDescription>Step-by-step execution events</CardDescription>
+        <CardDescription
+          className={cn(events.length > 0 ? "hidden" : "block", "md:block")}
+        >
+          Step-by-step execution events
+        </CardDescription>
       </CardHeader>
       <CardContent className="flex-1 overflow-hidden">
         {events.length === 0 ? (

@@ -5,6 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import {
   buildFiberTree,
   type FiberTreeNode,
@@ -61,9 +62,14 @@ export function FiberTreeView() {
 
   return (
     <Card className="flex h-full flex-col">
-      <CardHeader className="shrink-0 pb-3">
+      <CardHeader
+        className={`
+          shrink-0 pb-0
+          md:pb-3
+        `}
+      >
         <CardTitle className="text-base">Fiber Tree</CardTitle>
-        <CardDescription>
+        <CardDescription className={cn(tree ? "hidden" : "block", "md:block")}>
           Visualize fiber hierarchy and relationships
         </CardDescription>
       </CardHeader>
