@@ -1,7 +1,7 @@
-import { Effect, Fiber } from "effect";
+import { Effect } from "effect";
 
+import { nestedForksExample } from "@/lib/programs";
 import {
-  forkWithTrace,
   makeTraceEmitterLayer,
   runProgramWithTrace,
 } from "@/runtime/tracedRunner";
@@ -17,27 +17,8 @@ export function useEventHandlers() {
     clearEvents();
     clearFibers();
 
-    // Create the test program with forked fibers
-    const testProgram = Effect.gen(function* () {
-      // Fork two concurrent tasks
-      const fiber1 = yield* forkWithTrace(
-        Effect.sleep("1 second").pipe(Effect.as("task-1 done")),
-        "task-1",
-      );
-      const fiber2 = yield* forkWithTrace(
-        Effect.sleep("2 seconds").pipe(Effect.as("task-2 done")),
-        "task-2",
-      );
-
-      // Wait for both to complete
-      const result1 = yield* Fiber.join(fiber1);
-      const result2 = yield* Fiber.join(fiber2);
-
-      return { result1, result2 };
-    });
-
-    // Wrap with root fiber tracing
-    const traced = runProgramWithTrace(testProgram, "main-program");
+    // Wrap the example program with root fiber tracing
+    const traced = runProgramWithTrace(nestedForksExample, "main");
 
     // Create layer that emits to BOTH stores
     const layer = makeTraceEmitterLayer((event) => {
