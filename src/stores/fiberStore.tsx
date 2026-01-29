@@ -69,7 +69,15 @@ export function FiberStoreProvider({ children }: FiberStoreProviderProps) {
           });
           // Update parent's children array if parent exits
           if (event.parentId) {
-            next.get(event.parentId)?.children.push(event.fiberId);
+            const parent = next.get(event.parentId);
+            if (parent) {
+              next.set(parent.id, {
+                ...parent,
+                children: [
+                  ...new Set([...parent.children, event.fiberId]).values(),
+                ],
+              });
+            }
           }
           next.set(event.fiberId, fiberInfo);
           break;
