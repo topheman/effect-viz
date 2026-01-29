@@ -56,7 +56,7 @@ export function MainLayout() {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div className="flex h-dvh flex-col bg-background">
       <Header />
 
       {/* Desktop: Resizable split layout */}
