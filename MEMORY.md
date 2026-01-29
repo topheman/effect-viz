@@ -14,11 +14,18 @@
 
 ## Phase 2 Progress
 
-### In Progress
-- [ ] Concept lesson: Fibers and concurrency
-- [ ] Extend trace events for fibers
-- [ ] Implement fiber tracking in traced runner
-- [ ] Wire FiberTreeView to visualize fiber hierarchy
+### Completed
+- [x] FiberStore with processEvent (fork, end, interrupt)
+- [x] buildFiberTree recursive function
+- [x] `forkWithTrace` using Effect's real FiberId
+- [x] `runProgramWithTrace` for root fiber tracking
+- [x] Parent-child relationships via FiberId.threadName
+- [x] FiberTreeView wired to display fiber hierarchy
+
+### Key Learning
+- `Effect.fiberId` returns the current fiber's ID
+- `FiberId.threadName(id)` converts to readable string (e.g., "#1")
+- `fiber.id()` gets a forked fiber's ID
 
 ## Design Decisions
 - **Service + Layer** pattern for TraceEmitter

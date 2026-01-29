@@ -1,21 +1,55 @@
-import { Effect } from "effect";
+import { Effect, Fiber } from "effect";
 
-import { makeTraceEmitterLayer, withTrace } from "@/runtime/tracedRunner";
+import {
+  forkWithTrace,
+  makeTraceEmitterLayer,
+  runProgramWithTrace,
+} from "@/runtime/tracedRunner";
+import { useFiberStore } from "@/stores/fiberStore";
 import { useTraceStore } from "@/stores/traceStore";
 
 export function useEventHandlers() {
-  // In MainLayout or a new hook
-  const { addEvent, clear } = useTraceStore();
+  const { addEvent, clear: clearEvents } = useTraceStore();
+  const { processEvent, clear: clearFibers } = useFiberStore();
 
   const handlePlay = () => {
-    clear(); // Reset previous trace
+    // Reset previous state
+    clearEvents();
+    clearFibers();
 
-    const sampleEffect = Effect.succeed("Hello from Effect!");
+    // Create the test program with forked fibers
+    const testProgram = Effect.gen(function* () {
+      // Fork two concurrent tasks
+      const fiber1 = yield* forkWithTrace(
+        Effect.sleep("1 second").pipe(Effect.as("task-1 done")),
+        "task-1",
+      );
+      const fiber2 = yield* forkWithTrace(
+        Effect.sleep("2 seconds").pipe(Effect.as("task-2 done")),
+        "task-2",
+      );
 
-    const traced = withTrace(sampleEffect, "sample-effect");
-    const layer = makeTraceEmitterLayer(addEvent);
+      // Wait for both to complete
+      const result1 = yield* Fiber.join(fiber1);
+      const result2 = yield* Fiber.join(fiber2);
 
-    Effect.runPromise(traced.pipe(Effect.provide(layer))).then(console.log);
+      return { result1, result2 };
+    });
+
+    // Wrap with root fiber tracing
+    const traced = runProgramWithTrace(testProgram, "main-program");
+
+    // Create layer that emits to BOTH stores
+    const layer = makeTraceEmitterLayer((event) => {
+      addEvent(event); // For ExecutionLog
+      processEvent(event); // For FiberTreeView
+    });
+
+    // Run the program
+    Effect.runPromise(traced.pipe(Effect.provide(layer))).then(
+      (result) => console.log("Program completed:", result),
+      (error) => console.error("Program failed:", error),
+    );
   };
 
   return { handlePlay };

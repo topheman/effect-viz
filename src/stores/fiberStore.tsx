@@ -63,6 +63,7 @@ export function FiberStoreProvider({ children }: FiberStoreProviderProps) {
             id: event.fiberId,
             parentId: event.parentId,
             state: "running",
+            label: event.label,
             startTime: event.timestamp ?? Date.now(),
             children: [],
           });

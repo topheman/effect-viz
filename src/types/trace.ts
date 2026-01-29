@@ -26,6 +26,8 @@ export interface FiberForkEvent {
   type: "fiber:fork";
   fiberId: string;
   parentId?: string;
+  /** Optional label for display purposes */
+  label?: string;
   timestamp?: number;
 }
 
