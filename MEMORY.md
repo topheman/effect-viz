@@ -12,7 +12,7 @@
 - [x] `withTrace()` using Service + Layer pattern
 - [x] Play button wired via `useEventHandlers` hook
 
-## Phase 2 Progress
+## Phase 2: COMPLETE
 
 ### Completed
 - [x] FiberStore with processEvent (fork, end, interrupt)
@@ -21,11 +21,17 @@
 - [x] `runProgramWithTrace` for root fiber tracking
 - [x] Parent-child relationships via FiberId.threadName
 - [x] FiberTreeView wired to display fiber hierarchy
+- [x] Example programs in `src/lib/programs.ts`
+- [x] Racing example with interruption
+- [x] Reset button to interrupt running fibers
 
 ### Key Learning
 - `Effect.fiberId` returns the current fiber's ID
 - `FiberId.threadName(id)` converts to readable string (e.g., "#1")
 - `fiber.id()` gets a forked fiber's ID
+- `withTrace` tracks effect execution, `forkWithTrace` tracks fiber lifecycle
+- `Effect.runFork` returns a fiber handle for later control
+- `Fiber.interrupt(fiber)` stops a fiber (async operation)
 
 ## Design Decisions
 - **Service + Layer** pattern for TraceEmitter
@@ -42,7 +48,7 @@
 
 ## Learning Phases
 1. ~~**Phase 1**: Lazy evaluation, success/failure~~ (complete)
-2. **Phase 2**: Fibers, fork/join, interruption (current)
+2. ~~**Phase 2**: Fibers, fork/join, interruption~~ (complete)
 3. **Phase 3**: Scheduling, delays, suspended fibers
 4. **Phase 4**: Errors, retries, supervision
 5. **Phase 5**: Scopes, resources, finalizers

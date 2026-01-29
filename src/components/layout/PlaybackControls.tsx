@@ -73,6 +73,16 @@ export function PlaybackControls({
           </TooltipContent>
         </Tooltip>
 
+        {/* Reset */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={onReset}>
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Reset</TooltipContent>
+        </Tooltip>
+
         {/* Playback controls - center */}
         <div className="flex items-center gap-1">
           {/* Play / Pause */}
@@ -122,16 +132,6 @@ export function PlaybackControls({
               </Button>
             </TooltipTrigger>
             <TooltipContent>Step Over</TooltipContent>
-          </Tooltip>
-
-          {/* Reset */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={onReset}>
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Reset</TooltipContent>
           </Tooltip>
 
           {/* Status indicator */}

@@ -13,7 +13,7 @@ import { Header } from "./Header";
 import { PlaybackControls, type PlaybackState } from "./PlaybackControls";
 
 export function MainLayout() {
-  const { handlePlay } = useEventHandlers();
+  const { handlePlay, handleReset } = useEventHandlers();
 
   const [code, setCode] = useState<string | undefined>();
   const [playbackState, setPlaybackState] = useState<PlaybackState>("idle");
@@ -22,7 +22,9 @@ export function MainLayout() {
   const onPlay = () => {
     setPlaybackState("running");
     setShowVisualizer(true);
-    handlePlay();
+    handlePlay().then(() => {
+      setPlaybackState("idle");
+    });
   };
 
   const handlePause = () => {
@@ -38,9 +40,9 @@ export function MainLayout() {
     // TODO: Step over in Effect execution
   };
 
-  const handleReset = () => {
+  const onReset = () => {
     setPlaybackState("idle");
-    // TODO: Reset Effect execution
+    handleReset();
   };
 
   return (
@@ -147,7 +149,7 @@ export function MainLayout() {
         onPause={handlePause}
         onStep={handleStep}
         onStepOver={handleStepOver}
-        onReset={handleReset}
+        onReset={onReset}
         showVisualizer={showVisualizer}
         onToggleVisualizer={() => setShowVisualizer(!showVisualizer)}
       />
