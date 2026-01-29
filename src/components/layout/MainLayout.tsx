@@ -6,18 +6,28 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
+import { Select } from "@/components/ui/select";
 import { VisualizerPanel } from "@/components/visualizer/VisualizerPanel";
 import { useEventHandlers } from "@/hooks/useEventHandlers";
+import type { ProgramKey } from "@/lib/programs";
 
 import { Header } from "./Header";
 import { PlaybackControls, type PlaybackState } from "./PlaybackControls";
 
 export function MainLayout() {
-  const { handlePlay, handleReset } = useEventHandlers();
+  const {
+    handlePlay,
+    handleReset,
+    selectedProgram,
+    setSelectedProgram,
+    programs,
+  } = useEventHandlers();
 
-  const [code, setCode] = useState<string | undefined>();
   const [playbackState, setPlaybackState] = useState<PlaybackState>("idle");
   const [showVisualizer, setShowVisualizer] = useState(false);
+
+  // Get the source code for the selected program
+  const programSource = programs[selectedProgram].source;
 
   const onPlay = () => {
     setPlaybackState("running");
@@ -61,16 +71,30 @@ export function MainLayout() {
             <div className="flex h-full flex-col">
               <div
                 className={`
-                  shrink-0 border-b border-border bg-muted/50 px-4 py-2
+                  flex shrink-0 items-center justify-between gap-2 border-b
+                  border-border bg-muted/50 px-4 py-2
                 `}
               >
                 <span className="text-sm font-medium text-muted-foreground">
-                  Editor
+                  Program
                 </span>
+                <Select
+                  value={selectedProgram}
+                  onChange={(e) =>
+                    setSelectedProgram(e.target.value as ProgramKey)
+                  }
+                  className="h-7 w-40 text-xs"
+                >
+                  {Object.entries(programs).map(([key, { name }]) => (
+                    <option key={key} value={key}>
+                      {name}
+                    </option>
+                  ))}
+                </Select>
               </div>
               <CodeEditor
-                value={code}
-                onChange={setCode}
+                value={programSource}
+                readOnly
                 className="flex-1 overflow-hidden"
               />
             </div>
@@ -107,15 +131,29 @@ export function MainLayout() {
         {/* Editor - always full width */}
         <div className="flex h-full flex-col">
           <div
-            className={`shrink-0 border-b border-border bg-muted/50 px-4 py-2`}
+            className={`
+              flex shrink-0 items-center justify-between gap-2 border-b
+              border-border bg-muted/50 px-4 py-2
+            `}
           >
             <span className="text-sm font-medium text-muted-foreground">
-              Editor
+              Program
             </span>
+            <Select
+              value={selectedProgram}
+              onChange={(e) => setSelectedProgram(e.target.value as ProgramKey)}
+              className="h-7 w-40 text-xs"
+            >
+              {Object.entries(programs).map(([key, { name }]) => (
+                <option key={key} value={key}>
+                  {name}
+                </option>
+              ))}
+            </Select>
           </div>
           <CodeEditor
-            value={code}
-            onChange={setCode}
+            value={programSource}
+            readOnly
             className="flex-1 overflow-hidden"
           />
         </div>

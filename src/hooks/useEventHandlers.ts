@@ -1,10 +1,11 @@
 import { Effect, Fiber } from "effect";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
-import { racingExample } from "@/lib/programs";
+import { type ProgramKey, programs } from "@/lib/programs";
 import {
   makeTraceEmitterLayer,
   runProgramWithTrace,
+  TraceEmitter,
 } from "@/runtime/tracedRunner";
 import { useFiberStore } from "@/stores/fiberStore";
 import { useTraceStore } from "@/stores/traceStore";
@@ -12,6 +13,9 @@ import { useTraceStore } from "@/stores/traceStore";
 export function useEventHandlers() {
   const { addEvent, clear: clearEvents } = useTraceStore();
   const { processEvent, clear: clearFibers } = useFiberStore();
+
+  // Currently selected program
+  const [selectedProgram, setSelectedProgram] = useState<ProgramKey>("basic");
 
   // Track the running fiber so we can interrupt it
   const runningFiberRef = useRef<Fiber.RuntimeFiber<unknown, unknown> | null>(
@@ -23,8 +27,15 @@ export function useEventHandlers() {
     clearEvents();
     clearFibers();
 
+    // Get the selected program
+    const { program } = programs[selectedProgram];
+
     // Wrap the example program with root fiber tracing
-    const traced = runProgramWithTrace(racingExample, "main");
+    const traced = runProgramWithTrace<
+      string | { result1: string; result2: string },
+      never,
+      TraceEmitter
+    >(program, selectedProgram);
 
     // Create layer that emits to BOTH stores
     const layer = makeTraceEmitterLayer((event) => {
@@ -70,5 +81,11 @@ export function useEventHandlers() {
     clearFibers();
   };
 
-  return { handlePlay, handleReset };
+  return {
+    handlePlay,
+    handleReset,
+    selectedProgram,
+    setSelectedProgram,
+    programs,
+  };
 }

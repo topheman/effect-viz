@@ -1,24 +1,17 @@
 import Editor from "@monaco-editor/react";
 
-const DEFAULT_CODE = `// Write your Effect code here
-import { Effect } from "effect";
-
-const program = Effect.succeed("Hello, Effect!");
-
-// Run the program
-Effect.runPromise(program).then(console.log);
-`;
-
 interface CodeEditorProps {
   value?: string;
   onChange?: (value: string | undefined) => void;
   className?: string;
+  readOnly?: boolean;
 }
 
 export function CodeEditor({
-  value = DEFAULT_CODE,
+  value = "",
   onChange,
   className,
+  readOnly = false,
 }: CodeEditorProps) {
   return (
     <div className={className}>
@@ -37,6 +30,8 @@ export function CodeEditor({
           tabSize: 2,
           wordWrap: "on",
           padding: { top: 16, bottom: 16 },
+          readOnly,
+          domReadOnly: readOnly,
         }}
       />
     </div>
