@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+
 import {
   Card,
   CardContent,
@@ -49,6 +51,18 @@ function getEventColor(event: TraceEvent): string {
 
 export function ExecutionLog() {
   const { events } = useTraceStore();
+  const cardContentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const ref = cardContentRef.current;
+    if (ref) {
+      console.log("scrolling", ref.scrollHeight);
+      ref.scrollTo({
+        top: ref.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  }, [events]);
 
   return (
     <Card className="flex h-full flex-col">
@@ -72,7 +86,10 @@ export function ExecutionLog() {
             </div>
           </div>
         ) : (
-          <div className="h-full overflow-y-auto font-mono text-sm">
+          <div
+            className="h-full overflow-y-auto font-mono text-sm"
+            ref={cardContentRef}
+          >
             {events.map((event, index) => (
               <div
                 key={`${event.type}-${event.timestamp}-${index}`}
