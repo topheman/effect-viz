@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import {
   createContext,
   useCallback,
@@ -7,6 +8,10 @@ import {
 } from "react";
 
 import type { FiberInfo, FiberState, TraceEvent } from "@/types/trace";
+
+function createFiberInfo(fiberInfo: FiberInfo): FiberInfo {
+  return fiberInfo;
+}
 
 // =============================================================================
 // FiberStore Interface
@@ -54,28 +59,34 @@ export function FiberStoreProvider({ children }: FiberStoreProviderProps) {
 
       switch (event.type) {
         case "fiber:fork": {
-          // TODO: Create new FiberInfo
-          // Hints:
-          // - id: event.fiberId
-          // - parentId: event.parentId
-          // - state: "running"
-          // - startTime: event.timestamp ?? Date.now()
-          // - children: []
-          //
-          // Also update parent's children array if parentId exists
+          const fiberInfo = createFiberInfo({
+            id: event.fiberId,
+            parentId: event.parentId,
+            state: "running",
+            startTime: event.timestamp ?? Date.now(),
+            children: [],
+          });
+          // Update parent's children array if parent exits
+          if (event.parentId) {
+            next.get(event.parentId)?.children.push(event.fiberId);
+          }
+          next.set(event.fiberId, fiberInfo);
           break;
         }
 
         case "fiber:end": {
-          // TODO: Update fiber state to "completed"
-          // Hints:
-          // - Get existing fiber: next.get(event.fiberId)
-          // - Update state and endTime
+          const fiberInfo = next.get(event.fiberId);
+          if (fiberInfo) {
+            fiberInfo.state = "completed";
+          }
           break;
         }
 
         case "fiber:interrupt": {
-          // TODO: Update fiber state to "interrupted"
+          const fiberInfo = next.get(event.fiberId);
+          if (fiberInfo) {
+            fiberInfo.state = "interrupted";
+          }
           break;
         }
 
@@ -99,9 +110,7 @@ export function FiberStoreProvider({ children }: FiberStoreProviderProps) {
    * Find it in the fibers map.
    */
   const rootFiber = useMemo(() => {
-    // TODO: Find and return the fiber with no parentId
-    // Hint: Use Array.from(fibers.values()).find(...)
-    return undefined;
+    return Array.from(fibers.values()).find((fiber) => !fiber.parentId);
   }, [fibers]);
 
   const store = useMemo(
@@ -168,10 +177,16 @@ export function buildFiberTree(
   // - For each childId in root.children, recursively call buildFiberTree
   // - Return { fiber: root, children: [...] }
 
-  return {
+  const rootFiber: FiberTreeNode = {
     fiber: root,
-    children: [], // TODO: Map over root.children and recurse
+    children: [],
   };
+
+  rootFiber.children = root.children
+    .map((fiberId) => buildFiberTree(fibers, fiberId))
+    .filter((child) => !!child);
+
+  return rootFiber;
 }
 
 // =============================================================================
