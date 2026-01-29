@@ -56,7 +56,6 @@ export function ExecutionLog() {
   useEffect(() => {
     const ref = cardContentRef.current;
     if (ref) {
-      console.log("scrolling", ref.scrollHeight);
       ref.scrollTo({
         top: ref.scrollHeight,
         behavior: "smooth",
