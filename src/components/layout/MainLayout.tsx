@@ -161,7 +161,7 @@ export function MainLayout() {
         {/* Visualizer - slides in from right */}
         <div
           className={`
-            absolute inset-0 transform bg-background transition-transform
+            absolute inset-0 z-10 transform bg-background transition-transform
             duration-300 ease-in-out
             ${showVisualizer ? "translate-x-0" : "translate-x-full"}
           `}
