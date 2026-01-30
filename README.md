@@ -1,4 +1,4 @@
-# topheman/effect-flow
+# Effect runtime visualizer
 
 This is a starter template for frontend projects. It includes a robust set of features I've been using in my own [projects](https://topheman.github.io/me/).
 

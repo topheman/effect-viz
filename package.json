@@ -1,5 +1,5 @@
 {
-  "name": "topheman/effect-flow",
+  "name": "topheman/effect-viz",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -8,11 +8,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/topheman/effect-flow"
+    "url": "https://github.com/topheman/effect-viz"
   },
-  "homepage": "https://github.com/topheman/effect-flow",
+  "homepage": "https://github.com/topheman/effect-viz",
   "bugs": {
-    "url": "https://github.com/topheman/effect-flow/issues"
+    "url": "https://github.com/topheman/effect-viz/issues"
   },
   "keywords": [
     "vite",
