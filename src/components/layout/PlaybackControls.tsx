@@ -137,12 +137,12 @@ export function PlaybackControls({
           {/* Status indicator */}
           <div
             className={`
-              ml-4 flex items-center gap-2 text-sm text-muted-foreground
+              ml-4 flex w-20 items-center gap-2 text-sm text-muted-foreground
             `}
           >
             <div
               className={`
-                h-2 w-2 rounded-full
+                h-2 w-2 shrink-0 rounded-full
                 ${
                   state === "running"
                     ? "animate-pulse bg-green-500"
@@ -157,14 +157,6 @@ export function PlaybackControls({
             <span className="capitalize">{state}</span>
           </div>
         </div>
-
-        {/* Mobile: Spacer for balance */}
-        <div
-          className={`
-            w-10
-            md:hidden
-          `}
-        />
       </div>
     </TooltipProvider>
   );
