@@ -16,6 +16,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+import { InfoModal } from "./InfoModal";
+
 export type PlaybackState = "idle" | "running" | "paused" | "finished";
 
 interface PlaybackControlsProps {
@@ -49,42 +51,48 @@ export function PlaybackControls({
         className={`
           flex h-12 shrink-0 items-center justify-between border-t border-border
           bg-card px-4
-          md:justify-center
         `}
       >
-        {/* Mobile: Toggle Visualizer - left side */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onToggleVisualizer}
-              className="md:hidden"
-            >
-              {showVisualizer ? (
-                <Braces className="h-4 w-4" />
-              ) : (
-                <Workflow className="h-4 w-4" />
-              )}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            {showVisualizer ? "Hide Visualizer" : "Show Visualizer"}
-          </TooltipContent>
-        </Tooltip>
+        {/* Left: Mobile toggle visualizer */}
+        <div
+          className={`
+            flex w-9 items-center
+            md:w-9
+          `}
+        >
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onToggleVisualizer}
+                className="md:hidden"
+              >
+                {showVisualizer ? (
+                  <Braces className="h-4 w-4" />
+                ) : (
+                  <Workflow className="h-4 w-4" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {showVisualizer ? "Hide Visualizer" : "Show Visualizer"}
+            </TooltipContent>
+          </Tooltip>
+        </div>
 
-        {/* Reset */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={onReset}>
-              <RotateCcw className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Reset</TooltipContent>
-        </Tooltip>
-
-        {/* Playback controls - center */}
+        {/* Center: Playback controls */}
         <div className="flex items-center gap-1">
+          {/* Reset */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={onReset}>
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Reset</TooltipContent>
+          </Tooltip>
+
           {/* Play / Pause */}
           <Tooltip>
             <TooltipTrigger asChild>
@@ -156,6 +164,11 @@ export function PlaybackControls({
             />
             <span className="capitalize">{state}</span>
           </div>
+        </div>
+
+        {/* Right: Info button */}
+        <div className="flex w-9 items-center justify-end">
+          <InfoModal />
         </div>
       </div>
     </TooltipProvider>
