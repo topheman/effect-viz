@@ -1,11 +1,11 @@
 import {
-  Eye,
-  EyeOff,
+  Braces,
   Pause,
   Play,
   RotateCcw,
   SkipForward,
   StepForward,
+  Workflow,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -62,9 +62,9 @@ export function PlaybackControls({
               className="md:hidden"
             >
               {showVisualizer ? (
-                <EyeOff className="h-4 w-4" />
+                <Braces className="h-4 w-4" />
               ) : (
-                <Eye className="h-4 w-4" />
+                <Workflow className="h-4 w-4" />
               )}
             </Button>
           </TooltipTrigger>
