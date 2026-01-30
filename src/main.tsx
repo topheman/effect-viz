@@ -1,3 +1,5 @@
+import "./lib/polyfill"; // Must be first - browser compatibility fixes
+
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 

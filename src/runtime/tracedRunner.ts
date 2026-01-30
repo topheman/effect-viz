@@ -1,5 +1,6 @@
 import { Cause, Context, Effect, Exit, Fiber, FiberId, Layer } from "effect";
 
+import { randomUUID } from "@/lib/crypto";
 import type { TraceEvent } from "@/types/trace";
 
 // =============================================================================
@@ -89,7 +90,7 @@ export const withTrace = <A, E, R>(
   effect: Effect.Effect<A, E, R>,
   label: string,
 ): Effect.Effect<A, E, R | TraceEmitter> => {
-  const id = crypto.randomUUID();
+  const id = randomUUID();
   return Effect.gen(function* () {
     yield* emitStart(id, label);
 
