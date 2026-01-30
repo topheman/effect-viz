@@ -19,11 +19,11 @@ describe("InfoModal", () => {
     await user.click(button);
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByText("EffectViz")).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "A visual playground for exploring Effect.ts runtime behavior",
-      ),
+      screen.getByText(import.meta.env.VITE_SHORT_TITLE),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(import.meta.env.VITE_DESCRIPTION),
     ).toBeInTheDocument();
   });
 

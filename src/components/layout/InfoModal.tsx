@@ -40,9 +40,9 @@ export function InfoModal() {
 
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>EffectViz</DialogTitle>
+          <DialogTitle>{import.meta.env.VITE_SHORT_TITLE}</DialogTitle>
           <DialogDescription>
-            A visual playground for exploring Effect.ts runtime behavior
+            {import.meta.env.VITE_DESCRIPTION}
           </DialogDescription>
         </DialogHeader>
 
