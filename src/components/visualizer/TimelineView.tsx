@@ -20,7 +20,11 @@ export function TimelineView() {
           Visualize concurrency, delays, and scheduling
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-1 items-center justify-center">
+      <CardContent
+        className={`
+          flex min-h-0 flex-1 items-center justify-center overflow-hidden
+        `}
+      >
         <div className="text-center text-muted-foreground">
           <p className="text-sm">No events to display</p>
           <p className="mt-1 text-xs">

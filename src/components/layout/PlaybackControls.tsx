@@ -18,6 +18,10 @@ import {
 
 import { InfoModal } from "./InfoModal";
 
+const STEP_IS_IMPLEMENTED = false;
+const STEP_OVER_IS_IMPLEMENTED = false;
+const PAUSE_IS_IMPLEMENTED = false;
+
 export type PlaybackState = "idle" | "running" | "paused" | "finished";
 
 interface PlaybackControlsProps {
@@ -100,7 +104,10 @@ export function PlaybackControls({
                 variant="ghost"
                 size="icon"
                 onClick={isRunning ? onPause : onPlay}
-                disabled={!canPlay && !isRunning}
+                disabled={
+                  (!canPlay && !isRunning) ||
+                  (isRunning && !PAUSE_IS_IMPLEMENTED)
+                }
               >
                 {isRunning ? (
                   <Pause className="h-4 w-4" />
@@ -113,34 +120,38 @@ export function PlaybackControls({
           </Tooltip>
 
           {/* Step */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onStep}
-                disabled={!canStep}
-              >
-                <StepForward className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Step</TooltipContent>
-          </Tooltip>
+          {STEP_IS_IMPLEMENTED && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onStep}
+                  disabled={!canStep}
+                >
+                  <StepForward className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Step</TooltipContent>
+            </Tooltip>
+          )}
 
           {/* Step Over */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onStepOver}
-                disabled={!canStep}
-              >
-                <SkipForward className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Step Over</TooltipContent>
-          </Tooltip>
+          {STEP_OVER_IS_IMPLEMENTED && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onStepOver}
+                  disabled={!canStep}
+                >
+                  <SkipForward className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Step Over</TooltipContent>
+            </Tooltip>
+          )}
 
           {/* Status indicator */}
           <div
