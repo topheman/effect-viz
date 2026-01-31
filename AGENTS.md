@@ -60,7 +60,39 @@ type TraceEvent =
 
 You can read the project intent [here](.cursor/prompts/PROJECT_INTENT.md).
 
-A [memory file](MEMORY.md) is available where you store the progress of our learning.
+## Context Recovery (For Fresh Sessions)
+
+**ONLY read these files if the user explicitly says we're continuing the workshop:**
+
+1. **[`MEMORY.md`](MEMORY.md)** ⭐ **START HERE**
+   - Current phase and progress
+   - What's completed, what's next
+   - Key files and learning outcomes
+
+2. **[`workshop/README.md`](workshop/README.md)**
+   - Documentation structure
+   - Links to all phase docs
+   - Overall approach
+
+3. **[`workshop/ARCHITECTURE.md`](workshop/ARCHITECTURE.md)**
+   - Why Service + Layer pattern
+   - Why real FiberIds
+   - File structure and key patterns
+
+4. **[`workshop/phase-N.md`](workshop/)** (for completed phases)
+   - Concepts explored
+   - Implementation details
+   - Learning outcomes
+
+**Quick reference:**
+- Current phase? → `MEMORY.md` "Current Phase" section
+- Architecture decisions? → `workshop/ARCHITECTURE.md`
+- What was built? → `workshop/phase-N.md` for that phase
+
+When completing a phase, create a phase document in `workshop/`:
+- `workshop/phase-N.md` - Document concepts, implementation, and learning outcomes
+- See `workshop/README.md` for the documentation structure
+- Update `workshop/README.md` to mark the phase as complete
 
 ## Tech stack
 

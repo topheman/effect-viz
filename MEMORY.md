@@ -1,7 +1,11 @@
 # EffectFlow - Tutor Memory
 
+**Quick Context**: See [`workshop/README.md`](workshop/README.md) for full documentation.
+
 ## Current Phase
-**Phase 2**: Fibers, Fork/Join, Interruption
+**Phase 2**: COMPLETE ✅
+
+**Recent**: Added program selector dropdown, editor shows program source (readonly)
 
 ## Completed Phases
 
@@ -41,14 +45,21 @@
 ## Key Files
 - `src/types/trace.ts` - TraceEvent definitions
 - `src/stores/traceStore.tsx` - Event state
-- `src/runtime/tracedRunner.ts` - Instrumented runner
-- `src/hooks/useEventHandlers.ts` - Play button handler
+- `src/stores/fiberStore.tsx` - Fiber state
+- `src/runtime/tracedRunner.ts` - Instrumented runner (`withTrace`, `forkWithTrace`, `runProgramWithTrace`)
+- `src/hooks/useEventHandlers.ts` - Play/Reset handlers with program selection
 - `src/components/visualizer/ExecutionLog.tsx` - Event log
-- `src/components/visualizer/FiberTreeView.tsx` - Fiber tree (TODO)
+- `src/components/visualizer/FiberTreeView.tsx` - Fiber tree visualization
+- `src/lib/programs.ts` - Example programs with source code
+- `src/components/ui/select.tsx` - Select component for program dropdown
 
 ## Learning Phases
-1. ~~**Phase 1**: Lazy evaluation, success/failure~~ (complete)
-2. ~~**Phase 2**: Fibers, fork/join, interruption~~ (complete)
-3. **Phase 3**: Scheduling, delays, suspended fibers
+1. ~~**Phase 1**: Lazy evaluation, success/failure~~ ✅ See [`workshop/phase-1.md`](workshop/phase-1.md)
+2. ~~**Phase 2**: Fibers, fork/join, interruption~~ ✅ See [`workshop/phase-2.md`](workshop/phase-2.md)
+3. **Phase 3**: Scheduling, delays, suspended fibers (next)
 4. **Phase 4**: Errors, retries, supervision
 5. **Phase 5**: Scopes, resources, finalizers
+
+## Documentation
+- [`workshop/README.md`](workshop/README.md) - Documentation overview
+- [`workshop/ARCHITECTURE.md`](workshop/ARCHITECTURE.md) - Design decisions
