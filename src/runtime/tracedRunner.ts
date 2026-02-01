@@ -1,4 +1,13 @@
-import { Cause, Context, Effect, Exit, Fiber, FiberId, Layer } from "effect";
+import {
+  Cause,
+  Context,
+  Duration,
+  Effect,
+  Exit,
+  Fiber,
+  FiberId,
+  Layer,
+} from "effect";
 
 import { randomUUID } from "@/lib/crypto";
 import type { TraceEvent } from "@/types/trace";
@@ -221,5 +230,42 @@ export const runProgramWithTrace = <A, E, R>(
     );
 
     return result;
+  });
+};
+
+// =============================================================================
+// Sleep Tracing (Phase 3: Scheduling & Delays)
+// =============================================================================
+
+/**
+ * Sleep with tracing - emits sleep:start and sleep:end events.
+ * Makes fiber suspension visible in the visualizer.
+ *
+ * When a fiber sleeps, it SUSPENDS (yields control) rather than blocking.
+ * This function emits events so we can visualize when fibers are suspended.
+ */
+export const sleepWithTrace = (
+  duration: Duration.DurationInput,
+): Effect.Effect<void, never, TraceEmitter> => {
+  // TODO: Implement this function
+  //
+  // Steps:
+  // 1. Use Effect.gen(function* () { ... })
+  // 2. Get the TraceEmitter service: const { emit } = yield* TraceEmitter
+  // 3. Get current fiber ID: const currentFiberId = yield* Effect.fiberId
+  // 4. Convert to string: const fiberId = FiberId.threadName(currentFiberId)
+  // 5. Convert duration to milliseconds: Duration.toMillis(Duration.decode(duration))
+  // 6. Emit sleep:start event with { type: "sleep:start", fiberId, duration: <millis>, timestamp: Date.now() }
+  // 7. Actually sleep: yield* Effect.sleep(duration)
+  // 8. Emit sleep:end event with { type: "sleep:end", fiberId, timestamp: Date.now() }
+  //
+  // The return type is Effect<void, never, TraceEmitter> because:
+  // - void: sleep returns nothing
+  // - never: sleep cannot fail
+  // - TraceEmitter: we need the TraceEmitter service to emit events
+
+  return Effect.gen(function* () {
+    // Your implementation here
+    void duration; // Remove this line when implementing
   });
 };
