@@ -21,11 +21,28 @@ Each phase document covers:
 - **Key Files**: Important code changes
 - **Learning Outcomes**: What you learned
 
+### Version 1: Manual Instrumentation
+
+Learn Effect concepts through explicit tracing wrappers (`withTrace`, `forkWithTrace`, etc.)
+
 - [Phase 1: Lazy Evaluation](./phase-1.md) ✅
 - [Phase 2: Fibers](./phase-2.md) ✅
-- Phase 3: Scheduling & Delays (not started)
+- Phase 3: Scheduling & Delays (in progress)
 - Phase 4: Errors & Retries (not started)
 - Phase 5: Scopes & Resources (not started)
+
+### Version 2: Runtime Hooks (Future)
+
+Refactor to use Effect's built-in observability, removing manual wrappers.
+
+- Phase 6: Supervisor for automatic fiber lifecycle tracking
+- Phase 7: Tracer integration for effect spans
+- Phase 8: Custom Clock/Scheduler for suspension visibility
+
+**Why two versions?**
+- **V1** teaches concepts explicitly - you see exactly what gets traced
+- **V2** teaches Effect's production observability patterns
+- The conceptual knowledge from V1 transfers directly to understanding V2
 
 ## Approach
 
