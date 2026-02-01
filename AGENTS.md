@@ -9,7 +9,10 @@ Follow these rules strictly:
      - Type definitions  
      - Function signatures  
      - Pseudo-code or skeletons with TODOs  
-     - Commented hints  
+     - Commented hints (conceptual, NOT copy-pasteable code)
+   - Hints should guide thinking, not provide solutions:
+     - GOOD: "Use Effect.fiberId to get the current fiber's ID"
+     - BAD: "const fiberId = yield* Effect.fiberId" (this is just the answer)  
 
 2️⃣ **Explain Before I Code**  
    For each step, first:  

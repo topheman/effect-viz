@@ -247,25 +247,22 @@ export const runProgramWithTrace = <A, E, R>(
 export const sleepWithTrace = (
   duration: Duration.DurationInput,
 ): Effect.Effect<void, never, TraceEmitter> => {
-  // TODO: Implement this function
-  //
-  // Steps:
-  // 1. Use Effect.gen(function* () { ... })
-  // 2. Get the TraceEmitter service: const { emit } = yield* TraceEmitter
-  // 3. Get current fiber ID: const currentFiberId = yield* Effect.fiberId
-  // 4. Convert to string: const fiberId = FiberId.threadName(currentFiberId)
-  // 5. Convert duration to milliseconds: Duration.toMillis(Duration.decode(duration))
-  // 6. Emit sleep:start event with { type: "sleep:start", fiberId, duration: <millis>, timestamp: Date.now() }
-  // 7. Actually sleep: yield* Effect.sleep(duration)
-  // 8. Emit sleep:end event with { type: "sleep:end", fiberId, timestamp: Date.now() }
-  //
-  // The return type is Effect<void, never, TraceEmitter> because:
-  // - void: sleep returns nothing
-  // - never: sleep cannot fail
-  // - TraceEmitter: we need the TraceEmitter service to emit events
-
   return Effect.gen(function* () {
-    // Your implementation here
-    void duration; // Remove this line when implementing
+    const { emit } = yield* TraceEmitter;
+    const currentFiberId = yield* Effect.fiberId;
+    const fiberId = FiberId.threadName(currentFiberId);
+    const durationMillis = Duration.toMillis(Duration.decode(duration));
+    yield* emit({
+      type: "sleep:start",
+      fiberId,
+      duration: durationMillis,
+      timestamp: Date.now(),
+    });
+    yield* Effect.sleep(duration);
+    yield* emit({
+      type: "sleep:end",
+      fiberId,
+      timestamp: Date.now(),
+    });
   });
 };
