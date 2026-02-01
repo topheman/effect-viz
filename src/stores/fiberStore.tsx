@@ -99,6 +99,22 @@ export function FiberStoreProvider({ children }: FiberStoreProviderProps) {
           break;
         }
 
+        case "sleep:start": {
+          const fiberInfo = next.get(event.fiberId);
+          if (fiberInfo) {
+            fiberInfo.state = "suspended";
+          }
+          break;
+        }
+
+        case "sleep:end": {
+          const fiberInfo = next.get(event.fiberId);
+          if (fiberInfo) {
+            fiberInfo.state = "running";
+          }
+          break;
+        }
+
         // Ignore other event types for now
         default:
           break;
