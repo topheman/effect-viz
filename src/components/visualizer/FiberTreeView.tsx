@@ -15,11 +15,6 @@ import {
 
 /**
  * Renders a single fiber node and its children recursively.
- *
- * TODO 4: Enhance this component to show more fiber details
- * - Show fiber state with appropriate icon
- * - Show duration (endTime - startTime) if completed
- * - Add expand/collapse for large trees
  */
 function FiberNode({
   node,
@@ -29,6 +24,7 @@ function FiberNode({
   depth?: number;
 }) {
   const { fiber, children } = node;
+  const isSuspended = fiber.state === "suspended";
 
   return (
     <div className="font-mono text-sm">
@@ -39,11 +35,30 @@ function FiberNode({
         {/* Connector line for non-root nodes */}
         {depth > 0 && <span className="text-muted-foreground">└─</span>}
 
-        {/* Fiber info */}
-        <span className={getFiberStateColor(fiber.state)}>[{fiber.state}]</span>
+        {/* Fiber state badge */}
+        <span
+          className={cn(
+            getFiberStateColor(fiber.state),
+            isSuspended && "animate-pulse",
+          )}
+        >
+          [{fiber.state}]
+        </span>
+
+        {/* Fiber label */}
         <span className="text-foreground">
           {fiber.label || `Fiber ${fiber.id.slice(0, 8)}`}
         </span>
+
+        {/* Sleep indicator */}
+        {isSuspended && (
+          <span
+            className="text-xs text-yellow-400/70"
+            title="Fiber is sleeping"
+          >
+            zzz
+          </span>
+        )}
       </div>
 
       {/* Render children recursively */}
