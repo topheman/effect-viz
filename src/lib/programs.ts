@@ -121,26 +121,38 @@ export const nestedForksExample = Effect.gen(function* () {
 });
 
 // =============================================================================
-// Racing Example (future use)
+// Racing Example
 // =============================================================================
 
 /**
- * Demonstrates racing - first one to complete wins.
- * Note: The losing fiber will be interrupted.
+ * Demonstrates racing with explicit fiber forking.
+ * First fiber to complete wins, the loser gets interrupted.
+ *
+ * Uses forkWithTrace so both competing fibers are visible in the timeline.
  */
 export const racingExample = Effect.gen(function* () {
   yield* withTrace(Effect.succeed("starting race"), "race-start");
 
-  // Race two effects - first to complete wins
-  const winner = yield* withTrace(
-    Effect.race(
-      sleepWithTrace("1 second").pipe(Effect.as("Fast runner wins!")),
-      sleepWithTrace("2 seconds").pipe(Effect.as("Slow runner wins!")),
-    ),
-    "race",
+  // Fork two fibers explicitly so we can visualize them
+  const fastRunner = yield* forkWithTrace(
+    sleepWithTrace("1 second").pipe(Effect.as("Fast runner wins!")),
+    "fast-runner",
   );
 
-  yield* withTrace(Effect.succeed(winner), "race-result");
+  const slowRunner = yield* forkWithTrace(
+    sleepWithTrace("2 seconds").pipe(Effect.as("Slow runner wins!")),
+    "slow-runner",
+  );
+
+  // Race by joining both - Effect.race returns when first completes
+  const winner = yield* withTrace(
+    Effect.race(Fiber.join(fastRunner), Fiber.join(slowRunner)),
+    "race-join",
+  );
+
+  // Interrupt both fibers (winner already done, loser gets interrupted)
+  yield* Fiber.interrupt(fastRunner);
+  yield* Fiber.interrupt(slowRunner);
 
   return winner;
 });
@@ -258,25 +270,35 @@ const program = Effect.gen(function* () {
   },
   racing: {
     name: "Racing",
-    description: "Two effects racing - first to complete wins",
+    description:
+      "Two fibers racing - first to complete wins, loser interrupted",
     program: racingExample,
-    source: `import { Effect } from "effect";
-import { withTrace } from "./tracedRunner";
+    source: `import { Effect, Fiber } from "effect";
+import { forkWithTrace, withTrace, sleepWithTrace } from "./tracedRunner";
 
 const program = Effect.gen(function* () {
   yield* withTrace(Effect.succeed("starting race"), "race-start");
 
-  // Race two effects - first to complete wins
-  // The loser will be INTERRUPTED!
-  const winner = yield* withTrace(
-    Effect.race(
-      sleepWithTrace("1 second").pipe(Effect.as("Fast runner wins!")),
-      sleepWithTrace("2 seconds").pipe(Effect.as("Slow runner wins!"))
-    ),
-    "race"
+  // Fork two fibers explicitly so we can visualize them
+  const fastRunner = yield* forkWithTrace(
+    sleepWithTrace("1 second").pipe(Effect.as("Fast runner wins!")),
+    "fast-runner"
   );
 
-  yield* withTrace(Effect.succeed(winner), "race-result");
+  const slowRunner = yield* forkWithTrace(
+    sleepWithTrace("2 seconds").pipe(Effect.as("Slow runner wins!")),
+    "slow-runner"
+  );
+
+  // Race by joining both - Effect.race returns when first completes
+  const winner = yield* withTrace(
+    Effect.race(Fiber.join(fastRunner), Fiber.join(slowRunner)),
+    "race-join"
+  );
+
+  // Interrupt both fibers (winner already done, loser gets interrupted)
+  yield* Fiber.interrupt(fastRunner);
+  yield* Fiber.interrupt(slowRunner);
 
   return winner;
 });`,
