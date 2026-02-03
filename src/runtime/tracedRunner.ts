@@ -153,7 +153,7 @@ export const makeTraceEmitterLayer = (
  */
 export const forkWithTrace = <A, E, R>(
   effect: Effect.Effect<A, E, R>,
-  label?: string,
+  label: string,
 ): Effect.Effect<Fiber.RuntimeFiber<A, E>, never, R | TraceEmitter> => {
   return Effect.gen(function* () {
     const { emit } = yield* TraceEmitter;
@@ -201,7 +201,7 @@ export const forkWithTrace = <A, E, R>(
  */
 export const runProgramWithTrace = <A, E, R>(
   program: Effect.Effect<A, E, R>,
-  label?: string,
+  label: string,
 ): Effect.Effect<A, E, R | TraceEmitter> => {
   return Effect.gen(function* () {
     const { emit } = yield* TraceEmitter;

@@ -8,7 +8,7 @@ export interface EffectStartEvent {
   type: "effect:start";
   id: string;
   label: string;
-  timestamp?: number;
+  timestamp: number;
 }
 
 /** Event fired when an effect completes */
@@ -16,7 +16,7 @@ export interface EffectEndEvent {
   type: "effect:end";
   id: string;
   result: "success" | "failure";
-  timestamp?: number;
+  timestamp: number;
   error?: unknown;
   value?: unknown;
 }
@@ -26,23 +26,22 @@ export interface FiberForkEvent {
   type: "fiber:fork";
   fiberId: string;
   parentId?: string;
-  /** Optional label for display purposes */
-  label?: string;
-  timestamp?: number;
+  label: string;
+  timestamp: number;
 }
 
 /** Event fired when a fiber completes */
 export interface FiberEndEvent {
   type: "fiber:end";
   fiberId: string;
-  timestamp?: number;
+  timestamp: number;
 }
 
 /** Event fired when a fiber is interrupted */
 export interface FiberInterruptEvent {
   type: "fiber:interrupt";
   fiberId: string;
-  timestamp?: number;
+  timestamp: number;
 }
 
 /** Event fired when a sleep starts */
@@ -50,14 +49,14 @@ export interface SleepStartEvent {
   type: "sleep:start";
   fiberId: string;
   duration: number;
-  timestamp?: number;
+  timestamp: number;
 }
 
 /** Event fired when a sleep ends */
 export interface SleepEndEvent {
   type: "sleep:end";
   fiberId: string;
-  timestamp?: number;
+  timestamp: number;
 }
 
 /**
