@@ -28,8 +28,8 @@ Learn Effect concepts through explicit tracing wrappers (`withTrace`, `forkWithT
 - [Phase 1: Lazy Evaluation](./phase-1.md) ✅
 - [Phase 2: Fibers](./phase-2.md) ✅
 - [Phase 3: Scheduling & Delays](./phase-3.md) ✅
-- Phase 4: Errors & Retries (next)
-- Phase 5: Scopes & Resources (not started)
+- [Phase 4: Errors & Retries](./phase-4.md) ✅
+- Phase 5: Scopes & Resources (next)
 
 ### Version 2: Runtime Hooks (Future)
 

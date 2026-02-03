@@ -3,9 +3,9 @@
 **Quick Context**: See [`workshop/README.md`](workshop/README.md) for full documentation.
 
 ## Current Phase
-**Phase 3**: COMPLETE ✅
+**Phase 4**: COMPLETE ✅
 
-**Recent**: Implemented sleep tracing, real-time timeline visualization
+**Recent**: Retry tracing (retryWithTrace, retry:attempt), failure visibility in ExecutionLog
 
 ## Completed Phases
 
@@ -36,12 +36,25 @@
 - [x] Racing example rewritten with explicit fiber forking
 - [x] Legend for timeline states (running/suspended/completed/interrupted)
 
+### Phase 4: Errors and Retries
+- [x] Failure & Recovery program (`failureAndRecovery`)
+- [x] Retry program with Ref (`retry`) and `retryWithTrace`
+- [x] `retryWithTrace` loop-based: effect:start/effect:end + retry:attempt per failed attempt
+- [x] `RetryAttemptEvent` and `emitRetry` in tracedRunner
+- [x] ExecutionLog: failure styling (red), retry:attempt from current event, formatError
+
 ### Key Learning (Phase 3)
 - Fibers **suspend** (yield control) rather than block
 - Cooperative scheduling: fibers yield at suspension points
 - `Duration.decode()` converts DurationInput to Duration
 - `Effect.race` on `Fiber.join` calls for traceable racing
 - Manual instrumentation limitations vs runtime hooks
+
+### Key Learning (Phase 4)
+- Typed errors: effect:end with result "failure" and error; withTrace already used onExit
+- Retry attempt tracking: loop with Effect.exit(effect), emit retry:attempt, same span id
+- Ref for state across retry attempts (e.g. fail N times then succeed)
+- ExecutionLog must use current event for retry:attempt (not first match)
 
 ## Design Decisions
 - **Service + Layer** pattern for TraceEmitter
@@ -54,7 +67,7 @@
 - `src/types/trace.ts` - TraceEvent definitions (includes sleep events)
 - `src/stores/traceStore.tsx` - Event state
 - `src/stores/fiberStore.tsx` - Fiber state (handles suspension)
-- `src/runtime/tracedRunner.ts` - Instrumented runner (`withTrace`, `forkWithTrace`, `sleepWithTrace`)
+- `src/runtime/tracedRunner.ts` - Instrumented runner (`withTrace`, `forkWithTrace`, `sleepWithTrace`, `retryWithTrace`, `emitRetry`)
 - `src/hooks/useEventHandlers.ts` - Play/Reset handlers with program selection
 - `src/components/visualizer/ExecutionLog.tsx` - Event log
 - `src/components/visualizer/FiberTreeView.tsx` - Fiber tree with suspended indicator
@@ -65,8 +78,8 @@
 1. ~~**Phase 1**: Lazy evaluation, success/failure~~ ✅ See [`workshop/phase-1.md`](workshop/phase-1.md)
 2. ~~**Phase 2**: Fibers, fork/join, interruption~~ ✅ See [`workshop/phase-2.md`](workshop/phase-2.md)
 3. ~~**Phase 3**: Scheduling, delays, suspended fibers~~ ✅ See [`workshop/phase-3.md`](workshop/phase-3.md)
-4. **Phase 4**: Errors, retries, supervision (next)
-5. **Phase 5**: Scopes, resources, finalizers
+4. ~~**Phase 4**: Errors, retries~~ ✅ See [`workshop/phase-4.md`](workshop/phase-4.md)
+5. **Phase 5**: Scopes, resources, finalizers (next)
 
 ## Documentation
 - [`workshop/README.md`](workshop/README.md) - Documentation overview
