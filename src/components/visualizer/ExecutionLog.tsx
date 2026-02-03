@@ -15,6 +15,11 @@ import type {
   TraceEvent,
 } from "@/types/trace";
 
+function formatError(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  return String(err);
+}
+
 /** Format a trace event into a human-readable string */
 function formatEvent(event: TraceEvent, events: TraceEvent[]): string {
   switch (event.type) {
@@ -46,6 +51,8 @@ function formatEvent(event: TraceEvent, events: TraceEvent[]): string {
       return `Sleep started: ${event.duration}ms (fiber: ${event.fiberId})`;
     case "sleep:end":
       return `Sleep ended (fiber: ${event.fiberId})`;
+    case "retry:attempt":
+      return `Retry attempt: #${event.attempt} ${event.label} (${formatError(event.lastError)})`;
   }
 }
 
@@ -65,6 +72,8 @@ function getEventColor(event: TraceEvent): string {
     case "sleep:start":
     case "sleep:end":
       return "text-yellow-400";
+    case "retry:attempt":
+      return "text-orange-400";
   }
 }
 

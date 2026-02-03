@@ -12,13 +12,29 @@ export interface EffectStartEvent {
 }
 
 /** Event fired when an effect completes */
-export interface EffectEndEvent {
-  type: "effect:end";
+export type EffectEndEvent =
+  | {
+      type: "effect:end";
+      id: string;
+      result: "success";
+      timestamp: number;
+      value: unknown;
+    }
+  | {
+      type: "effect:end";
+      id: string;
+      result: "failure";
+      timestamp: number;
+      error: unknown;
+    };
+
+export interface RetryAttemptEvent {
+  type: "retry:attempt";
   id: string;
-  result: "success" | "failure";
+  label: string;
+  attempt: number;
+  lastError: unknown;
   timestamp: number;
-  error?: unknown;
-  value?: unknown;
 }
 
 /** Event fired when a fiber is forked */
@@ -70,7 +86,8 @@ export type TraceEvent =
   | FiberEndEvent
   | FiberInterruptEvent
   | SleepStartEvent
-  | SleepEndEvent;
+  | SleepEndEvent
+  | RetryAttemptEvent;
 
 /**
  * Type guard to check if an event is an effect event

@@ -80,6 +80,25 @@ export const emitEnd = (
   });
 };
 
+export const emitRetry = (
+  id: string,
+  label: string,
+  attempt: number,
+  lastError: unknown,
+): Effect.Effect<void, never, TraceEmitter> => {
+  return Effect.gen(function* () {
+    const { emit } = yield* TraceEmitter;
+    yield* emit({
+      type: "retry:attempt",
+      id,
+      label,
+      attempt,
+      lastError,
+      timestamp: Date.now(),
+    });
+  });
+};
+
 // =============================================================================
 // Traced Runner
 // =============================================================================
@@ -266,3 +285,51 @@ export const sleepWithTrace = (
     });
   });
 };
+
+/**
+ * Run an effect with retries and tracing.
+ *
+ * - Emits effect:start once (one span for the whole retry).
+ * - On each failure before the last, emits retry:attempt (id, label, attempt, lastError).
+ * - When the effect finally succeeds or exhausts retries, emits effect:end with the same id.
+ *
+ * Semantics: total attempts = 1 + maxRetries (one initial try plus up to maxRetries retries).
+ * So maxRetries: 3 ⇒ at most 4 attempts.
+ *
+ * We use a loop instead of Effect.retry so we can observe each attempt and emit retry:attempt.
+ * Effect.retry runs the effect internally and only gives us one final Exit—no per-attempt callback.
+ */
+export function retryWithTrace<A, E, R>(
+  effect: Effect.Effect<A, E, R>,
+  options: {
+    maxRetries: number;
+    label: string;
+  },
+): Effect.Effect<A, Cause.Cause<E>, R | TraceEmitter> {
+  const id = randomUUID();
+  return Effect.gen(function* () {
+    yield* emitStart(id, options.label);
+
+    let attempt = 1;
+    const maxAttempts = 1 + options.maxRetries;
+
+    while (true) {
+      const exit = yield* Effect.exit(effect);
+
+      if (Exit.isSuccess(exit)) {
+        yield* emitEnd(id, "success", exit.value);
+        return exit.value;
+      }
+
+      const lastError = Cause.squash(exit.cause);
+
+      if (attempt >= maxAttempts) {
+        yield* emitEnd(id, "failure", undefined, lastError);
+        return yield* Effect.fail(exit.cause);
+      }
+
+      yield* emitRetry(id, options.label, attempt, lastError);
+      attempt++;
+    }
+  });
+}

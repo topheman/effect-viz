@@ -3,12 +3,13 @@
  * These demonstrate different Effect patterns with tracing.
  */
 
-import { Effect, Fiber } from "effect";
+import { Effect, Fiber, Ref } from "effect";
 
 import {
   forkWithTrace,
   withTrace,
   sleepWithTrace,
+  retryWithTrace,
 } from "@/runtime/tracedRunner";
 
 // =============================================================================
@@ -158,6 +159,64 @@ export const racingExample = Effect.gen(function* () {
 });
 
 // =============================================================================
+// Failure Example (Phase 4: Errors)
+// =============================================================================
+
+/**
+ * Demonstrates effects that fail and recovery.
+ * - "setup" succeeds
+ * - "risky-step" fails (so we see effect:end with result: "failure")
+ * - "recovery" runs after catching the error
+ *
+ * Uses withTrace so every step (including the failing one) emits trace events.
+ */
+export const failureExample = Effect.gen(function* () {
+  yield* withTrace(Effect.succeed("ready"), "setup");
+
+  const recovered = yield* withTrace(
+    Effect.fail(new Error("Something went wrong")),
+    "risky-step",
+  ).pipe(
+    Effect.catchAll((err) =>
+      Effect.succeed(`Recovered from: ${(err as Error).message}`),
+    ),
+  );
+
+  yield* withTrace(
+    Effect.sync(() => console.log("Recovery:", recovered)),
+    "recovery",
+  );
+
+  return recovered;
+});
+
+// =============================================================================
+// Retry Example (Phase 4: Errors & Retries)
+// =============================================================================
+
+/**
+ * Demonstrates retryWithTrace: an effect that fails twice then succeeds.
+ * A Ref counts attempts; the inner effect fails when count < 3.
+ * retryWithTrace retries until success (or max retries).
+ */
+export const retryExample = Effect.gen(function* () {
+  const attempts = yield* Ref.make(0);
+
+  const flakyEffect = Effect.gen(function* () {
+    const n = yield* Ref.updateAndGet(attempts, (x) => x + 1);
+    if (n < 3) {
+      return yield* Effect.fail(new Error(`Attempt ${n} failed`));
+    }
+    return "success";
+  });
+
+  return yield* retryWithTrace(flakyEffect, {
+    maxRetries: 3,
+    label: "flaky-task",
+  });
+});
+
+// =============================================================================
 // Program Registry (with source code for display)
 // =============================================================================
 
@@ -301,6 +360,58 @@ const program = Effect.gen(function* () {
   yield* Fiber.interrupt(slowRunner);
 
   return winner;
+});`,
+  },
+  failureAndRecovery: {
+    name: "Failure & Recovery",
+    description: "A step fails, then we recover and continue",
+    program: failureExample,
+    source: `import { Effect } from "effect";
+import { withTrace } from "./tracedRunner";
+
+const program = Effect.gen(function* () {
+  yield* withTrace(Effect.succeed("ready"), "setup");
+
+  const recovered = yield* withTrace(
+    Effect.fail(new Error("Something went wrong")),
+    "risky-step"
+  ).pipe(
+    Effect.catchAll((err) =>
+      Effect.succeed(\`Recovered from: \${(err as Error).message}\`)
+    )
+  );
+
+  yield* withTrace(
+    Effect.sync(() => console.log("Recovery:", recovered)),
+    "recovery"
+  );
+
+  return recovered;
+});`,
+  },
+  retry: {
+    name: "Retry",
+    description:
+      "Effect fails twice then succeeds; retryWithTrace retries until success",
+    program: retryExample,
+    source: `import { Effect, Ref } from "effect";
+import { retryWithTrace } from "./tracedRunner";
+
+const program = Effect.gen(function* () {
+  const attempts = yield* Ref.make(0);
+
+  const flakyEffect = Effect.gen(function* () {
+    const n = yield* Ref.updateAndGet(attempts, (x) => x + 1);
+    if (n < 3) {
+      return yield* Effect.fail(new Error(\`Attempt \${n} failed\`));
+    }
+    return "success";
+  });
+
+  return yield* retryWithTrace(flakyEffect, {
+    maxRetries: 3,
+    label: "flaky-task",
+  });
 });`,
   },
 } as const;

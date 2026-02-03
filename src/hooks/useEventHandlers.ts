@@ -27,15 +27,14 @@ export function useEventHandlers() {
     clearEvents();
     clearFibers();
 
-    // Get the selected program
-    const { program } = programs[selectedProgram];
-
-    // Wrap the example program with root fiber tracing
-    const traced = runProgramWithTrace<
-      string | { result1: string; result2: string },
-      never,
+    // Get the selected program (cast to generic effect; programs have varying A/E)
+    const program = programs[selectedProgram].program as Effect.Effect<
+      unknown,
+      unknown,
       TraceEmitter
-    >(program, selectedProgram);
+    >;
+
+    const traced = runProgramWithTrace(program, selectedProgram);
 
     // Create layer that emits to BOTH stores
     const layer = makeTraceEmitterLayer((event) => {
