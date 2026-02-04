@@ -1,6 +1,6 @@
-import { Info } from "lucide-react";
+import { Info, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +21,10 @@ import { cn } from "@/lib/utils";
 
 const GITHUB_REPO_URL = "https://github.com/topheman/effect-viz";
 
+const MOBILE_BREAKPOINT_PX = 640; // Tailwind sm
+const QR_SIZE_DESKTOP = 200;
+const QR_SIZE_MOBILE = 64;
+
 interface InfoModalProps {
   onboardingStep?: OnboardingStepId | null;
   onOnboardingComplete?: (stepId: OnboardingStepId) => void;
@@ -37,9 +41,28 @@ export function InfoModal({
     return url;
   });
 
+  const [isMobile, setIsMobile] = useState(() => {
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function"
+    )
+      return false;
+    return window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT_PX - 1}px)`)
+      .matches;
+  });
+  const [showBigQr, setShowBigQr] = useState(false);
+
+  useEffect(() => {
+    const m = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT_PX - 1}px)`);
+    const fn = () => setIsMobile(m.matches);
+    m.addEventListener("change", fn);
+    return () => m.removeEventListener("change", fn);
+  }, []);
+
   return (
     <Dialog
       onOpenChange={(open) => {
+        if (!open) setShowBigQr(false);
         if (open) onOnboardingComplete?.("info");
       }}
     >
@@ -129,19 +152,80 @@ export function InfoModal({
           </section>
 
           <div className="flex flex-col items-center gap-6">
-            {/* QR Code */}
-            <div
-              data-testid="qrcode-container"
-              className={`rounded-lg bg-white p-4`}
-            >
-              <QRCodeSVG
-                value={currentUrl}
-                size={200}
-                level="M"
-                fgColor="#09090b"
-                includeMargin={false}
-              />
-            </div>
+            {/* QR Code: small + clickable on mobile, large on desktop */}
+            {isMobile ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowBigQr(true)}
+                  className={`
+                    rounded-lg bg-white p-2
+                    focus:ring-2 focus:ring-ring focus:ring-offset-2
+                    focus:outline-none
+                  `}
+                  aria-label="Show larger QR code"
+                  data-testid="qrcode-container"
+                >
+                  <QRCodeSVG
+                    value={currentUrl}
+                    size={QR_SIZE_MOBILE}
+                    level="M"
+                    fgColor="#09090b"
+                    includeMargin={false}
+                  />
+                </button>
+                {showBigQr && (
+                  <div
+                    className={`
+                      fixed inset-0 z-100 flex items-center justify-center
+                      bg-black/70 p-4
+                    `}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="QR code full size"
+                    onClick={() => setShowBigQr(false)}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setShowBigQr(false)}
+                      className={`
+                        absolute top-4 right-4 rounded-full bg-background p-2
+                        text-foreground
+                        focus:ring-2 focus:ring-ring focus:outline-none
+                      `}
+                      aria-label="Close QR code"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                    <div
+                      className="rounded-lg bg-white p-4"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <QRCodeSVG
+                        value={currentUrl}
+                        size={QR_SIZE_DESKTOP}
+                        level="M"
+                        fgColor="#09090b"
+                        includeMargin={false}
+                      />
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div
+                data-testid="qrcode-container"
+                className="rounded-lg bg-white p-4"
+              >
+                <QRCodeSVG
+                  value={currentUrl}
+                  size={QR_SIZE_DESKTOP}
+                  level="M"
+                  fgColor="#09090b"
+                  includeMargin={false}
+                />
+              </div>
+            )}
 
             {/* URL */}
             <p

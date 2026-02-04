@@ -11,3 +11,16 @@ const ResizeObserverMock = vi.fn(
 );
 
 vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+
+// Mock matchMedia for InfoModal and other components that use it
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+  value: vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
