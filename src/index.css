@@ -42,6 +42,19 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --animate-onboarding-pulse: onboarding-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes onboarding-pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(2.5);
+  }
 }
 
 :root {

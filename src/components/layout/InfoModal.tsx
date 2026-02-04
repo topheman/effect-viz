@@ -16,21 +16,45 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type { OnboardingStepId } from "@/hooks/useOnboarding";
+import { cn } from "@/lib/utils";
 
 const GITHUB_REPO_URL = "https://github.com/topheman/effect-viz";
 
-export function InfoModal() {
+interface InfoModalProps {
+  onboardingStep?: OnboardingStepId | null;
+  onOnboardingComplete?: (stepId: OnboardingStepId) => void;
+  onRestartOnboarding?: () => void;
+}
+
+export function InfoModal({
+  onboardingStep = null,
+  onOnboardingComplete,
+  onRestartOnboarding,
+}: InfoModalProps = {}) {
   const [currentUrl] = useState<string>(() => {
     const [url] = window.location.href.split("#");
     return url;
   });
 
   return (
-    <Dialog>
+    <Dialog
+      onOpenChange={(open) => {
+        if (open) onOnboardingComplete?.("info");
+      }}
+    >
       <Tooltip>
         <TooltipTrigger asChild>
           <DialogTrigger asChild>
-            <Button variant="ghost" size="icon">
+            <Button
+              data-onboarding-step="info"
+              variant="ghost"
+              size="icon"
+              className={cn(
+                onboardingStep === "info" &&
+                  "origin-center animate-onboarding-pulse",
+              )}
+            >
               <Info className="h-4 w-4" />
             </Button>
           </DialogTrigger>
@@ -40,7 +64,23 @@ export function InfoModal() {
 
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{import.meta.env.VITE_SHORT_TITLE}</DialogTitle>
+          <DialogTitle
+            className={`
+              cursor-pointer select-none
+              hover:opacity-80
+            `}
+            onClick={onRestartOnboarding}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onRestartOnboarding?.();
+              }
+            }}
+            role="button"
+            tabIndex={0}
+          >
+            {import.meta.env.VITE_SHORT_TITLE}
+          </DialogTitle>
           <DialogDescription>
             {import.meta.env.VITE_DESCRIPTION}
           </DialogDescription>

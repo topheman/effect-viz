@@ -9,7 +9,9 @@ import {
 import { Select } from "@/components/ui/select";
 import { VisualizerPanel } from "@/components/visualizer/VisualizerPanel";
 import { useEventHandlers } from "@/hooks/useEventHandlers";
+import { useOnboarding } from "@/hooks/useOnboarding";
 import type { ProgramKey } from "@/lib/programs";
+import { cn } from "@/lib/utils";
 
 import { Header } from "./Header";
 import { PlaybackControls, type PlaybackState } from "./PlaybackControls";
@@ -22,6 +24,12 @@ export function MainLayout() {
     setSelectedProgram,
     programs,
   } = useEventHandlers();
+
+  const {
+    currentStep: onboardingStep,
+    completeStep: completeOnboardingStep,
+    restartOnboarding,
+  } = useOnboarding();
 
   const [playbackState, setPlaybackState] = useState<PlaybackState>("idle");
   const [showVisualizer, setShowVisualizer] = useState(false);
@@ -83,11 +91,17 @@ export function MainLayout() {
                   Program
                 </span>
                 <Select
+                  data-onboarding-step="programSelect"
                   value={selectedProgram}
-                  onChange={(e) =>
-                    setSelectedProgram(e.target.value as ProgramKey)
-                  }
-                  className="h-7 w-40 text-xs"
+                  onChange={(e) => {
+                    setSelectedProgram(e.target.value as ProgramKey);
+                    completeOnboardingStep("programSelect");
+                  }}
+                  className={cn(
+                    "h-7 w-40 text-xs",
+                    onboardingStep === "programSelect" &&
+                      "origin-center animate-onboarding-pulse",
+                  )}
                 >
                   {Object.entries(programs).map(([key, { name }]) => (
                     <option key={key} value={key}>
@@ -144,9 +158,17 @@ export function MainLayout() {
               Program
             </span>
             <Select
+              data-onboarding-step="programSelect"
               value={selectedProgram}
-              onChange={(e) => setSelectedProgram(e.target.value as ProgramKey)}
-              className="h-7 w-40 text-xs"
+              onChange={(e) => {
+                setSelectedProgram(e.target.value as ProgramKey);
+                completeOnboardingStep("programSelect");
+              }}
+              className={cn(
+                "h-7 w-40 text-xs",
+                onboardingStep === "programSelect" &&
+                  "origin-center animate-onboarding-pulse",
+              )}
             >
               {Object.entries(programs).map(([key, { name }]) => (
                 <option key={key} value={key}>
@@ -194,6 +216,9 @@ export function MainLayout() {
         onReset={onReset}
         showVisualizer={showVisualizer}
         onToggleVisualizer={() => setShowVisualizer(!showVisualizer)}
+        onboardingStep={onboardingStep}
+        onOnboardingComplete={completeOnboardingStep}
+        onRestartOnboarding={restartOnboarding}
       />
     </div>
   );

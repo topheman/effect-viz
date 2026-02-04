@@ -7,6 +7,7 @@ import {
   StepForward,
   Workflow,
 } from "lucide-react";
+import { useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +16,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type { OnboardingStepId } from "@/hooks/useOnboarding";
+import { cn } from "@/lib/utils";
 
 import { InfoModal } from "./InfoModal";
 
@@ -33,6 +36,9 @@ interface PlaybackControlsProps {
   onReset?: () => void;
   showVisualizer?: boolean;
   onToggleVisualizer?: () => void;
+  onboardingStep?: OnboardingStepId | null;
+  onOnboardingComplete?: (stepId: OnboardingStepId) => void;
+  onRestartOnboarding?: () => void;
 }
 
 export function PlaybackControls({
@@ -44,10 +50,25 @@ export function PlaybackControls({
   onReset,
   showVisualizer = true,
   onToggleVisualizer,
+  onboardingStep = null,
+  onOnboardingComplete,
+  onRestartOnboarding,
 }: PlaybackControlsProps) {
   const isRunning = state === "running";
   const canPlay = state === "idle" || state === "paused";
   const canStep = state === "idle" || state === "paused";
+
+  // Skip showVisualizer step on desktop (toggle is hidden)
+  useEffect(() => {
+    if (
+      onboardingStep === "showVisualizer" &&
+      typeof window !== "undefined" &&
+      window.matchMedia("(min-width: 768px)").matches &&
+      onOnboardingComplete
+    ) {
+      onOnboardingComplete("showVisualizer");
+    }
+  }, [onboardingStep, onOnboardingComplete]);
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -67,10 +88,18 @@ export function PlaybackControls({
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
+                data-onboarding-step="showVisualizer"
                 variant="ghost"
                 size="icon"
-                onClick={onToggleVisualizer}
-                className="md:hidden"
+                onClick={() => {
+                  onToggleVisualizer?.();
+                  onOnboardingComplete?.("showVisualizer");
+                }}
+                className={cn(
+                  "md:hidden",
+                  onboardingStep === "showVisualizer" &&
+                    "origin-center animate-onboarding-pulse",
+                )}
               >
                 {showVisualizer ? (
                   <Braces className="h-4 w-4" />
@@ -101,13 +130,25 @@ export function PlaybackControls({
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
+                data-onboarding-step="play"
                 variant="ghost"
                 size="icon"
-                onClick={isRunning ? onPause : onPlay}
+                onClick={() => {
+                  if (isRunning) {
+                    onPause?.();
+                  } else {
+                    onPlay?.();
+                    onOnboardingComplete?.("play");
+                  }
+                }}
                 disabled={
                   (!canPlay && !isRunning) ||
                   (isRunning && !PAUSE_IS_IMPLEMENTED)
                 }
+                className={cn(
+                  onboardingStep === "play" &&
+                    "origin-center animate-onboarding-pulse",
+                )}
               >
                 {isRunning ? (
                   <Pause className="h-4 w-4" />
@@ -179,7 +220,11 @@ export function PlaybackControls({
 
         {/* Right: Info button */}
         <div className="flex w-9 items-center justify-end">
-          <InfoModal />
+          <InfoModal
+            onboardingStep={onboardingStep}
+            onOnboardingComplete={onOnboardingComplete}
+            onRestartOnboarding={onRestartOnboarding}
+          />
         </div>
       </div>
     </TooltipProvider>
