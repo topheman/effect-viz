@@ -43,6 +43,7 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
   --animate-onboarding-pulse: onboarding-pulse 1.5s ease-in-out infinite;
+  --animate-play-button-mount: play-button-mount 1s ease-in-out forwards;
 }
 
 @keyframes onboarding-pulse {
@@ -54,6 +55,23 @@
 
   50% {
     transform: scale(2.5);
+  }
+}
+
+@keyframes play-button-mount {
+  0% {
+    transform: translate(0, -50vh) scale(8);
+    opacity: 1;
+  }
+
+  30% {
+    transform: translate(0, -50vh) scale(8);
+    opacity: 0.7;
+  }
+
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
   }
 }
 

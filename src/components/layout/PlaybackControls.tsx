@@ -7,7 +7,7 @@ import {
   StepForward,
   Workflow,
 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -57,6 +57,7 @@ export function PlaybackControls({
   const isRunning = state === "running";
   const canPlay = state === "idle" || state === "paused";
   const canStep = state === "idle" || state === "paused";
+  const [playMountAnimationEnded, setPlayMountAnimationEnded] = useState(false);
 
   // Skip showVisualizer step on desktop (toggle is hidden)
   useEffect(() => {
@@ -145,8 +146,15 @@ export function PlaybackControls({
                   (!canPlay && !isRunning) ||
                   (isRunning && !PAUSE_IS_IMPLEMENTED)
                 }
+                onAnimationEnd={(e) => {
+                  if (e.animationName === "play-button-mount") {
+                    setPlayMountAnimationEnded(true);
+                  }
+                }}
                 className={cn(
-                  onboardingStep === "play" &&
+                  !playMountAnimationEnded && "animate-play-button-mount",
+                  playMountAnimationEnded &&
+                    onboardingStep === "play" &&
                     "origin-center animate-onboarding-pulse",
                 )}
               >
