@@ -115,6 +115,25 @@ export const emitFinalizer = (
   });
 };
 
+export const emitAcquire = (
+  id: string,
+  label: string,
+  result: "success" | "failure",
+  error?: unknown,
+): Effect.Effect<void, never, TraceEmitter> => {
+  return Effect.gen(function* () {
+    const { emit } = yield* TraceEmitter;
+    yield* emit({
+      type: "acquire",
+      id,
+      label,
+      result,
+      error,
+      timestamp: Date.now(),
+    });
+  });
+};
+
 // =============================================================================
 // Traced Runner
 // =============================================================================
@@ -364,5 +383,30 @@ export function addFinalizerWithTrace<R>(
         yield* finalizer(exit);
       }),
     );
+  });
+}
+
+export function acquireReleaseWithTrace<A, E, R, X, R2>(
+  acquire: Effect.Effect<A, E, R>,
+  release: (
+    a: A,
+    exit: Exit.Exit<unknown, unknown>,
+  ) => Effect.Effect<X, never, R2>,
+  label: string,
+): Effect.Effect<A, E, TraceEmitter | Scope.Scope | R | R2> {
+  return Effect.gen(function* () {
+    const id = randomUUID();
+    const resource = yield* acquire.pipe(
+      Effect.onExit((exit) =>
+        Exit.isSuccess(exit)
+          ? emitAcquire(id, label, "success")
+          : emitAcquire(id, label, "failure", Cause.squash(exit.cause)),
+      ),
+    );
+    yield* addFinalizerWithTrace(
+      (exit) => Effect.asVoid(release(resource, exit)), // A finalizer callback returns Effect.Effect<void, never, R>, narrowing X to void
+      `${label}:release`,
+    );
+    return resource;
   });
 }

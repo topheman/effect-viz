@@ -83,6 +83,27 @@ export interface FinalizerEvent {
   timestamp: number;
 }
 
+/*
+ * There is no release events (they are implicit in the finalizer event)
+ * but we need to track the acquire event to know when the resource is acquired.
+ */
+type AcquireEvent =
+  | {
+      type: "acquire";
+      result: "success";
+      id: string;
+      label: string;
+      timestamp: number;
+    }
+  | {
+      type: "acquire";
+      result: "failure";
+      id: string;
+      label: string;
+      error: unknown;
+      timestamp: number;
+    };
+
 /**
  * Union type of all possible trace events.
  * This forms the event model for the visualizer.
@@ -96,7 +117,8 @@ export type TraceEvent =
   | SleepStartEvent
   | SleepEndEvent
   | RetryAttemptEvent
-  | FinalizerEvent;
+  | FinalizerEvent
+  | AcquireEvent;
 
 /**
  * Type guard to check if an event is an effect event

@@ -41,7 +41,7 @@ function formatEvent(event: TraceEvent, events: TraceEvent[]): string {
         (e) => e.type === "fiber:fork" && e.fiberId === event.fiberId,
       ) as FiberForkEvent | undefined;
       if (!forkFiber) {
-        return `Fiber ended: ${event.fiberId} : ""}`;
+        return `Fiber ended: ${event.fiberId}`;
       }
       return `Fiber ended: ${event.fiberId}${forkFiber.parentId ? ` (parent: ${forkFiber.parentId})` : ""} ${forkFiber.label ? `${forkFiber.label}` : ""}`;
     }
@@ -55,6 +55,10 @@ function formatEvent(event: TraceEvent, events: TraceEvent[]): string {
       return `Retry attempt: #${event.attempt} ${event.label} (${formatError(event.lastError)})`;
     case "finalizer":
       return `Finalizer ran: ${event.label}`;
+    case "acquire":
+      return event.result === "success"
+        ? `Resource acquired: ${event.label}`
+        : `Resource acquire failed: ${event.label} (${formatError(event.error)})`;
   }
 }
 
@@ -78,6 +82,8 @@ function getEventColor(event: TraceEvent): string {
       return "text-orange-400";
     case "finalizer":
       return "text-cyan-400";
+    case "acquire":
+      return event.result === "success" ? "text-cyan-300" : "text-red-400";
   }
 }
 
