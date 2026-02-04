@@ -54,6 +54,22 @@ describe("InfoModal", () => {
     expect(qrCodeContainer).toBeInTheDocument();
   });
 
+  it("displays the About the project content in the modal", async () => {
+    const user = userEvent.setup();
+    render(<InfoModal />);
+
+    await user.click(screen.getByRole("button"));
+
+    const dialog = screen.getByRole("dialog");
+    expect(
+      within(dialog).getByLabelText("About the project"),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/Effect runtime visualizer/i),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText(/This is v1/i)).toBeInTheDocument();
+  });
+
   it("closes the modal when clicking the close button", async () => {
     const user = userEvent.setup();
     render(<InfoModal />);

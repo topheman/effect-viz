@@ -86,43 +86,86 @@ export function InfoModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col items-center gap-6 py-4">
-          {/* QR Code */}
-          <div
-            data-testid="qrcode-container"
-            className="rounded-lg bg-white p-4"
+        <div
+          className={`flex max-h-[60vh] flex-col gap-6 overflow-y-auto py-4`}
+          data-testid="info-modal-body"
+        >
+          {/* About the project */}
+          <section
+            className="flex flex-col gap-3 text-sm text-muted-foreground"
+            aria-label="About the project"
           >
-            <QRCodeSVG
-              value={currentUrl}
-              size={200}
-              level="M"
-              fgColor="#09090b"
-              includeMargin={false}
-            />
+            <p>
+              The goal of this project is for me to learn Effect by building an
+              Effect runtime visualizer.
+            </p>
+            <p>
+              This is v1: I use explicit tracing wrappers like{" "}
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                withTrace
+              </code>{" "}
+              or{" "}
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                forkWithTrace
+              </code>{" "}
+              (manual instrumentation, explicit and educational).
+            </p>
+            <p>
+              I used AI as my Effect tutor that guided me through a multi-step
+              workshop (read about it on the{" "}
+              <a
+                href={GITHUB_REPO_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`
+                  text-primary underline-offset-4
+                  hover:underline
+                `}
+              >
+                GitHub repo
+              </a>
+              ).
+            </p>
+          </section>
+
+          <div className="flex flex-col items-center gap-6">
+            {/* QR Code */}
+            <div
+              data-testid="qrcode-container"
+              className={`rounded-lg bg-white p-4`}
+            >
+              <QRCodeSVG
+                value={currentUrl}
+                size={200}
+                level="M"
+                fgColor="#09090b"
+                includeMargin={false}
+              />
+            </div>
+
+            {/* URL */}
+            <p
+              className={`
+                max-w-full text-center text-sm break-all text-muted-foreground
+              `}
+            >
+              {currentUrl}
+            </p>
+
+            {/* GitHub Link */}
+            <a
+              href={GITHUB_REPO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`
+                inline-flex items-center gap-2 text-sm text-primary
+                underline-offset-4 transition-colors
+                hover:underline
+              `}
+            >
+              View on GitHub
+            </a>
           </div>
-
-          {/* URL */}
-          <p
-            className={`
-              max-w-full text-center text-sm break-all text-muted-foreground
-            `}
-          >
-            {currentUrl}
-          </p>
-
-          {/* GitHub Link */}
-          <a
-            href={GITHUB_REPO_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`
-              inline-flex items-center gap-2 text-sm text-primary
-              underline-offset-4 transition-colors
-              hover:underline
-            `}
-          >
-            View on GitHub
-          </a>
         </div>
       </DialogContent>
     </Dialog>
