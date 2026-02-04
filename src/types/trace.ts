@@ -75,6 +75,14 @@ export interface SleepEndEvent {
   timestamp: number;
 }
 
+/** Event fired when a finalizer is run */
+export interface FinalizerEvent {
+  type: "finalizer";
+  id: string;
+  label: string;
+  timestamp: number;
+}
+
 /**
  * Union type of all possible trace events.
  * This forms the event model for the visualizer.
@@ -87,7 +95,8 @@ export type TraceEvent =
   | FiberInterruptEvent
   | SleepStartEvent
   | SleepEndEvent
-  | RetryAttemptEvent;
+  | RetryAttemptEvent
+  | FinalizerEvent;
 
 /**
  * Type guard to check if an event is an effect event

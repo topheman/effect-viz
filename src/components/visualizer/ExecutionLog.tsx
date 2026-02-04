@@ -53,6 +53,8 @@ function formatEvent(event: TraceEvent, events: TraceEvent[]): string {
       return `Sleep ended (fiber: ${event.fiberId})`;
     case "retry:attempt":
       return `Retry attempt: #${event.attempt} ${event.label} (${formatError(event.lastError)})`;
+    case "finalizer":
+      return `Finalizer ran: ${event.label}`;
   }
 }
 
@@ -74,6 +76,8 @@ function getEventColor(event: TraceEvent): string {
       return "text-yellow-400";
     case "retry:attempt":
       return "text-orange-400";
+    case "finalizer":
+      return "text-cyan-400";
   }
 }
 

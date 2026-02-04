@@ -7,6 +7,7 @@ import {
   Fiber,
   FiberId,
   Layer,
+  Scope,
 } from "effect";
 
 import { randomUUID } from "@/lib/crypto";
@@ -94,6 +95,21 @@ export const emitRetry = (
       label,
       attempt,
       lastError,
+      timestamp: Date.now(),
+    });
+  });
+};
+
+export const emitFinalizer = (
+  id: string,
+  label: string,
+): Effect.Effect<void, never, TraceEmitter> => {
+  return Effect.gen(function* () {
+    const { emit } = yield* TraceEmitter;
+    yield* emit({
+      type: "finalizer",
+      id,
+      label,
       timestamp: Date.now(),
     });
   });
@@ -331,5 +347,22 @@ export function retryWithTrace<A, E, R>(
       yield* emitRetry(id, options.label, attempt, lastError);
       attempt++;
     }
+  });
+}
+
+export function addFinalizerWithTrace<R>(
+  finalizer: (
+    exit: Exit.Exit<unknown, unknown>,
+  ) => Effect.Effect<void, never, R>,
+  label: string,
+): Effect.Effect<void, never, TraceEmitter | Scope.Scope | R> {
+  return Effect.gen(function* () {
+    return yield* Effect.addFinalizer((exit) =>
+      Effect.gen(function* () {
+        const id = randomUUID();
+        yield* emitFinalizer(id, label);
+        yield* finalizer(exit);
+      }),
+    );
   });
 }
