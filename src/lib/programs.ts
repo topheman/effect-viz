@@ -6,6 +6,8 @@
 import { Effect, Fiber, Ref } from "effect";
 
 import {
+  addFinalizerWithTrace,
+  acquireReleaseWithTrace,
   forkWithTrace,
   withTrace,
   sleepWithTrace,
@@ -217,6 +219,52 @@ export const retryExample = Effect.gen(function* () {
 });
 
 // =============================================================================
+// Basic Finalizers (Phase 5: Scopes & Resources)
+// =============================================================================
+
+/**
+ * Demonstrates addFinalizerWithTrace: register 3 finalizers to show LIFO
+ * order (last registered runs first). Log shows effect steps then
+ * "Finalizer ran: finalizer-3", "finalizer-2", "finalizer-1".
+ * Must run inside Effect.scoped so the finalizers have a scope to run in.
+ */
+export const basicFinalizersExample = Effect.scoped(
+  Effect.gen(function* () {
+    yield* addFinalizerWithTrace(() => Effect.sync(() => {}), "finalizer-1");
+    yield* addFinalizerWithTrace(() => Effect.sync(() => {}), "finalizer-2");
+    yield* addFinalizerWithTrace(() => Effect.sync(() => {}), "finalizer-3");
+    yield* withTrace(Effect.succeed("step 1"), "step-1");
+    yield* withTrace(Effect.succeed("step 2"), "step-2");
+    return "done";
+  }),
+);
+
+// =============================================================================
+// Acquire / Release (Phase 5: Scopes & Resources)
+// =============================================================================
+
+/**
+ * Demonstrates acquireReleaseWithTrace: acquire a resource, use it, then
+ * release when the scope closes. Log shows "Resource acquired", steps,
+ * then "Finalizer ran: connection:release".
+ * Must run inside Effect.scoped so the release finalizer has a scope.
+ */
+export const acquireReleaseExample = Effect.scoped(
+  Effect.gen(function* () {
+    const connection = yield* acquireReleaseWithTrace(
+      Effect.succeed({ id: "conn-1" }),
+      () => Effect.sync(() => {}),
+      "connection",
+    );
+    yield* withTrace(
+      Effect.sync(() => console.log("Using", connection)),
+      "use-connection",
+    );
+    return connection;
+  }),
+);
+
+// =============================================================================
 // Program Registry (with source code for display)
 // =============================================================================
 
@@ -413,6 +461,48 @@ const program = Effect.gen(function* () {
     label: "flaky-task",
   });
 });`,
+  },
+  basicFinalizers: {
+    name: "Basic Finalizers",
+    description:
+      "Register 3 finalizers; they run in LIFO order when the scope closes",
+    program: basicFinalizersExample,
+    source: `import { Effect } from "effect";
+import { addFinalizerWithTrace, withTrace } from "./tracedRunner";
+
+const program = Effect.scoped(
+  Effect.gen(function* () {
+    yield* addFinalizerWithTrace((_exit) => Effect.sync(() => {}), "finalizer-1");
+    yield* addFinalizerWithTrace((_exit) => Effect.sync(() => {}), "finalizer-2");
+    yield* addFinalizerWithTrace((_exit) => Effect.sync(() => {}), "finalizer-3");
+    yield* withTrace(Effect.succeed("step 1"), "step-1");
+    yield* withTrace(Effect.succeed("step 2"), "step-2");
+    return "done";
+  })
+);`,
+  },
+  acquireRelease: {
+    name: "Acquire / Release",
+    description:
+      "acquireReleaseWithTrace: acquire a resource, use it, release on scope exit",
+    program: acquireReleaseExample,
+    source: `import { Effect } from "effect";
+import { acquireReleaseWithTrace, withTrace } from "./tracedRunner";
+
+const program = Effect.scoped(
+  Effect.gen(function* () {
+    const connection = yield* acquireReleaseWithTrace(
+      Effect.succeed({ id: "conn-1" }),
+      () => Effect.sync(() => {}),
+      "connection"
+    );
+    yield* withTrace(
+      Effect.sync(() => console.log("Using", connection)),
+      "use-connection"
+    );
+    return connection;
+  })
+);`,
   },
 } as const;
 
