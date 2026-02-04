@@ -29,7 +29,7 @@ Learn Effect concepts through explicit tracing wrappers (`withTrace`, `forkWithT
 - [Phase 2: Fibers](./phase-2.md) ✅
 - [Phase 3: Scheduling & Delays](./phase-3.md) ✅
 - [Phase 4: Errors & Retries](./phase-4.md) ✅
-- Phase 5: Scopes & Resources (next)
+- [Phase 5: Scopes & Resources](./phase-5.md) ✅
 
 ### Version 2: Runtime Hooks (Future)
 
