@@ -96,6 +96,7 @@ export function MainLayout() {
                   onChange={(e) => {
                     setSelectedProgram(e.target.value as ProgramKey);
                     completeOnboardingStep("programSelect");
+                    handleReset();
                   }}
                   className={cn(
                     "h-7 w-40 text-xs",
@@ -163,6 +164,7 @@ export function MainLayout() {
               onChange={(e) => {
                 setSelectedProgram(e.target.value as ProgramKey);
                 completeOnboardingStep("programSelect");
+                handleReset();
               }}
               className={cn(
                 "h-7 w-40 text-xs",
