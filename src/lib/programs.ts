@@ -173,8 +173,10 @@ export const racingExample = Effect.gen(function* () {
  * Uses withTrace so every step (including the failing one) emits trace events.
  */
 export const failureExample = Effect.gen(function* () {
+  // Step 1: Setup succeeds
   yield* withTrace(Effect.succeed("ready"), "setup");
 
+  // Step 2: Risky step fails; catchAll recovers with a message
   const recovered = yield* withTrace(
     Effect.fail(new Error("Something went wrong")),
     "risky-step",
@@ -184,6 +186,7 @@ export const failureExample = Effect.gen(function* () {
     ),
   );
 
+  // Step 3: Log recovery and return
   yield* withTrace(
     Effect.sync(() => console.log("Recovery:", recovered)),
     "recovery",
@@ -202,8 +205,10 @@ export const failureExample = Effect.gen(function* () {
  * retryWithTrace retries until success (or max retries).
  */
 export const retryExample = Effect.gen(function* () {
+  // Step 1: Ref to count attempts
   const attempts = yield* Ref.make(0);
 
+  // Step 2: Effect that fails when count < 3, then succeeds
   const flakyEffect = Effect.gen(function* () {
     const n = yield* Ref.updateAndGet(attempts, (x) => x + 1);
     if (n < 3) {
@@ -212,6 +217,7 @@ export const retryExample = Effect.gen(function* () {
     return "success";
   });
 
+  // Step 3: retryWithTrace retries until success (or maxRetries)
   return yield* retryWithTrace(flakyEffect, {
     maxRetries: 3,
     label: "flaky-task",
@@ -230,11 +236,14 @@ export const retryExample = Effect.gen(function* () {
  */
 export const basicFinalizersExample = Effect.scoped(
   Effect.gen(function* () {
+    // Step 1: Register 3 finalizers (LIFO: 3 runs first, then 2, then 1)
     yield* addFinalizerWithTrace(() => Effect.sync(() => {}), "finalizer-1");
     yield* addFinalizerWithTrace(() => Effect.sync(() => {}), "finalizer-2");
     yield* addFinalizerWithTrace(() => Effect.sync(() => {}), "finalizer-3");
+    // Step 2: Run two traced steps
     yield* withTrace(Effect.succeed("step 1"), "step-1");
     yield* withTrace(Effect.succeed("step 2"), "step-2");
+    // Step 3: Return; scope exit runs finalizers
     return "done";
   }),
 );
@@ -251,15 +260,18 @@ export const basicFinalizersExample = Effect.scoped(
  */
 export const acquireReleaseExample = Effect.scoped(
   Effect.gen(function* () {
+    // Step 1: Acquire resource (release runs when scope closes)
     const connection = yield* acquireReleaseWithTrace(
       Effect.succeed({ id: "conn-1" }),
       () => Effect.sync(() => {}),
       "connection",
     );
+    // Step 2: Use the connection
     yield* withTrace(
       Effect.sync(() => console.log("Using", connection)),
       "use-connection",
     );
+    // Step 3: Return; release finalizer runs on scope exit
     return connection;
   }),
 );
@@ -418,8 +430,10 @@ const program = Effect.gen(function* () {
 import { withTrace } from "./tracedRunner";
 
 const program = Effect.gen(function* () {
+  // Step 1: Setup succeeds
   yield* withTrace(Effect.succeed("ready"), "setup");
 
+  // Step 2: Risky step fails; catchAll recovers with a message
   const recovered = yield* withTrace(
     Effect.fail(new Error("Something went wrong")),
     "risky-step"
@@ -429,6 +443,7 @@ const program = Effect.gen(function* () {
     )
   );
 
+  // Step 3: Log recovery and return
   yield* withTrace(
     Effect.sync(() => console.log("Recovery:", recovered)),
     "recovery"
@@ -446,8 +461,10 @@ const program = Effect.gen(function* () {
 import { retryWithTrace } from "./tracedRunner";
 
 const program = Effect.gen(function* () {
+  // Step 1: Ref to count attempts
   const attempts = yield* Ref.make(0);
 
+  // Step 2: Effect that fails when count < 3, then succeeds
   const flakyEffect = Effect.gen(function* () {
     const n = yield* Ref.updateAndGet(attempts, (x) => x + 1);
     if (n < 3) {
@@ -456,6 +473,7 @@ const program = Effect.gen(function* () {
     return "success";
   });
 
+  // Step 3: retryWithTrace retries until success (or maxRetries)
   return yield* retryWithTrace(flakyEffect, {
     maxRetries: 3,
     label: "flaky-task",
@@ -472,11 +490,14 @@ import { addFinalizerWithTrace, withTrace } from "./tracedRunner";
 
 const program = Effect.scoped(
   Effect.gen(function* () {
+    // Step 1: Register 3 finalizers (LIFO: 3 runs first, then 2, then 1)
     yield* addFinalizerWithTrace((_exit) => Effect.sync(() => {}), "finalizer-1");
     yield* addFinalizerWithTrace((_exit) => Effect.sync(() => {}), "finalizer-2");
     yield* addFinalizerWithTrace((_exit) => Effect.sync(() => {}), "finalizer-3");
+    // Step 2: Run two traced steps
     yield* withTrace(Effect.succeed("step 1"), "step-1");
     yield* withTrace(Effect.succeed("step 2"), "step-2");
+    // Step 3: Return; scope exit runs finalizers
     return "done";
   })
 );`,
@@ -491,15 +512,18 @@ import { acquireReleaseWithTrace, withTrace } from "./tracedRunner";
 
 const program = Effect.scoped(
   Effect.gen(function* () {
+    // Step 1: Acquire resource (release runs when scope closes)
     const connection = yield* acquireReleaseWithTrace(
       Effect.succeed({ id: "conn-1" }),
       () => Effect.sync(() => {}),
       "connection"
     );
+    // Step 2: Use the connection
     yield* withTrace(
       Effect.sync(() => console.log("Using", connection)),
       "use-connection"
     );
+    // Step 3: Return; release finalizer runs on scope exit
     return connection;
   })
 );`,
