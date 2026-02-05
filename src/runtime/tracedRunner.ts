@@ -20,9 +20,9 @@ import {
 } from "@/runtime/traceEmitter";
 import type { TraceEvent } from "@/types/trace";
 
-// =============================================================================
+// ---
 // Traced Runner
-// =============================================================================
+// ---
 
 /**
  * Wrap an effect to emit trace events before and after execution.
@@ -53,9 +53,9 @@ export const withTrace = <A, E, R>(
   });
 };
 
-// =============================================================================
+// ---
 // Layer Implementation
-// =============================================================================
+// ---
 
 /**
  * Create a TraceEmitter Layer that calls a callback function.
@@ -73,9 +73,9 @@ export const makeTraceEmitterLayer = (
   });
 };
 
-// =============================================================================
-// Fiber Tracing (using Effect's real FiberId)
-// =============================================================================
+// ---
+// Fiber Tracing (Effect's real FiberId)
+// ---
 
 /**
  * Fork an effect and emit fiber lifecycle events.
@@ -163,9 +163,9 @@ export const runProgramWithTrace = <A, E, R>(
   });
 };
 
-// =============================================================================
-// Sleep Tracing (Phase 3: Scheduling & Delays)
-// =============================================================================
+// ---
+// Sleep Tracing (Phase 3)
+// ---
 
 /**
  * Sleep with tracing - emits sleep:start and sleep:end events.
@@ -245,9 +245,9 @@ export function retryWithTrace<A, E, R>(
   });
 }
 
-// =============================================================================
+// ---
 // Finalizer Tracing
-// =============================================================================
+// ---
 
 /**
  * Add a finalizer with tracing.
