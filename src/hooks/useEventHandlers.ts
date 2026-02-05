@@ -5,8 +5,8 @@ import { type ProgramKey, programs } from "@/lib/programs";
 import {
   makeTraceEmitterLayer,
   runProgramWithTrace,
-  TraceEmitter,
 } from "@/runtime/tracedRunner";
+import { TraceEmitter } from "@/runtime/traceEmitter";
 import { useFiberStore } from "@/stores/fiberStore";
 import { useTraceStore } from "@/stores/traceStore";
 

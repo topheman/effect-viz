@@ -1,6 +1,5 @@
 import {
   Cause,
-  Context,
   Duration,
   Effect,
   Exit,
@@ -11,128 +10,15 @@ import {
 } from "effect";
 
 import { randomUUID } from "@/lib/crypto";
-import type { TraceEvent } from "@/types/trace";
-
-// =============================================================================
-// TraceEmitter Service Definition
-// =============================================================================
-
-/**
- * TraceEmitter is a SERVICE that emits trace events.
- *
- * In Effect, services are defined using Context.Tag. The Tag acts as a
- * "key" to look up the service implementation at runtime.
- *
- * The type signature Effect<A, E, TraceEmitter> means:
- * - A: success type
- * - E: error type
- * - TraceEmitter: this effect REQUIRES a TraceEmitter service to run
- */
-export class TraceEmitter extends Context.Tag("TraceEmitter")<
+import {
   TraceEmitter,
-  {
-    readonly emit: (event: TraceEvent) => Effect.Effect<void>;
-  }
->() {}
-
-// =============================================================================
-// Helper Effects
-// =============================================================================
-
-/**
- * Emit an effect:start event.
- * Returns an Effect that requires TraceEmitter.
- */
-export const emitStart = (
-  id: string,
-  label: string,
-): Effect.Effect<void, never, TraceEmitter> => {
-  return Effect.gen(function* () {
-    const { emit } = yield* TraceEmitter;
-    yield* emit({
-      type: "effect:start",
-      id,
-      label,
-      timestamp: Date.now(),
-    });
-  });
-};
-
-/**
- * Emit an effect:end event.
- * Returns an Effect that requires TraceEmitter.
- */
-export const emitEnd = (
-  id: string,
-  result: "success" | "failure",
-  value?: unknown,
-  error?: unknown,
-): Effect.Effect<void, never, TraceEmitter> => {
-  return Effect.gen(function* () {
-    const { emit } = yield* TraceEmitter;
-    yield* emit({
-      type: "effect:end",
-      id,
-      result,
-      value,
-      error,
-      timestamp: Date.now(),
-    });
-  });
-};
-
-export const emitRetry = (
-  id: string,
-  label: string,
-  attempt: number,
-  lastError: unknown,
-): Effect.Effect<void, never, TraceEmitter> => {
-  return Effect.gen(function* () {
-    const { emit } = yield* TraceEmitter;
-    yield* emit({
-      type: "retry:attempt",
-      id,
-      label,
-      attempt,
-      lastError,
-      timestamp: Date.now(),
-    });
-  });
-};
-
-export const emitFinalizer = (
-  id: string,
-  label: string,
-): Effect.Effect<void, never, TraceEmitter> => {
-  return Effect.gen(function* () {
-    const { emit } = yield* TraceEmitter;
-    yield* emit({
-      type: "finalizer",
-      id,
-      label,
-      timestamp: Date.now(),
-    });
-  });
-};
-
-export const emitAcquire = (
-  id: string,
-  label: string,
-  result: "success" | "failure",
-  error?: unknown,
-): Effect.Effect<void, never, TraceEmitter> => {
-  return Effect.gen(function* () {
-    const { emit } = yield* TraceEmitter;
-    yield* emit({
-      type: "acquire",
-      id,
-      label,
-      result,
-      error,
-      timestamp: Date.now(),
-    });
-  });
-};
+  emitAcquire,
+  emitEnd,
+  emitFinalizer,
+  emitRetry,
+  emitStart,
+} from "@/runtime/traceEmitter";
+import type { TraceEvent } from "@/types/trace";
 
 // =============================================================================
 // Traced Runner
@@ -182,16 +68,6 @@ export const withTrace = <A, E, R>(
 export const makeTraceEmitterLayer = (
   onEmit: (event: TraceEvent) => void,
 ): Layer.Layer<TraceEmitter> => {
-  // TODO 4: Create a Layer that provides the TraceEmitter service
-  //
-  // Hint: Use Layer.succeed(TraceEmitter, { emit: ... })
-  // Hint: The emit function should wrap onEmit in Effect.sync
-  //
-  // Example:
-  //   Layer.succeed(TraceEmitter, {
-  //     emit: (event) => Effect.sync(() => onEmit(event)),
-  //   })
-
   return Layer.succeed(TraceEmitter, {
     emit: (event) => Effect.sync(() => onEmit(event)),
   });
@@ -369,6 +245,16 @@ export function retryWithTrace<A, E, R>(
   });
 }
 
+// =============================================================================
+// Finalizer Tracing
+// =============================================================================
+
+/**
+ * Add a finalizer with tracing.
+ *
+ * - Emits finalizer event when the finalizer runs.
+ * - Runs the user's finalizer.
+ */
 export function addFinalizerWithTrace<R>(
   finalizer: (
     exit: Exit.Exit<unknown, unknown>,
@@ -386,6 +272,10 @@ export function addFinalizerWithTrace<R>(
   });
 }
 
+/**
+ * Effect.acquireRelease with tracing.
+ * Based on addFinalizerWithTrace.
+ */
 export function acquireReleaseWithTrace<A, E, R, X, R2>(
   acquire: Effect.Effect<A, E, R>,
   release: (
