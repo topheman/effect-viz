@@ -5,6 +5,12 @@ interface CodeEditorProps {
   onChange?: (value: string | undefined) => void;
   className?: string;
   readOnly?: boolean;
+  /**
+   * Model path for multi-model support. When set, the editor reuses models by path
+   * and preserves view state (scroll, selection, undo) when switching.
+   * @see https://github.com/suren-atoyan/monaco-react#multi-model-editor
+   */
+  path?: string;
 }
 
 export function CodeEditor({
@@ -12,6 +18,7 @@ export function CodeEditor({
   onChange,
   className,
   readOnly = false,
+  path,
 }: CodeEditorProps) {
   return (
     <div className={className}>
@@ -19,7 +26,9 @@ export function CodeEditor({
         height="100%"
         defaultLanguage="typescript"
         theme="vs-dark"
+        path={path}
         value={value}
+        defaultValue={value}
         onChange={onChange}
         options={{
           minimap: { enabled: false },

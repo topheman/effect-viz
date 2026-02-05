@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { CodeEditor } from "@/components/editor/CodeEditor";
+import { MultiModelEditor } from "@/components/editor/MultiModelEditor";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -12,6 +12,7 @@ import { useEventHandlers } from "@/hooks/useEventHandlers";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import type { ProgramKey } from "@/lib/programs";
 import { cn } from "@/lib/utils";
+import tracedRunnerSource from "@/runtime/tracedRunner.ts?raw";
 
 import { Header } from "./Header";
 import { PlaybackControls, type PlaybackState } from "./PlaybackControls";
@@ -33,9 +34,26 @@ export function MainLayout() {
 
   const [playbackState, setPlaybackState] = useState<PlaybackState>("idle");
   const [showVisualizer, setShowVisualizer] = useState(false);
+  const [editorTabId, setEditorTabId] = useState("program");
 
   // Get the source code for the selected program
   const programSource = programs[selectedProgram].source;
+
+  const handleProgramChange = (programKey: ProgramKey) => {
+    setSelectedProgram(programKey);
+    completeOnboardingStep("programSelect");
+    handleReset();
+    setEditorTabId("program");
+  };
+
+  const editorTabs = [
+    { id: "program", title: "Program", source: programSource },
+    {
+      id: "tracedRunner",
+      title: "tracedRunner.ts",
+      source: tracedRunnerSource,
+    },
+  ];
 
   const onPlay = () => {
     setPlaybackState("running");
@@ -81,40 +99,31 @@ export function MainLayout() {
         <ResizablePanelGroup orientation="horizontal" className="h-full">
           <ResizablePanel defaultSize={40} minSize={25}>
             <div className="flex h-full flex-col">
-              <div
-                className={`
-                  flex shrink-0 items-center justify-between gap-2 border-b
-                  border-border bg-muted/50 px-4 py-2
-                `}
-              >
-                <span className="text-sm font-medium text-muted-foreground">
-                  Program
-                </span>
-                <Select
-                  data-onboarding-step="programSelect"
-                  value={selectedProgram}
-                  onChange={(e) => {
-                    setSelectedProgram(e.target.value as ProgramKey);
-                    completeOnboardingStep("programSelect");
-                    handleReset();
-                  }}
-                  className={cn(
-                    "h-7 w-40 text-xs",
-                    onboardingStep === "programSelect" &&
-                      "origin-center animate-onboarding-pulse",
-                  )}
-                >
-                  {Object.entries(programs).map(([key, { name }]) => (
-                    <option key={key} value={key}>
-                      {name}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <CodeEditor
-                value={programSource}
-                readOnly
-                className="flex-1 overflow-hidden"
+              <MultiModelEditor
+                tabs={editorTabs}
+                value={editorTabId}
+                onValueChange={setEditorTabId}
+                headerExtra={
+                  <Select
+                    data-onboarding-step="programSelect"
+                    value={selectedProgram}
+                    onChange={(e) =>
+                      handleProgramChange(e.target.value as ProgramKey)
+                    }
+                    className={cn(
+                      "h-7 w-40 text-xs",
+                      onboardingStep === "programSelect" &&
+                        "origin-center animate-onboarding-pulse",
+                    )}
+                  >
+                    {Object.entries(programs).map(([key, { name }]) => (
+                      <option key={key} value={key}>
+                        {name}
+                      </option>
+                    ))}
+                  </Select>
+                }
+                className="flex h-full flex-col"
               />
             </div>
           </ResizablePanel>
@@ -149,40 +158,31 @@ export function MainLayout() {
       >
         {/* Editor - always full width */}
         <div className="flex h-full flex-col">
-          <div
-            className={`
-              flex shrink-0 items-center justify-between gap-2 border-b
-              border-border bg-muted/50 px-4 py-2
-            `}
-          >
-            <span className="text-sm font-medium text-muted-foreground">
-              Program
-            </span>
-            <Select
-              data-onboarding-step="programSelect"
-              value={selectedProgram}
-              onChange={(e) => {
-                setSelectedProgram(e.target.value as ProgramKey);
-                completeOnboardingStep("programSelect");
-                handleReset();
-              }}
-              className={cn(
-                "h-7 w-40 text-xs",
-                onboardingStep === "programSelect" &&
-                  "origin-center animate-onboarding-pulse",
-              )}
-            >
-              {Object.entries(programs).map(([key, { name }]) => (
-                <option key={key} value={key}>
-                  {name}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <CodeEditor
-            value={programSource}
-            readOnly
-            className="flex-1 overflow-hidden"
+          <MultiModelEditor
+            tabs={editorTabs}
+            value={editorTabId}
+            onValueChange={setEditorTabId}
+            headerExtra={
+              <Select
+                data-onboarding-step="programSelect"
+                value={selectedProgram}
+                onChange={(e) =>
+                  handleProgramChange(e.target.value as ProgramKey)
+                }
+                className={cn(
+                  "h-7 w-40 text-xs",
+                  onboardingStep === "programSelect" &&
+                    "origin-center animate-onboarding-pulse",
+                )}
+              >
+                {Object.entries(programs).map(([key, { name }]) => (
+                  <option key={key} value={key}>
+                    {name}
+                  </option>
+                ))}
+              </Select>
+            }
+            className="flex h-full flex-col"
           />
         </div>
 
