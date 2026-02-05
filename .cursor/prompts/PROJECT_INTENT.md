@@ -1,4 +1,4 @@
-# PROJECT_INTENT.md — EffectFlow Visualizer
+# PROJECT_INTENT.md — EffectViz Visualizer
 
 ## Purpose
 The goal of this project is to **learn Effect deeply** while building an interactive **visualizer** that demonstrates the execution of Effect programs in the browser.  

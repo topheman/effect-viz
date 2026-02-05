@@ -1,5 +1,5 @@
 /**
- * Example programs for the EffectFlow visualizer.
+ * Example programs for the EffectViz visualizer.
  * These demonstrate different Effect patterns with tracing.
  */
 

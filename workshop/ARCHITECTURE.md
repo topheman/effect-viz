@@ -1,4 +1,4 @@
-# EffectFlow Architecture
+# EffectViz Architecture
 
 ## Design Decisions
 

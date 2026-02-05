@@ -1,4 +1,4 @@
-# EffectFlow - Tutor Memory
+# EffectViz - Tutor Memory
 
 **Quick Context**: See [`workshop/README.md`](workshop/README.md) for full documentation.
 

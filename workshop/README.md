@@ -1,6 +1,6 @@
-# EffectFlow Workshop Documentation
+# EffectViz Workshop Documentation
 
-This folder contains documentation for the EffectFlow visualizer learning journey.
+This folder contains documentation for the EffectViz visualizer learning journey.
 
 ## Purpose
 
