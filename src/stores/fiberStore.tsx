@@ -41,18 +41,6 @@ interface FiberStoreProviderProps {
 export function FiberStoreProvider({ children }: FiberStoreProviderProps) {
   const [fibers, setFibers] = useState<Map<string, FiberInfo>>(new Map());
 
-  /**
-   * Process a TraceEvent and update fiber state accordingly.
-   *
-   * TODO 1: Implement the event processing logic
-   *
-   * When you receive:
-   * - "fiber:fork" → Create a new FiberInfo with state "running"
-   * - "fiber:end" → Update fiber state to "completed"
-   * - "fiber:interrupt" → Update fiber state to "interrupted"
-   *
-   * Don't forget to update parent's children array on fork!
-   */
   const processEvent = useCallback((event: TraceEvent) => {
     setFibers((prev) => {
       const next = new Map(prev);
@@ -128,12 +116,6 @@ export function FiberStoreProvider({ children }: FiberStoreProviderProps) {
     setFibers(new Map());
   }, []);
 
-  /**
-   * TODO 2: Compute the root fiber
-   *
-   * The root fiber is the one with no parentId.
-   * Find it in the fibers map.
-   */
   const rootFiber = useMemo(() => {
     return Array.from(fibers.values()).find((fiber) => !fiber.parentId);
   }, [fibers]);
@@ -181,9 +163,9 @@ export interface FiberTreeNode {
 }
 
 /**
- * TODO 3: Build a tree structure from flat fiber map
- *
- * This is useful for rendering the FiberTreeView recursively.
+/**
+ * Builds a tree of FiberTreeNode from a flat Map of FiberInfo, starting at the given rootId.
+ * Used for recursive rendering of the FiberTreeView.
  *
  * @param fibers - Map of all fibers
  * @param rootId - ID of the root fiber to start from
@@ -195,12 +177,6 @@ export function buildFiberTree(
 ): FiberTreeNode | undefined {
   const root = fibers.get(rootId);
   if (!root) return undefined;
-
-  // TODO: Recursively build the tree
-  // Hints:
-  // - Get the root fiber
-  // - For each childId in root.children, recursively call buildFiberTree
-  // - Return { fiber: root, children: [...] }
 
   const rootFiber: FiberTreeNode = {
     fiber: root,

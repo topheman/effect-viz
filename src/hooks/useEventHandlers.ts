@@ -62,16 +62,6 @@ export function useEventHandlers() {
   };
 
   const handleReset = () => {
-    // TODO: Implement this!
-    //
-    // Hints:
-    // - Check if runningFiberRef.current exists
-    // - Use Fiber.interrupt(fiber) to interrupt it
-    // - Fiber.interrupt returns an Effect, so you need to run it
-    // - Clear the stores after interrupting
-    // - Set runningFiberRef.current = null
-    //
-    // Your code here:
     if (runningFiberRef.current) {
       Effect.runPromise(Fiber.interrupt(runningFiberRef.current));
       runningFiberRef.current = null;
