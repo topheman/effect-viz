@@ -25,3 +25,5 @@ dist-ssr
 *.sw?
 
 .cursor/**/*.local.*
+
+src/types/editor-bundled-definitions.d.ts

@@ -34,6 +34,8 @@
     "typecheck:app": "tsc --noEmit -p ./tsconfig.app.json",
     "typecheck:node": "tsc --noEmit -p ./tsconfig.node.json",
     "typecheck": "npm run typecheck:app && npm run typecheck:node",
+    "typedef:bundled:dev:start": "cp public/editor-bundled-definitions.d.ts src/types/editor-bundled-definitions.d.ts",
+    "typedef:bundled:dev:stop": "cp src/types/editor-bundled-definitions.d.ts public/editor-bundled-definitions.d.ts; rm src/types/editor-bundled-definitions.d.ts",
     "prepare": "husky",
     "bootstrap": "./scripts/bootstrap.ts"
   },
