@@ -286,7 +286,7 @@ export const programs = {
     description: "Sequential + concurrent execution with fiber joins",
     program: basicExample,
     source: `import { Effect, Fiber } from "effect";
-import { forkWithTrace, withTrace, sleepWithTrace } from "./tracedRunner";
+import { forkWithTrace, withTrace, sleepWithTrace } from "@/runtime/tracedRunner";
 
 const program = Effect.gen(function* () {
   // Step 1: Sequential initialization
@@ -330,7 +330,7 @@ const program = Effect.gen(function* () {
     description: "A fiber performing multiple sequential steps",
     program: multiStepExample,
     source: `import { Effect, Fiber } from "effect";
-import { forkWithTrace, withTrace, sleepWithTrace } from "./tracedRunner";
+import { forkWithTrace, withTrace, sleepWithTrace } from "@/runtime/tracedRunner";
 
 const program = Effect.gen(function* () {
   const worker = yield* forkWithTrace(
@@ -351,7 +351,7 @@ const program = Effect.gen(function* () {
     description: "Parent -> child -> grandchild fiber hierarchy",
     program: nestedForksExample,
     source: `import { Effect, Fiber } from "effect";
-import { forkWithTrace, withTrace, sleepWithTrace } from "./tracedRunner";
+import { forkWithTrace, withTrace, sleepWithTrace } from "@/runtime/tracedRunner";
 
 const program = Effect.gen(function* () {
   const parent = yield* forkWithTrace(
@@ -393,7 +393,7 @@ const program = Effect.gen(function* () {
       "Two fibers racing - first to complete wins, loser interrupted",
     program: racingExample,
     source: `import { Effect, Fiber } from "effect";
-import { forkWithTrace, withTrace, sleepWithTrace } from "./tracedRunner";
+import { forkWithTrace, withTrace, sleepWithTrace } from "@/runtime/tracedRunner";
 
 const program = Effect.gen(function* () {
   yield* withTrace(Effect.succeed("starting race"), "race-start");
@@ -427,7 +427,7 @@ const program = Effect.gen(function* () {
     description: "A step fails, then we recover and continue",
     program: failureExample,
     source: `import { Effect } from "effect";
-import { withTrace } from "./tracedRunner";
+import { withTrace } from "@/runtime/tracedRunner";
 
 const program = Effect.gen(function* () {
   // Step 1: Setup succeeds
@@ -458,7 +458,7 @@ const program = Effect.gen(function* () {
       "Effect fails twice then succeeds; retryWithTrace retries until success",
     program: retryExample,
     source: `import { Effect, Ref } from "effect";
-import { retryWithTrace } from "./tracedRunner";
+import { retryWithTrace } from "@/runtime/tracedRunner";
 
 const program = Effect.gen(function* () {
   // Step 1: Ref to count attempts
@@ -486,7 +486,7 @@ const program = Effect.gen(function* () {
       "Register 3 finalizers; they run in LIFO order when the scope closes",
     program: basicFinalizersExample,
     source: `import { Effect } from "effect";
-import { addFinalizerWithTrace, withTrace } from "./tracedRunner";
+import { addFinalizerWithTrace, withTrace } from "@/runtime/tracedRunner";
 
 const program = Effect.scoped(
   Effect.gen(function* () {
@@ -508,7 +508,7 @@ const program = Effect.scoped(
       "acquireReleaseWithTrace: acquire a resource, use it, release on scope exit",
     program: acquireReleaseExample,
     source: `import { Effect } from "effect";
-import { acquireReleaseWithTrace, withTrace } from "./tracedRunner";
+import { acquireReleaseWithTrace, withTrace } from "@/runtime/tracedRunner";
 
 const program = Effect.scoped(
   Effect.gen(function* () {
