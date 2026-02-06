@@ -23,20 +23,49 @@ declare module "effect" {
   // --- Effect type and namespace (merge so Effect.Effect<A,E,R> and Effect.gen both work)
 
   export namespace Effect {
+    /** Wrapper for the value yielded when you yield* an effect; used for infer/conditional in gen. */
+    export interface YieldWrap<T> {
+      readonly _: T;
+    }
+
+    /** Resume adapter passed to the generator (e.g. pipe); minimal for editor stub. */
+    export interface Adapter {
+      <A, E, R>(self: Effect<A, E, R>): Effect<A, E, R>;
+    }
+
     export interface Effect<A, E = unknown, R = never> {
       pipe<B, E2, R2>(
         ...fns: Array<(self: Effect<A, E, R>) => Effect<B, E2, R2>>
       ): Effect<B, E2, R | R2>;
-      [Symbol.iterator](): Iterator<
-        Effect<unknown, unknown, unknown>,
-        A,
-        unknown
-      >;
+      [Symbol.iterator](): Iterator<YieldWrap<Effect<A, E, R>>, A, unknown>;
     }
 
-    export function gen<A, E, R>(
-      fn: () => Generator<Effect<unknown, unknown, unknown>, A, unknown>,
-    ): Effect<A, E, R>;
+    /**
+     * Effect.gen type inference (how E and R "bubble up" from yield*):
+     *
+     * 1. Each effect has [Symbol.iterator]() that yields YieldWrap<Effect<A,E,R>> once.
+     * 2. The generator's yield type Eff is inferred as the union of all yielded types:
+     *    Eff = YieldWrap<Effect<A1,E1,R1>> | YieldWrap<Effect<A2,E2,R2>> | ...
+     * 3. Conditional types below extract E and R from Eff. They distribute over unions, so:
+     *    E = E1 | E2 | ...,  R = R1 | R2 | ...
+     * 4. Result type is Effect<AEff, E, R> with AEff = generator return type.
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- constraint must match any Effect for infer
+    export function gen<Eff extends YieldWrap<Effect<any, any, any>>, AEff>(
+      f: (resume: Adapter) => Generator<Eff, AEff, never>,
+    ): Effect<
+      AEff,
+      [Eff] extends [never]
+        ? never
+        : [Eff] extends [YieldWrap<Effect<infer _A, infer E, infer _R>>]
+          ? E
+          : never,
+      [Eff] extends [never]
+        ? never
+        : [Eff] extends [YieldWrap<Effect<infer _A, infer _E, infer R>>]
+          ? R
+          : never
+    >;
     export function sync<A>(fn: () => A): Effect<A, never, never>;
     export function succeed<A>(value: A): Effect<A, never, never>;
     export function fail<E>(error: E): Effect<never, E, never>;
