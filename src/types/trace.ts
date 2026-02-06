@@ -151,10 +151,6 @@ export function isSleepEvent(
   return event.type === "sleep:start" || event.type === "sleep:end";
 }
 
-// =============================================================================
-// Fiber State (for visualization)
-// =============================================================================
-
 /**
  * Possible states a fiber can be in.
  * Used by the FiberTreeView to show fiber lifecycle.

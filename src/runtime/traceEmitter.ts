@@ -2,20 +2,12 @@ import { Context, Effect } from "effect";
 
 import type { TraceEvent } from "@/types/trace";
 
-// =============================================================================
-// TraceEmitter Service Definition
-// =============================================================================
-
 export class TraceEmitter extends Context.Tag("TraceEmitter")<
   TraceEmitter,
   {
     readonly emit: (event: TraceEvent) => Effect.Effect<void>;
   }
 >() {}
-
-// =============================================================================
-// Helper Effects
-// =============================================================================
 
 export const emitStart = (
   id: string,
