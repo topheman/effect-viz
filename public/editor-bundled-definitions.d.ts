@@ -34,9 +34,13 @@ declare module "effect" {
     }
 
     export interface Effect<A, E = unknown, R = never> {
+      /**
+       * Single-step pipe: result has the transformed effect's requirements (e.g. provide removes them).
+       * We do not support all overloads from https://github.com/Effect-TS/effect/blob/main/packages/effect/src/Pipeable.ts
+       */
       pipe<B, E2, R2>(
-        ...fns: Array<(self: Effect<A, E, R>) => Effect<B, E2, R2>>
-      ): Effect<B, E2, R | R2>;
+        fn: (self: Effect<A, E, R>) => Effect<B, E2, R2>,
+      ): Effect<B, E2, R2>;
       [Symbol.iterator](): Iterator<YieldWrap<Effect<A, E, R>>, A, unknown>;
     }
 
@@ -80,9 +84,13 @@ declare module "effect" {
       f: (e: E) => Effect<A2, E2, R2>,
     ): <A, R>(self: Effect<A, E, R>) => Effect<A2, E2, R | R2>;
     export function scoped<A, E, R>(effect: Effect<A, E, R>): Effect<A, E, R>;
-    export function pipe<A, B, E2, R2>(
-      value: Effect<A, unknown, unknown>,
-      ...fns: Array<(self: Effect<A, unknown, unknown>) => Effect<B, E2, R2>>
+    /**
+     * Single-step pipe so that e.g. Effect.provide(layer) correctly narrows requirements to Exclude<R, ROut>.
+     * We do not support all overloads from https://github.com/Effect-TS/effect/blob/main/packages/effect/src/Pipeable.ts
+     */
+    export function pipe<A, B, E, E2, R, R2>(
+      value: Effect<A, E, R>,
+      fn: (self: Effect<A, E, R>) => Effect<B, E2, R2>,
     ): Effect<B, E2, R2>;
     export function onExit<A, E, R, A2, E2, R2>(
       f: (exit: Exit.Exit<A, E>) => Effect<A2, E2, R2>,
@@ -106,9 +114,10 @@ declare module "effect" {
     export function runFork<A, E, R>(
       effect: Effect<A, E, R>,
     ): Fiber.RuntimeFiber<A, E>;
-    export function provide<R, E, A>(
-      layer: Layer.Layer<R>,
-    ): (self: Effect<A, E, R>) => Effect<A, E, never>;
+    /** Providing a layer that outputs ROut removes ROut from the effect's requirements. */
+    export function provide<ROut>(
+      layer: Layer.Layer<ROut>,
+    ): <A, E, R>(self: Effect<A, E, R>) => Effect<A, E, Exclude<R, ROut>>;
     export function runPromise<A, E>(effect: Effect<A, E, never>): Promise<A>;
   }
 

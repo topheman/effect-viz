@@ -286,7 +286,13 @@ export const programs = {
     description: "Sequential + concurrent execution with fiber joins",
     program: basicExample,
     source: `import { Effect, Fiber } from "effect";
-import { forkWithTrace, withTrace, sleepWithTrace } from "@/runtime/tracedRunner";
+import {
+  forkWithTrace,
+  withTrace,
+  sleepWithTrace,
+  runProgramWithTrace,
+  makeTraceEmitterLayer,
+} from "@/runtime/tracedRunner";
 
 const program = Effect.gen(function* () {
   // Step 1: Sequential initialization
@@ -323,14 +329,38 @@ const program = Effect.gen(function* () {
   );
 
   return { result1, result2 };
-});`,
+});
+
+// ---
+// Example code to launch the program (inject service before)
+// ---
+
+const tracedProgram = runProgramWithTrace(program, "basic");
+//^ Effect<{ result1: string; result2: string; }, never, TraceEmitter>
+
+// create a layer that emits to the trace store in react context
+const layer = makeTraceEmitterLayer((event) => {
+  // process the event
+});
+
+const tracedProgramWithLayer = tracedProgram.pipe(Effect.provide(layer))
+//^ Effect<{ result1: string; result2: string; }, never, never>
+
+const fiber = Effect.runFork(tracedProgramWithLayer);
+`,
   },
   multiStep: {
     name: "Multi-Step Worker",
     description: "A fiber performing multiple sequential steps",
     program: multiStepExample,
     source: `import { Effect, Fiber } from "effect";
-import { forkWithTrace, withTrace, sleepWithTrace } from "@/runtime/tracedRunner";
+import {
+  forkWithTrace,
+  withTrace,
+  sleepWithTrace,
+  runProgramWithTrace,
+  makeTraceEmitterLayer,
+} from "@/runtime/tracedRunner";
 
 const program = Effect.gen(function* () {
   const worker = yield* forkWithTrace(
@@ -344,14 +374,37 @@ const program = Effect.gen(function* () {
   );
 
   return yield* Fiber.join(worker);
-});`,
+});
+
+// ---
+// Example code to launch the program (inject service before)
+// ---
+
+const tracedProgram = runProgramWithTrace(program, "multiStep");
+//^ Effect.Effect<string, never, TraceEmitter>
+
+// create a layer that emits to the trace store in react context
+const layer = makeTraceEmitterLayer((event) => {
+  // process the event
+});
+
+const tracedProgramWithLayer = tracedProgram.pipe(Effect.provide(layer))
+//^ Effect.Effect<string, never, never>
+
+const fiber = Effect.runFork(tracedProgramWithLayer);`,
   },
   nestedForks: {
     name: "Nested Forks",
     description: "Parent -> child -> grandchild fiber hierarchy",
     program: nestedForksExample,
     source: `import { Effect, Fiber } from "effect";
-import { forkWithTrace, withTrace, sleepWithTrace } from "@/runtime/tracedRunner";
+import {
+  forkWithTrace,
+  withTrace,
+  sleepWithTrace,
+  runProgramWithTrace,
+  makeTraceEmitterLayer,
+} from "@/runtime/tracedRunner";
 
 const program = Effect.gen(function* () {
   const parent = yield* forkWithTrace(
@@ -385,7 +438,25 @@ const program = Effect.gen(function* () {
   );
 
   return yield* Fiber.join(parent);
-});`,
+});
+
+// ---
+// Example code to launch the program (inject service before)
+// ---
+
+const tracedProgram = runProgramWithTrace(program, "nestedForks");
+//^ Effect.Effect<string, never, TraceEmitter>
+
+// create a layer that emits to the trace store in react context
+const layer = makeTraceEmitterLayer((event) => {
+  // process the event
+});
+
+const tracedProgramWithLayer = tracedProgram.pipe(Effect.provide(layer))
+//^ Effect.Effect<string, never, never>
+
+const fiber = Effect.runFork(tracedProgramWithLayer);
+`,
   },
   racing: {
     name: "Racing",
@@ -393,7 +464,13 @@ const program = Effect.gen(function* () {
       "Two fibers racing - first to complete wins, loser interrupted",
     program: racingExample,
     source: `import { Effect, Fiber } from "effect";
-import { forkWithTrace, withTrace, sleepWithTrace } from "@/runtime/tracedRunner";
+import {
+  forkWithTrace,
+  withTrace,
+  sleepWithTrace,
+  runProgramWithTrace,
+  makeTraceEmitterLayer,
+} from "@/runtime/tracedRunner";
 
 const program = Effect.gen(function* () {
   yield* withTrace(Effect.succeed("starting race"), "race-start");
@@ -420,14 +497,36 @@ const program = Effect.gen(function* () {
   yield* Fiber.interrupt(slowRunner);
 
   return winner;
-});`,
+});
+
+// ---
+// Example code to launch the program (inject service before)
+// ---
+
+const tracedProgram = runProgramWithTrace(program, "racing");
+//^ Effect.Effect<string, never, TraceEmitter>
+
+// create a layer that emits to the trace store in react context
+const layer = makeTraceEmitterLayer((event) => {
+  // process the event
+});
+
+const tracedProgramWithLayer = tracedProgram.pipe(Effect.provide(layer))
+//^ Effect.Effect<string, never, never>
+
+const fiber = Effect.runFork(tracedProgramWithLayer);
+`,
   },
   failureAndRecovery: {
     name: "Failure & Recovery",
     description: "A step fails, then we recover and continue",
     program: failureExample,
     source: `import { Effect } from "effect";
-import { withTrace } from "@/runtime/tracedRunner";
+import {
+  withTrace,
+  runProgramWithTrace,
+  makeTraceEmitterLayer,
+} from "@/runtime/tracedRunner";
 
 const program = Effect.gen(function* () {
   // Step 1: Setup succeeds
@@ -450,7 +549,25 @@ const program = Effect.gen(function* () {
   );
 
   return recovered;
-});`,
+});
+
+// ---
+// Example code to launch the program (inject service before)
+// ---
+
+const tracedProgram = runProgramWithTrace(program, "failureAndRecovery");
+//^ Effect.Effect<string, never, TraceEmitter>
+
+// create a layer that emits to the trace store in react context
+const layer = makeTraceEmitterLayer((event) => {
+  // process the event
+});
+
+const tracedProgramWithLayer = tracedProgram.pipe(Effect.provide(layer))
+//^ Effect.Effect<string, never, never>
+
+const fiber = Effect.runFork(tracedProgramWithLayer);
+`,
   },
   retry: {
     name: "Retry",
@@ -458,7 +575,11 @@ const program = Effect.gen(function* () {
       "Effect fails twice then succeeds; retryWithTrace retries until success",
     program: retryExample,
     source: `import { Effect, Ref } from "effect";
-import { retryWithTrace } from "@/runtime/tracedRunner";
+import {
+  retryWithTrace,
+  runProgramWithTrace,
+  makeTraceEmitterLayer,
+} from "@/runtime/tracedRunner";
 
 const program = Effect.gen(function* () {
   // Step 1: Ref to count attempts
@@ -478,7 +599,25 @@ const program = Effect.gen(function* () {
     maxRetries: 3,
     label: "flaky-task",
   });
-});`,
+});
+
+// ---
+// Example code to launch the program (inject service before)
+// ---
+
+const tracedProgram = runProgramWithTrace(program, "retry");
+//^ Effect.Effect<string, never, TraceEmitter>
+
+// create a layer that emits to the trace store in react context
+const layer = makeTraceEmitterLayer((event) => {
+  // process the event
+});
+
+const tracedProgramWithLayer = tracedProgram.pipe(Effect.provide(layer))
+//^ Effect.Effect<string, never, never>
+
+const fiber = Effect.runFork(tracedProgramWithLayer);
+`,
   },
   basicFinalizers: {
     name: "Basic Finalizers",
@@ -486,7 +625,12 @@ const program = Effect.gen(function* () {
       "Register 3 finalizers; they run in LIFO order when the scope closes",
     program: basicFinalizersExample,
     source: `import { Effect } from "effect";
-import { addFinalizerWithTrace, withTrace } from "@/runtime/tracedRunner";
+import {
+  addFinalizerWithTrace,
+  withTrace,
+  runProgramWithTrace,
+  makeTraceEmitterLayer,
+} from "@/runtime/tracedRunner";
 
 const program = Effect.scoped(
   Effect.gen(function* () {
@@ -500,7 +644,25 @@ const program = Effect.scoped(
     // Step 3: Return; scope exit runs finalizers
     return "done";
   })
-);`,
+);
+
+// ---
+// Example code to launch the program (inject service before)
+// ---
+
+const tracedProgram = runProgramWithTrace(program, "basicFinalizers");
+//^ Effect.Effect<string, never, TraceEmitter>
+
+// create a layer that emits to the trace store in react context
+const layer = makeTraceEmitterLayer((event) => {
+  // process the event
+});
+
+const tracedProgramWithLayer = tracedProgram.pipe(Effect.provide(layer))
+//^ Effect.Effect<string, never, never>
+
+const fiber = Effect.runFork(tracedProgramWithLayer);
+`,
   },
   acquireRelease: {
     name: "Acquire / Release",
@@ -508,7 +670,12 @@ const program = Effect.scoped(
       "acquireReleaseWithTrace: acquire a resource, use it, release on scope exit",
     program: acquireReleaseExample,
     source: `import { Effect } from "effect";
-import { acquireReleaseWithTrace, withTrace } from "@/runtime/tracedRunner";
+import {
+  acquireReleaseWithTrace,
+  withTrace,
+  runProgramWithTrace,
+  makeTraceEmitterLayer,
+} from "@/runtime/tracedRunner";
 
 const program = Effect.scoped(
   Effect.gen(function* () {
@@ -526,7 +693,25 @@ const program = Effect.scoped(
     // Step 3: Return; release finalizer runs on scope exit
     return connection;
   })
-);`,
+);
+
+// ---
+// Example code to launch the program (inject service before)
+// ---
+
+const tracedProgram = runProgramWithTrace(program, "acquireRelease");
+//^ Effect.Effect<{ id: string }, never, TraceEmitter>
+
+// create a layer that emits to the trace store in react context
+const layer = makeTraceEmitterLayer((event) => {
+  // process the event
+});
+
+const tracedProgramWithLayer = tracedProgram.pipe(Effect.provide(layer))
+//^ Effect.Effect<{ id: string }, never, never>
+
+const fiber = Effect.runFork(tracedProgramWithLayer);
+`,
   },
 } as const;
 
