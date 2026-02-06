@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { CodeEditor } from "@/components/editor/CodeEditor";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -52,6 +52,14 @@ export function MultiModelEditor({
   const editorPath = activeTab ? `${activeTab.id}.ts` : "";
   const editorValue = activeTab?.source ?? "";
 
+  const tabScrollRef = useRef<HTMLDivElement>(null);
+  // When switching back to the first tab (e.g. after changing program), reset horizontal scroll so "Program" is visible.
+  useEffect(() => {
+    if (activeTabId === firstTabId) {
+      tabScrollRef.current?.scrollTo({ left: 0 });
+    }
+  }, [activeTabId, firstTabId, editorValue]);
+
   return (
     <Tabs
       value={activeTabId}
@@ -60,18 +68,23 @@ export function MultiModelEditor({
     >
       <div
         className={`
-          flex shrink-0 items-center justify-between gap-2 border-b
-          border-border bg-muted/50 px-4 py-2
+          flex min-w-0 shrink-0 items-center gap-2 border-b border-border
+          bg-muted/50 px-4 py-2
         `}
       >
-        <TabsList variant="line" className="h-auto justify-start">
-          {tabs.map((tab) => (
-            <TabsTrigger key={tab.id} value={tab.id}>
-              {tab.title}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-        {headerExtra}
+        <div
+          ref={tabScrollRef}
+          className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden"
+        >
+          <TabsList variant="line" className="h-auto w-max justify-start">
+            {tabs.map((tab) => (
+              <TabsTrigger key={tab.id} value={tab.id}>
+                {tab.title}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
+        {headerExtra && <div className="shrink-0">{headerExtra}</div>}
       </div>
       <div className="mt-0 flex-1 overflow-hidden">
         <CodeEditor

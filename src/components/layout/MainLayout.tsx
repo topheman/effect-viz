@@ -13,6 +13,8 @@ import { useOnboarding } from "@/hooks/useOnboarding";
 import type { ProgramKey } from "@/lib/programs";
 import { cn } from "@/lib/utils";
 import tracedRunnerSource from "@/runtime/tracedRunner.ts?raw";
+import traceEmitterSource from "@/runtime/traceEmitter.ts?raw";
+import typesSource from "@/types/trace.ts?raw";
 
 import { Header } from "./Header";
 import { PlaybackControls, type PlaybackState } from "./PlaybackControls";
@@ -52,6 +54,16 @@ export function MainLayout() {
       id: "tracedRunner",
       title: "tracedRunner.ts",
       source: tracedRunnerSource,
+    },
+    {
+      id: "traceEmitter",
+      title: "traceEmitter.ts",
+      source: traceEmitterSource,
+    },
+    {
+      id: "traceTypes",
+      title: "trace.ts",
+      source: typesSource,
     },
   ];
 
@@ -98,7 +110,7 @@ export function MainLayout() {
       >
         <ResizablePanelGroup orientation="horizontal" className="h-full">
           <ResizablePanel defaultSize={40} minSize={25}>
-            <div className="flex h-full flex-col">
+            <div className="flex h-full min-w-0 flex-col">
               <MultiModelEditor
                 tabs={editorTabs}
                 value={editorTabId}
@@ -123,7 +135,7 @@ export function MainLayout() {
                     ))}
                   </Select>
                 }
-                className="flex h-full flex-col"
+                className="flex h-full min-w-0 flex-col"
               />
             </div>
           </ResizablePanel>
@@ -157,7 +169,7 @@ export function MainLayout() {
         `}
       >
         {/* Editor - always full width */}
-        <div className="flex h-full flex-col">
+        <div className="flex h-full min-w-0 flex-col">
           <MultiModelEditor
             tabs={editorTabs}
             value={editorTabId}
@@ -182,7 +194,7 @@ export function MainLayout() {
                 ))}
               </Select>
             }
-            className="flex h-full flex-col"
+            className="flex h-full min-w-0 flex-col"
           />
         </div>
 
