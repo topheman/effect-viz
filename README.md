@@ -12,6 +12,10 @@ This project is a learning project for me to understand the Effect runtime. The 
 
 This is the v1 of the project. V2 will be released soon - see roadmap in [`workshop/README.md`](./workshop/README.md#phase-documentation)
 
+
+https://github.com/user-attachments/assets/54e91852-a9da-4e03-984c-af441d2e8a90
+
+
 ## Scripts
 
 - `npm run dev`: Start the development server
