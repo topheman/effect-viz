@@ -10,7 +10,7 @@ This project is a learning project for me to understand the Effect runtime. The 
 - The Effect related code is written by me, guided by Cursor as a tutor
 - See [`workshop/README.md`](./workshop/README.md) for the complete learning journey and [`workshop/ARCHITECTURE.md`](./workshop/ARCHITECTURE.md) for design decisions
 
-This is still a work in progress.
+This is the v1 of the project. V2 will be released soon - see roadmap in [`workshop/README.md`](./workshop/README.md#phase-documentation)
 
 ## Scripts
 
