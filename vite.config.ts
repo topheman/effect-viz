@@ -47,6 +47,23 @@ export default defineConfig({
           "**/*.{js,css,html,ico,png,svg,woff2}",
           "editor-bundled-definitions.d.ts",
         ],
+        runtimeCaching: [
+          {
+            urlPattern:
+              /^https:\/\/cdn\.jsdelivr\.net\/npm\/monaco-editor\/.*/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "monaco-editor-cdn",
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+        ],
       },
     }),
   ],
