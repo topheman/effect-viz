@@ -16,7 +16,7 @@ export default defineConfig({
     }),
     tailwindcss(),
     VitePWA({
-      registerType: "autoUpdate",
+      registerType: "prompt",
       includeAssets: ["favicon.ico", "favicon-*.png", "apple-touch-icon-*.png"],
       manifest: {
         name: "EffectViz",
@@ -39,7 +39,14 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        // Let the new SW activate even when an old (e.g. autoUpdate) SW still controls
+        // the page; otherwise the waiting SW never gets SKIP_WAITING from the old app.
+        // Set to false later to restore prompt-only updates (5s snackbar).
+        skipWaiting: true,
+        globPatterns: [
+          "**/*.{js,css,html,ico,png,svg,woff2}",
+          "editor-bundled-definitions.d.ts",
+        ],
       },
     }),
   ],

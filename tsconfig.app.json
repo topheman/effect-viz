@@ -12,7 +12,8 @@
     "types": [
       "vite/client",
       "vitest/globals",
-      "@testing-library/jest-dom"
+      "@testing-library/jest-dom",
+      "vite-plugin-pwa/react"
     ],
     "skipLibCheck": true,
     /* Bundler mode */
