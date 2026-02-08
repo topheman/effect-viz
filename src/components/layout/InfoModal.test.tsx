@@ -33,13 +33,30 @@ describe("InfoModal", () => {
 
     await user.click(screen.getByRole("button"));
 
-    const githubLink = screen.getByRole("link", { name: /view on github/i });
+    const githubLink = screen.getByRole("link", { name: /visit github repo/i });
     expect(githubLink).toBeInTheDocument();
     expect(githubLink).toHaveAttribute(
       "href",
       "https://github.com/topheman/effect-viz",
     );
     expect(githubLink).toHaveAttribute("target", "_blank");
+  });
+
+  it("displays the portfolio link in the modal", async () => {
+    const user = userEvent.setup();
+    render(<InfoModal />);
+
+    await user.click(screen.getByRole("button"));
+
+    const portfolioLink = screen.getByRole("link", {
+      name: /visit portfolio/i,
+    });
+    expect(portfolioLink).toBeInTheDocument();
+    expect(portfolioLink).toHaveAttribute(
+      "href",
+      "https://topheman.github.io/me/",
+    );
+    expect(portfolioLink).toHaveAttribute("target", "_blank");
   });
 
   it("renders a QR code in the modal", async () => {

@@ -20,6 +20,7 @@ import type { OnboardingStepId } from "@/hooks/useOnboarding";
 import { cn } from "@/lib/utils";
 
 const GITHUB_REPO_URL = "https://github.com/topheman/effect-viz";
+const PORTFOLIO_URL = "https://topheman.github.io/me/";
 
 const MOBILE_BREAKPOINT_PX = 640; // Tailwind sm
 const QR_SIZE_DESKTOP = 200;
@@ -236,19 +237,35 @@ export function InfoModal({
               {currentUrl}
             </p>
 
-            {/* GitHub Link */}
-            <a
-              href={GITHUB_REPO_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`
-                inline-flex items-center gap-2 text-sm text-primary
-                underline-offset-4 transition-colors
-                hover:underline
-              `}
-            >
-              View on GitHub
-            </a>
+            <p>
+              {/* GitHub Link */}
+              <a
+                href={GITHUB_REPO_URL}
+                target="_blank"
+                title="Visit the GitHub repo"
+                rel="noopener noreferrer"
+                className={`
+                  text-sm text-primary underline-offset-4 transition-colors
+                  hover:underline
+                `}
+              >
+                Visit GitHub repo
+              </a>
+              {" - "}
+              {/* Portfolio Link */}
+              <a
+                href={PORTFOLIO_URL}
+                target="_blank"
+                title="Visit my portfolio"
+                rel="noopener noreferrer"
+                className={`
+                  text-sm text-primary underline-offset-4 transition-colors
+                  hover:underline
+                `}
+              >
+                Visit portfolio
+              </a>
+            </p>
           </div>
         </div>
       </DialogContent>
