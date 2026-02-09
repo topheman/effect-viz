@@ -54,7 +54,7 @@
   }
 
   50% {
-    transform: scale(2.5);
+    transform: scale(var(--onboarding-pulse-scale, 2.5)) translate(var(--onboarding-pulse-x, 0), var(--onboarding-pulse-y, 0));
   }
 }
 

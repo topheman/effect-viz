@@ -127,6 +127,13 @@ export function MainLayout() {
                       onboardingStep === "programSelect" &&
                         "origin-center animate-onboarding-pulse",
                     )}
+                    style={
+                      {
+                        "--onboarding-pulse-x": "-15%",
+                        "--onboarding-pulse-y": "10%",
+                        "--onboarding-pulse-scale": "1.5",
+                      } as React.CSSProperties
+                    }
                   >
                     {Object.entries(programs).map(([key, { name }]) => (
                       <option key={key} value={key}>
@@ -186,6 +193,13 @@ export function MainLayout() {
                   onboardingStep === "programSelect" &&
                     "origin-center animate-onboarding-pulse",
                 )}
+                style={
+                  {
+                    "--onboarding-pulse-x": "-15%",
+                    "--onboarding-pulse-y": "10%",
+                    "--onboarding-pulse-scale": "1.5",
+                  } as React.CSSProperties
+                }
               >
                 {Object.entries(programs).map(([key, { name }]) => (
                   <option key={key} value={key}>

@@ -78,6 +78,13 @@ export function InfoModal({
                 onboardingStep === "info" &&
                   "origin-center animate-onboarding-pulse",
               )}
+              style={
+                {
+                  "--onboarding-pulse-x": "-20%",
+                  "--onboarding-pulse-y": "-30%",
+                  "z-index": onboardingStep === "info" ? "100" : "auto",
+                } as React.CSSProperties
+              }
             >
               <Info className="h-4 w-4" />
             </Button>

@@ -101,6 +101,14 @@ export function PlaybackControls({
                   onboardingStep === "showVisualizer" &&
                     "origin-center animate-onboarding-pulse",
                 )}
+                style={
+                  {
+                    "--onboarding-pulse-x": "20%",
+                    "--onboarding-pulse-y": "-30%",
+                    "z-index":
+                      onboardingStep === "showVisualizer" ? "100" : "auto",
+                  } as React.CSSProperties
+                }
               >
                 {showVisualizer ? (
                   <Braces className="h-4 w-4" />
@@ -157,6 +165,13 @@ export function PlaybackControls({
                     onboardingStep === "play" &&
                     "origin-center animate-onboarding-pulse",
                 )}
+                style={
+                  {
+                    "--onboarding-pulse-x": "0",
+                    "--onboarding-pulse-y": "-30%",
+                    "z-index": onboardingStep === "play" ? "100" : "auto",
+                  } as React.CSSProperties
+                }
               >
                 {isRunning ? (
                   <Pause className="h-4 w-4" />
