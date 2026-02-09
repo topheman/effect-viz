@@ -1,7 +1,7 @@
 {
   "name": "topheman/effect-viz",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "description": "Effect runtime visualizer",
   "author": "Christophe Rosset",
