@@ -52,3 +52,7 @@ Refactor to use Effect's built-in observability, removing manual wrappers.
 4. **Event-driven visualization** - TraceEvents bridge Effect runtime to React UI
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for design decisions.
+
+## WebContainers: Editable Programs
+
+- [webcontainers-spec.md](./webcontainers-spec.md) - Specification for running edited programs in a WebContainer (boot on mount, install sequence, root vs inner project structure). This step is **necessary for v2** — the editable editor and WebContainer runtime must be in place before refactoring to runtime hooks.
