@@ -1,5 +1,7 @@
 # WebContainers: Run Edited Program in Visualizer (Specification)
 
+> See the [implementation plan](webcontainer-impl.md) for phased rollout and Effect-based architecture.
+
 ## Goal
 
 - Allow the user to **edit** the program in the Program tab (editor becomes source of truth for Run).
