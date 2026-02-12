@@ -7,6 +7,7 @@ export interface EditorTab {
   id: string;
   title: string;
   source: string;
+  readOnly?: boolean;
 }
 
 interface MultiModelEditorProps {
@@ -20,6 +21,10 @@ interface MultiModelEditorProps {
    */
   value?: string;
   onValueChange?: (tabId: string) => void;
+  /**
+   * Called when the Program tab content changes (only when that tab is editable).
+   */
+  onProgramContentChange?: (content: string) => void;
 }
 
 /**
@@ -34,6 +39,7 @@ export function MultiModelEditor({
   className,
   value: controlledValue,
   onValueChange,
+  onProgramContentChange,
 }: MultiModelEditorProps) {
   const firstTabId = tabs[0]?.id ?? "";
   const [internalTabId, setInternalTabId] = useState(
@@ -90,7 +96,12 @@ export function MultiModelEditor({
         <CodeEditor
           path={editorPath}
           value={editorValue}
-          readOnly
+          readOnly={activeTab?.readOnly ?? true}
+          onChange={
+            activeTabId === "program" && onProgramContentChange
+              ? (value) => value !== undefined && onProgramContentChange(value)
+              : undefined
+          }
           className="h-full"
         />
       </div>

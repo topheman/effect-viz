@@ -67,6 +67,12 @@ export default defineConfig({
     }),
   ],
   base: "./",
+  server: {
+    headers: {
+      "Cross-Origin-Embedder-Policy": "require-corp",
+      "Cross-Origin-Opener-Policy": "same-origin",
+    },
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

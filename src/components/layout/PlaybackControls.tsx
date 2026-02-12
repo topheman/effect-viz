@@ -39,6 +39,8 @@ interface PlaybackControlsProps {
   onboardingStep?: OnboardingStepId | null;
   onOnboardingComplete?: (stepId: OnboardingStepId) => void;
   onRestartOnboarding?: () => void;
+  /** When true, Play is disabled (e.g. WebContainer still booting) */
+  isPlayDisabled?: boolean;
 }
 
 export function PlaybackControls({
@@ -53,9 +55,10 @@ export function PlaybackControls({
   onboardingStep = null,
   onOnboardingComplete,
   onRestartOnboarding,
+  isPlayDisabled = false,
 }: PlaybackControlsProps) {
   const isRunning = state === "running";
-  const canPlay = state === "idle" || state === "paused";
+  const canPlay = (state === "idle" || state === "paused") && !isPlayDisabled;
   const canStep = state === "idle" || state === "paused";
   const [playMountAnimationEnded, setPlayMountAnimationEnded] = useState(false);
 

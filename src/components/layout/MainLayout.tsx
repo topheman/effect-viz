@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { MultiModelEditor } from "@/components/editor/MultiModelEditor";
 import {
@@ -10,6 +10,7 @@ import { Select } from "@/components/ui/select";
 import { VisualizerPanel } from "@/components/visualizer/VisualizerPanel";
 import { useEventHandlers } from "@/hooks/useEventHandlers";
 import { useOnboarding } from "@/hooks/useOnboarding";
+import { useWebContainerBoot } from "@/hooks/useWebContainerBoot";
 import type { ProgramKey } from "@/lib/programs";
 import { cn } from "@/lib/utils";
 import tracedRunnerSource from "@/runtime/tracedRunner.ts?raw";
@@ -20,13 +21,26 @@ import { Header } from "./Header";
 import { PlaybackControls, type PlaybackState } from "./PlaybackControls";
 
 export function MainLayout() {
+  const webContainer = useWebContainerBoot();
+  const webContainerBridge = webContainer.isReady
+    ? {
+        runPlay: webContainer.runPlay,
+        interruptPlay: webContainer.interruptPlay,
+        isReady: true,
+      }
+    : null;
+
   const {
     handlePlay,
     handleReset,
     selectedProgram,
     setSelectedProgram,
     programs,
-  } = useEventHandlers();
+  } = useEventHandlers(webContainerBridge);
+
+  const [editorContent, setEditorContent] = useState<string>(
+    () => programs[selectedProgram].source,
+  );
 
   const {
     currentStep: onboardingStep,
@@ -38,18 +52,41 @@ export function MainLayout() {
   const [showVisualizer, setShowVisualizer] = useState(false);
   const [editorTabId, setEditorTabId] = useState("program");
 
-  // Get the source code for the selected program
-  const programSource = programs[selectedProgram].source;
-
   const handleProgramChange = (programKey: ProgramKey) => {
+    const source = programs[programKey].source;
     setSelectedProgram(programKey);
+    setEditorContent(source);
     completeOnboardingStep("programSelect");
     handleReset();
     setEditorTabId("program");
+    if (webContainer.isReady) {
+      webContainer.syncToContainer(source);
+    }
   };
 
+  const handleProgramContentChange = (content: string) => {
+    setEditorContent(content);
+    if (webContainer.isReady) {
+      webContainer.syncToContainerDebounced(content);
+    }
+  };
+
+  useEffect(() => {
+    if (webContainer.isReady) {
+      webContainer.syncToContainer(editorContent);
+    }
+    // Only sync when container becomes ready; editorContent is intentionally
+    // excluded to avoid syncing on every keystroke (debounced sync handles edits).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [webContainer.isReady]);
+
   const editorTabs = [
-    { id: "program", title: "Program", source: programSource },
+    {
+      id: "program",
+      title: "Program",
+      source: editorContent,
+      readOnly: false,
+    },
     {
       id: "tracedRunner",
       title: "tracedRunner.ts",
@@ -115,6 +152,7 @@ export function MainLayout() {
                 tabs={editorTabs}
                 value={editorTabId}
                 onValueChange={setEditorTabId}
+                onProgramContentChange={handleProgramContentChange}
                 headerExtra={
                   <Select
                     data-onboarding-step="programSelect"
@@ -181,6 +219,7 @@ export function MainLayout() {
             tabs={editorTabs}
             value={editorTabId}
             onValueChange={setEditorTabId}
+            onProgramContentChange={handleProgramContentChange}
             headerExtra={
               <Select
                 data-onboarding-step="programSelect"
@@ -247,6 +286,7 @@ export function MainLayout() {
         onboardingStep={onboardingStep}
         onOnboardingComplete={completeOnboardingStep}
         onRestartOnboarding={restartOnboarding}
+        isPlayDisabled={webContainer.status === "booting"}
       />
     </div>
   );
