@@ -27,15 +27,29 @@ export function useWebContainerBoot() {
   useEffect(() => {
     setStatus("booting");
     setError(null);
+    console.log("[useWebContainerBoot] Boot started");
 
-    const program = Effect.gen(function* () {
+    const bootEffect = Effect.gen(function* () {
       const handle = yield* WebContainer;
       handleRef.current = handle;
       setStatus("ready");
+      console.log("[useWebContainerBoot] Boot complete, status=ready");
       yield* Effect.never;
-    }).pipe(Effect.provide(WebContainerLive), Effect.scoped, Effect.fork);
+    }).pipe(
+      Effect.provide(WebContainerLive),
+      Effect.scoped,
+      Effect.tapError((err) =>
+        Effect.sync(() => {
+          console.error("[useWebContainerBoot] Boot failed", err);
+          setStatus("error");
+          setError(err instanceof Error ? err.message : String(err));
+        }),
+      ),
+    );
 
-    const fiber = Effect.runSync(program);
+    // runFork starts the effect as root fiber (async-safe). runPromise(fork(...))
+    // would let the parent complete and interrupt the child before it runs.
+    const fiber = Effect.runFork(bootEffect);
     bootFiberRef.current = fiber;
 
     return () => {
