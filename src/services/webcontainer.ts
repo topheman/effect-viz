@@ -9,6 +9,8 @@
 import { WebContainer as WC, type FileSystemTree } from "@webcontainer/api";
 import { Context, Effect, GlobalValue, Layer } from "effect";
 
+import { WebContainerLogs } from "@/services/webContainerLogs";
+
 // ---
 // Inner project template (mounted at container root)
 // ---
@@ -88,48 +90,46 @@ function filesToTree(files: Record<string, string>): FileSystemTree {
   return tree;
 }
 
-const DEBUG = true;
-const debugLog = (step: string, extra?: unknown) => {
-  if (DEBUG) {
-    const msg = extra !== undefined ? `${step} ${JSON.stringify(extra)}` : step;
-    console.log(`[WebContainerLive] ${msg}`);
-  }
-};
-
 /**
  * WebContainer Layer - scoped, single instance.
  * Boots container, mounts template, runs npm install.
+ * Requires WebContainerLogs to be provided (e.g. via Layer.merge).
  */
 export const WebContainerLive = Layer.scoped(
   WebContainer,
   Effect.gen(function* () {
-    debugLog("0/6 Boot started (scope entered)");
-    debugLog("1/6 Acquiring semaphore...");
-    yield* Effect.acquireRelease(semaphore.take(1), () => {
-      debugLog("1/6 Semaphore released (on scope close)");
-      return semaphore.release(1);
-    });
-    debugLog("1/6 Semaphore acquired");
+    const logs = yield* WebContainerLogs;
 
-    debugLog("2/6 Booting WebContainer...");
+    yield* logs.log("boot", "0/6 Boot started (scope entered)");
+    yield* logs.log("boot", "1/6 Acquiring semaphore...");
+    yield* Effect.acquireRelease(semaphore.take(1), () =>
+      Effect.gen(function* () {
+        yield* logs.log("boot", "1/6 Semaphore released (on scope close)");
+        yield* semaphore.release(1);
+      }),
+    );
+    yield* logs.log("boot", "1/6 Semaphore acquired");
+
+    yield* logs.log("boot", "2/6 Booting WebContainer...");
     const container = yield* Effect.acquireRelease(
       Effect.promise(() => WC.boot()),
       (c) =>
-        Effect.sync(() => {
-          debugLog("2/6 WebContainer teardown (on scope close)");
-          c.teardown();
+        Effect.gen(function* () {
+          yield* logs.log("boot", "2/6 WebContainer teardown (on scope close)");
+          yield* Effect.sync(() => c.teardown());
         }),
     );
-    debugLog("2/6 WebContainer booted");
+    yield* logs.log("boot", "2/6 WebContainer booted");
 
-    debugLog("3/6 Fetching tracedRunner.js...");
+    yield* logs.log("boot", "3/6 Fetching tracedRunner.js...");
     const tracedRunnerJs = yield* Effect.tryPromise({
       try: () => fetch("/tracedRunner.js").then((r) => r.text()),
       catch: (e) => new Error(`Failed to fetch tracedRunner.js: ${e}`),
     });
-    debugLog("3/6 tracedRunner.js fetched", {
-      length: tracedRunnerJs.length,
-    });
+    yield* logs.log(
+      "boot",
+      `3/6 tracedRunner.js fetched ${JSON.stringify({ length: tracedRunnerJs.length })}`,
+    );
 
     const files: Record<string, string> = {
       "package.json": PACKAGE_JSON,
@@ -138,24 +138,30 @@ export const WebContainerLive = Layer.scoped(
       "program.ts": INITIAL_PROGRAM,
     };
 
-    debugLog("4/6 Mounting files...");
+    yield* logs.log("boot", "4/6 Mounting files...");
     yield* Effect.promise(() => container.mount(filesToTree(files)));
-    debugLog("4/6 Files mounted");
+    yield* logs.log("boot", "4/6 Files mounted");
 
-    debugLog("5/6 Running npm install...");
+    yield* logs.log("boot", "5/6 Running npm install...");
     const installProcess = yield* Effect.promise(() =>
-      container.spawn("npm", ["install"], { output: true }),
+      container.spawn("npm", ["install"], { output: false }),
     );
     const exitCode = yield* Effect.promise(() => installProcess.exit);
-    debugLog("5/6 npm install finished", { exitCode });
+    yield* logs.log(
+      "boot",
+      `5/6 npm install finished ${JSON.stringify({ exitCode })}`,
+    );
     if (exitCode !== 0) {
-      debugLog("5/6 npm install FAILED", { exitCode });
+      yield* logs.log(
+        "boot",
+        `5/6 npm install FAILED ${JSON.stringify({ exitCode })}`,
+      );
       return yield* Effect.fail(
         new Error(`npm install failed with exit code ${exitCode}`),
       );
     }
 
-    debugLog("6/6 Boot complete, returning handle");
+    yield* logs.log("boot", "6/6 Boot complete, returning handle");
     const handle: WebContainerHandle = {
       writeFile: (path, content) =>
         Effect.promise(() => container.fs.writeFile(path, content)),

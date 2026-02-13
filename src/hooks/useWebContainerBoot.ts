@@ -12,10 +12,13 @@ import {
 import { transformForContainer } from "@/lib/transformForContainer";
 import type { WebContainerHandle } from "@/services/webcontainer";
 import { WebContainer, WebContainerLive } from "@/services/webcontainer";
+import { makeWebContainerLogsLayer } from "@/services/webContainerLogs";
+import { useWebContainerLogsStore } from "@/stores/webContainerLogsStore";
 
 export type BootStatus = "idle" | "booting" | "ready" | "error";
 
 export function useWebContainerBoot() {
+  const { addLog } = useWebContainerLogsStore();
   const [status, setStatus] = useState<BootStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const handleRef = useRef<WebContainerHandle | null>(null);
@@ -27,22 +30,27 @@ export function useWebContainerBoot() {
   useEffect(() => {
     setStatus("booting");
     setError(null);
+    addLog("boot", "Boot effect starting...");
     console.log("[useWebContainerBoot] Boot started");
 
+    const webContainerLogsLayer = makeWebContainerLogsLayer(addLog);
     const bootEffect = Effect.gen(function* () {
       const handle = yield* WebContainer;
       handleRef.current = handle;
       setStatus("ready");
+      addLog("boot", "Boot complete, ready");
       console.log("[useWebContainerBoot] Boot complete, status=ready");
       yield* Effect.never;
     }).pipe(
-      Effect.provide(WebContainerLive),
+      Effect.provide(Layer.provide(WebContainerLive, webContainerLogsLayer)),
       Effect.scoped,
       Effect.tapError((err) =>
         Effect.sync(() => {
+          const msg = err instanceof Error ? err.message : String(err);
+          addLog("boot", `Boot failed: ${msg}`);
           console.error("[useWebContainerBoot] Boot failed", err);
           setStatus("error");
-          setError(err instanceof Error ? err.message : String(err));
+          setError(msg);
         }),
       ),
     );
@@ -60,7 +68,7 @@ export function useWebContainerBoot() {
       handleRef.current = null;
       setStatus("idle");
     };
-  }, []);
+  }, [addLog]);
 
   const runPlay = useCallback(
     (

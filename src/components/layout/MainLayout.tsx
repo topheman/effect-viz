@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { MultiModelEditor } from "@/components/editor/MultiModelEditor";
+import { WebContainerLogsPanel } from "@/components/editor/WebContainerLogsPanel";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -50,6 +51,7 @@ export function MainLayout() {
 
   const [playbackState, setPlaybackState] = useState<PlaybackState>("idle");
   const [showVisualizer, setShowVisualizer] = useState(false);
+  const [showLogsPanel, setShowLogsPanel] = useState(true);
   const [editorTabId, setEditorTabId] = useState("program");
 
   const handleProgramChange = (programKey: ProgramKey) => {
@@ -148,39 +150,45 @@ export function MainLayout() {
         <ResizablePanelGroup orientation="horizontal" className="h-full">
           <ResizablePanel defaultSize={40} minSize={25}>
             <div className="flex h-full min-w-0 flex-col">
-              <MultiModelEditor
-                tabs={editorTabs}
-                value={editorTabId}
-                onValueChange={setEditorTabId}
-                onProgramContentChange={handleProgramContentChange}
-                headerExtra={
-                  <Select
-                    data-onboarding-step="programSelect"
-                    value={selectedProgram}
-                    onChange={(e) =>
-                      handleProgramChange(e.target.value as ProgramKey)
-                    }
-                    className={cn(
-                      "h-7 w-40 text-xs",
-                      onboardingStep === "programSelect" &&
-                        "origin-center animate-onboarding-pulse",
-                    )}
-                    style={
-                      {
-                        "--onboarding-pulse-x": "-15%",
-                        "--onboarding-pulse-y": "10%",
-                        "--onboarding-pulse-scale": "1.5",
-                      } as React.CSSProperties
-                    }
-                  >
-                    {Object.entries(programs).map(([key, { name }]) => (
-                      <option key={key} value={key}>
-                        {name}
-                      </option>
-                    ))}
-                  </Select>
-                }
-                className="flex h-full min-w-0 flex-col"
+              <div className="min-h-0 flex-1">
+                <MultiModelEditor
+                  tabs={editorTabs}
+                  value={editorTabId}
+                  onValueChange={setEditorTabId}
+                  onProgramContentChange={handleProgramContentChange}
+                  headerExtra={
+                    <Select
+                      data-onboarding-step="programSelect"
+                      value={selectedProgram}
+                      onChange={(e) =>
+                        handleProgramChange(e.target.value as ProgramKey)
+                      }
+                      className={cn(
+                        "h-7 w-40 text-xs",
+                        onboardingStep === "programSelect" &&
+                          "origin-center animate-onboarding-pulse",
+                      )}
+                      style={
+                        {
+                          "--onboarding-pulse-x": "-15%",
+                          "--onboarding-pulse-y": "10%",
+                          "--onboarding-pulse-scale": "1.5",
+                        } as React.CSSProperties
+                      }
+                    >
+                      {Object.entries(programs).map(([key, { name }]) => (
+                        <option key={key} value={key}>
+                          {name}
+                        </option>
+                      ))}
+                    </Select>
+                  }
+                  className="flex h-full min-w-0 flex-col"
+                />
+              </div>
+              <WebContainerLogsPanel
+                expanded={showLogsPanel}
+                onToggle={() => setShowLogsPanel((v) => !v)}
               />
             </div>
           </ResizablePanel>
@@ -215,39 +223,45 @@ export function MainLayout() {
       >
         {/* Editor - always full width */}
         <div className="flex h-full min-w-0 flex-col">
-          <MultiModelEditor
-            tabs={editorTabs}
-            value={editorTabId}
-            onValueChange={setEditorTabId}
-            onProgramContentChange={handleProgramContentChange}
-            headerExtra={
-              <Select
-                data-onboarding-step="programSelect"
-                value={selectedProgram}
-                onChange={(e) =>
-                  handleProgramChange(e.target.value as ProgramKey)
-                }
-                className={cn(
-                  "h-7 w-40 text-xs",
-                  onboardingStep === "programSelect" &&
-                    "origin-center animate-onboarding-pulse",
-                )}
-                style={
-                  {
-                    "--onboarding-pulse-x": "-15%",
-                    "--onboarding-pulse-y": "10%",
-                    "--onboarding-pulse-scale": "1.5",
-                  } as React.CSSProperties
-                }
-              >
-                {Object.entries(programs).map(([key, { name }]) => (
-                  <option key={key} value={key}>
-                    {name}
-                  </option>
-                ))}
-              </Select>
-            }
-            className="flex h-full min-w-0 flex-col"
+          <div className="min-h-0 flex-1">
+            <MultiModelEditor
+              tabs={editorTabs}
+              value={editorTabId}
+              onValueChange={setEditorTabId}
+              onProgramContentChange={handleProgramContentChange}
+              headerExtra={
+                <Select
+                  data-onboarding-step="programSelect"
+                  value={selectedProgram}
+                  onChange={(e) =>
+                    handleProgramChange(e.target.value as ProgramKey)
+                  }
+                  className={cn(
+                    "h-7 w-40 text-xs",
+                    onboardingStep === "programSelect" &&
+                      "origin-center animate-onboarding-pulse",
+                  )}
+                  style={
+                    {
+                      "--onboarding-pulse-x": "-15%",
+                      "--onboarding-pulse-y": "10%",
+                      "--onboarding-pulse-scale": "1.5",
+                    } as React.CSSProperties
+                  }
+                >
+                  {Object.entries(programs).map(([key, { name }]) => (
+                    <option key={key} value={key}>
+                      {name}
+                    </option>
+                  ))}
+                </Select>
+              }
+              className="flex h-full min-w-0 flex-col"
+            />
+          </div>
+          <WebContainerLogsPanel
+            expanded={showLogsPanel}
+            onToggle={() => setShowLogsPanel((v) => !v)}
           />
         </div>
 
