@@ -82,7 +82,7 @@ export function InfoModal({
                 {
                   "--onboarding-pulse-x": "-20%",
                   "--onboarding-pulse-y": "-30%",
-                  "z-index": onboardingStep === "info" ? "100" : "auto",
+                  zIndex: onboardingStep === "info" ? "100" : "auto",
                 } as React.CSSProperties
               }
             >

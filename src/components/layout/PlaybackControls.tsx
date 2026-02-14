@@ -108,7 +108,7 @@ export function PlaybackControls({
                   {
                     "--onboarding-pulse-x": "20%",
                     "--onboarding-pulse-y": "-30%",
-                    "z-index":
+                    zIndex:
                       onboardingStep === "showVisualizer" ? "100" : "auto",
                   } as React.CSSProperties
                 }
@@ -172,7 +172,7 @@ export function PlaybackControls({
                   {
                     "--onboarding-pulse-x": "0",
                     "--onboarding-pulse-y": "-30%",
-                    "z-index": onboardingStep === "play" ? "100" : "auto",
+                    zIndex: onboardingStep === "play" ? "100" : "auto",
                   } as React.CSSProperties
                 }
               >
