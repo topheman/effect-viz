@@ -2,7 +2,7 @@
  * WebContainer Effect Service.
  *
  * Boots a single WebContainer instance, mounts the inner project template,
- * runs npm install, and provides writeFile/spawn/run.
+ * runs pnpm install, and provides writeFile/spawn/run.
  *
  * Requires: npm install @webcontainer/api
  */
@@ -149,22 +149,22 @@ export const WebContainerLive = Layer.scoped(
     yield* Effect.promise(() => container.mount(filesToTree(files)));
     yield* logs.log("boot", "4/6 Files mounted");
 
-    yield* logs.log("boot", "5/6 Running npm install...");
+    yield* logs.log("boot", "5/6 Running pnpm install...");
     const installProcess = yield* Effect.promise(() =>
-      container.spawn("npm", ["install"], { output: false }),
+      container.spawn("pnpm", ["install"], { output: false }),
     );
     const exitCode = yield* Effect.promise(() => installProcess.exit);
     yield* logs.log(
       "boot",
-      `5/6 npm install finished ${JSON.stringify({ exitCode })}`,
+      `5/6 pnpm install finished ${JSON.stringify({ exitCode })}`,
     );
     if (exitCode !== 0) {
       yield* logs.log(
         "boot",
-        `5/6 npm install FAILED ${JSON.stringify({ exitCode })}`,
+        `5/6 pnpm install FAILED ${JSON.stringify({ exitCode })}`,
       );
       return yield* Effect.fail(
-        new Error(`npm install failed with exit code ${exitCode}`),
+        new Error(`pnpm install failed with exit code ${exitCode}`),
       );
     }
 
