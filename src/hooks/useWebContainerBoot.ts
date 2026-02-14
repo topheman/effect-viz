@@ -54,8 +54,15 @@ export function useWebContainerBoot() {
       Effect.tapError((err) =>
         Effect.sync(() => {
           const msg = err instanceof Error ? err.message : String(err);
-          addLog("boot", `Boot failed: ${msg}`);
-          console.error("[useWebContainerBoot] Boot failed", err);
+          const name = err instanceof Error ? err.name : "Error";
+          addLog("boot", `Boot failed: ${name}: ${msg}`);
+          // Log full details for debugging (DataCloneError on iOS, etc.)
+          console.error("[useWebContainerBoot] Boot failed", {
+            name,
+            message: msg,
+            stack: err instanceof Error ? err.stack : undefined,
+            err,
+          });
           setStatus("error");
           setError(msg);
         }),
