@@ -130,7 +130,7 @@ export const WebContainerLive = Layer.scoped(
 
     yield* logs.log("boot", "3/6 Fetching tracedRunner.js...");
     const tracedRunnerJs = yield* Effect.tryPromise({
-      try: () => fetch("/tracedRunner.js").then((r) => r.text()),
+      try: () => fetch("/app/tracedRunner.js").then((r) => r.text()),
       catch: (e) => new Error(`Failed to fetch tracedRunner.js: ${e}`),
     });
     yield* logs.log(

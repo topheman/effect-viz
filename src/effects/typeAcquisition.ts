@@ -14,19 +14,19 @@ import { WebContainer } from "@/services/webcontainer";
 
 /**
  * App lib types emitted by `npm run build:tracedrunner` (tsc -p tsconfig.tracedrunner.json).
- * Served from public/ and added to Monaco for @/ paths resolution.
+ * Served from public/app/ and added to Monaco for @/ paths resolution.
  */
 const APP_LIB_URLS = [
   {
-    url: "/runtime/tracedRunner.d.ts",
+    url: "/app/runtime/tracedRunner.d.ts",
     path: "file:///runtime/tracedRunner.d.ts",
   },
-  { url: "/types/trace.d.ts", path: "file:///types/trace.d.ts" },
+  { url: "/app/types/trace.d.ts", path: "file:///types/trace.d.ts" },
   {
-    url: "/runtime/traceEmitter.d.ts",
+    url: "/app/runtime/traceEmitter.d.ts",
     path: "file:///runtime/traceEmitter.d.ts",
   },
-  { url: "/lib/crypto.d.ts", path: "file:///lib/crypto.d.ts" },
+  { url: "/app/lib/crypto.d.ts", path: "file:///lib/crypto.d.ts" },
 ] as const;
 
 function addExtraLib(

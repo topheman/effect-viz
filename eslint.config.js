@@ -68,4 +68,13 @@ export default defineConfig([
       ]
     }
   },
+  {
+    files: ['public/app/**/*'],
+    rules: {
+      "prettier/prettier": "off",
+      "import/order": "off",
+      "import/no-unresolved": "off",
+      "import/no-extraneous-dependencies": "off"
+    }
+  }
 ])

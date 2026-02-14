@@ -1,20 +1,20 @@
 /**
  * Builds the tracedRunner bundle for the WebContainer inner project.
- * Output: dist/tracedRunner.js (ESM, minify disabled to preserve export names)
+ * Output: dist/tracedrunner/ (then copied to public/app via build:tracedrunner)
  */
 import path from "path";
 
 import { defineConfig } from "vite";
 
 export default defineConfig({
+  publicDir: false, // Don't copy public/ into output (we only want tracedRunner.js)
   build: {
     lib: {
       entry: path.resolve(__dirname, "src/runtime/tracedRunner.ts"),
       formats: ["es"],
       fileName: "tracedRunner",
     },
-    outDir: "public",
-    emptyOutDir: false, // Don't clear public (other assets there)
+    outDir: "dist/tracedrunner",
     minify: false,
     rollupOptions: {
       external: ["effect"],
