@@ -9,6 +9,7 @@ import {
   spawnAndParseTraceEvents,
   type SpawnAndParseCallbacks,
 } from "@/effects/spawnAndParse";
+import { acquireMonacoTypes } from "@/effects/typeAcquisition";
 import { transformForContainer } from "@/lib/transformForContainer";
 import type { WebContainerHandle } from "@/services/webcontainer";
 import { WebContainer, WebContainerLive } from "@/services/webcontainer";
@@ -21,6 +22,7 @@ export function useWebContainerBoot() {
   const { addLog } = useWebContainerLogsStore();
   const [status, setStatus] = useState<BootStatus>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [typesReady, setTypesReady] = useState(false);
   const handleRef = useRef<WebContainerHandle | null>(null);
   const bootFiberRef = useRef<Fiber.RuntimeFiber<void, unknown> | null>(null);
   const playFiberRef = useRef<Fiber.RuntimeFiber<unknown, unknown> | null>(
@@ -40,6 +42,11 @@ export function useWebContainerBoot() {
       setStatus("ready");
       addLog("boot", "Boot complete, ready");
       console.log("[useWebContainerBoot] Boot complete, status=ready");
+      addLog("boot", "Acquiring Monaco types...");
+      yield* acquireMonacoTypes.pipe(
+        Effect.tap(() => Effect.sync(() => addLog("boot", "Types acquired"))),
+        Effect.tap(() => Effect.sync(() => setTypesReady(true))),
+      );
       yield* Effect.never;
     }).pipe(
       Effect.provide(Layer.provide(WebContainerLive, webContainerLogsLayer)),
@@ -135,6 +142,7 @@ export function useWebContainerBoot() {
   return {
     status,
     error,
+    typesReady,
     runPlay,
     interruptPlay,
     syncToContainer,

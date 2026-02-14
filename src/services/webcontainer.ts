@@ -69,6 +69,13 @@ const semaphore = GlobalValue.globalValue("app/WebContainer/semaphore", () =>
 
 export interface WebContainerHandle {
   readonly writeFile: (path: string, content: string) => Effect.Effect<void>;
+  readonly readFile: (path: string) => Effect.Effect<Uint8Array, Error>;
+  readonly readDirectory: (
+    path: string,
+  ) => Effect.Effect<
+    Array<{ name: string; isDirectory: () => boolean }>,
+    Error
+  >;
   readonly spawn: (
     command: string,
     args: string[],
@@ -165,6 +172,24 @@ export const WebContainerLive = Layer.scoped(
     const handle: WebContainerHandle = {
       writeFile: (path, content) =>
         Effect.promise(() => container.fs.writeFile(path, content)),
+      readFile: (path) =>
+        Effect.tryPromise({
+          try: () => container.fs.readFile(path),
+          catch: (e) => new Error(`Failed to read ${path}: ${e}`),
+        }),
+      readDirectory: (path) =>
+        Effect.tryPromise({
+          try: () =>
+            container.fs
+              .readdir(path, { withFileTypes: true })
+              .then((entries) =>
+                entries.map((e) => ({
+                  name: e.name,
+                  isDirectory: () => e.isDirectory(),
+                })),
+              ),
+          catch: (e) => new Error(`Failed to readdir ${path}: ${e}`),
+        }),
       spawn: (command, args, options) =>
         Effect.promise(() => container.spawn(command, args, options ?? {})),
     };

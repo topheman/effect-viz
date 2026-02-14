@@ -15,6 +15,8 @@ interface MultiModelEditorProps {
   defaultTabId?: string;
   headerExtra?: React.ReactNode;
   className?: string;
+  /** When true, type acquisition completed. CodeEditor triggers re-validation. */
+  typesReady?: boolean;
   /**
    * Controlled mode: when provided with onValueChange, the active tab is
    * driven by the parent. Omit to use internal state.
@@ -40,6 +42,7 @@ export function MultiModelEditor({
   value: controlledValue,
   onValueChange,
   onProgramContentChange,
+  typesReady,
 }: MultiModelEditorProps) {
   const firstTabId = tabs[0]?.id ?? "";
   const [internalTabId, setInternalTabId] = useState(
@@ -97,6 +100,7 @@ export function MultiModelEditor({
           path={editorPath}
           value={editorValue}
           readOnly={activeTab?.readOnly ?? true}
+          typesReady={typesReady}
           onChange={
             activeTabId === "program" && onProgramContentChange
               ? (value) => value !== undefined && onProgramContentChange(value)

@@ -156,6 +156,7 @@ export function MainLayout() {
                   value={editorTabId}
                   onValueChange={setEditorTabId}
                   onProgramContentChange={handleProgramContentChange}
+                  typesReady={webContainer.typesReady}
                   headerExtra={
                     <Select
                       data-onboarding-step="programSelect"
@@ -229,6 +230,7 @@ export function MainLayout() {
               value={editorTabId}
               onValueChange={setEditorTabId}
               onProgramContentChange={handleProgramContentChange}
+              typesReady={webContainer.typesReady}
               headerExtra={
                 <Select
                   data-onboarding-step="programSelect"
