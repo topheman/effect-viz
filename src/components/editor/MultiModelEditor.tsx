@@ -8,6 +8,11 @@ export interface EditorTab {
   title: string;
   source: string;
   readOnly?: boolean;
+  /**
+   * Override model path for Monaco. When set, uses this instead of `${id}.ts`.
+   * Use different paths per program to preserve scroll/selection/undo per model.
+   */
+  path?: string;
 }
 
 interface MultiModelEditorProps {
@@ -58,7 +63,7 @@ export function MultiModelEditor({
   };
 
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? tabs[0];
-  const editorPath = activeTab ? `${activeTab.id}.ts` : "";
+  const editorPath = activeTab ? (activeTab.path ?? `${activeTab.id}.ts`) : "";
   const editorValue = activeTab?.source ?? "";
 
   const tabScrollRef = useRef<HTMLDivElement>(null);

@@ -1,17 +1,29 @@
-import { useEffect, useState } from "react";
+import { RotateCcw } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { MultiModelEditor } from "@/components/editor/MultiModelEditor";
 import { WebContainerLogsPanel } from "@/components/editor/WebContainerLogsPanel";
+import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { Select } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { VisualizerPanel } from "@/components/visualizer/VisualizerPanel";
 import { useEventHandlers } from "@/hooks/useEventHandlers";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useWebContainerBoot } from "@/hooks/useWebContainerBoot";
+import {
+  computeProgramSwitch,
+  computeResetToTemplate,
+} from "@/lib/programCache";
 import type { ProgramKey } from "@/lib/programs";
 import { cn } from "@/lib/utils";
 import tracedRunnerSource from "@/runtime/tracedRunner.ts?raw";
@@ -39,6 +51,9 @@ export function MainLayout() {
     programs,
   } = useEventHandlers(webContainerBridge);
 
+  // Session cache: per-program editor content. Lost on refresh.
+  const editorCacheRef = useRef<Partial<Record<ProgramKey, string>>>({});
+
   const [editorContent, setEditorContent] = useState<string>(
     () => programs[selectedProgram].source,
   );
@@ -54,17 +69,49 @@ export function MainLayout() {
   const [showLogsPanel, setShowLogsPanel] = useState(true);
   const [editorTabId, setEditorTabId] = useState("program");
 
-  const handleProgramChange = (programKey: ProgramKey) => {
-    const source = programs[programKey].source;
-    setSelectedProgram(programKey);
-    setEditorContent(source);
-    completeOnboardingStep("programSelect");
-    handleReset();
-    setEditorTabId("program");
+  const handleProgramChange = useCallback(
+    (programKey: ProgramKey) => {
+      const { newContent, updatedCache } = computeProgramSwitch(
+        selectedProgram,
+        programKey,
+        editorContent,
+        editorCacheRef.current,
+        programs,
+      );
+      editorCacheRef.current = updatedCache;
+
+      setSelectedProgram(programKey);
+      setEditorContent(newContent);
+      completeOnboardingStep("programSelect");
+      handleReset();
+      setEditorTabId("program");
+      if (webContainer.isReady) {
+        webContainer.syncToContainer(newContent);
+      }
+    },
+    [
+      selectedProgram,
+      editorContent,
+      programs,
+      setSelectedProgram,
+      completeOnboardingStep,
+      handleReset,
+      webContainer,
+    ],
+  );
+
+  const handleResetToTemplate = useCallback(() => {
+    const { newContent, updatedCache } = computeResetToTemplate(
+      selectedProgram,
+      programs,
+      editorCacheRef.current,
+    );
+    editorCacheRef.current = updatedCache;
+    setEditorContent(newContent);
     if (webContainer.isReady) {
-      webContainer.syncToContainer(source);
+      webContainer.syncToContainer(newContent);
     }
-  };
+  }, [selectedProgram, programs, webContainer]);
 
   const handleProgramContentChange = (content: string) => {
     setEditorContent(content);
@@ -88,6 +135,7 @@ export function MainLayout() {
       title: "Program",
       source: editorContent,
       readOnly: false,
+      path: `program-${selectedProgram}.ts`,
     },
     {
       id: "tracedRunner",
@@ -105,6 +153,53 @@ export function MainLayout() {
       source: typesSource,
     },
   ];
+
+  const programSelectorHeader = (
+    <TooltipProvider>
+      <div className="flex items-center gap-1">
+        <Select
+          data-onboarding-step="programSelect"
+          value={selectedProgram}
+          onChange={(e) => handleProgramChange(e.target.value as ProgramKey)}
+          className={cn(
+            "h-7 w-[85%] text-xs",
+            onboardingStep === "programSelect" &&
+              "origin-center animate-onboarding-pulse",
+          )}
+          style={
+            {
+              "--onboarding-pulse-x": "-15%",
+              "--onboarding-pulse-y": "10%",
+              "--onboarding-pulse-scale": "1.5",
+            } as React.CSSProperties
+          }
+        >
+          {Object.entries(programs).map(([key, { name }]) => (
+            <option key={key} value={key}>
+              {name}
+            </option>
+          ))}
+        </Select>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0"
+              onClick={handleResetToTemplate}
+              aria-label="Reset to template"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Reset to template</p>
+          </TooltipContent>
+        </Tooltip>
+      </div>
+    </TooltipProvider>
+  );
 
   const onPlay = () => {
     setPlaybackState("running");
@@ -157,33 +252,7 @@ export function MainLayout() {
                   onValueChange={setEditorTabId}
                   onProgramContentChange={handleProgramContentChange}
                   typesReady={webContainer.typesReady}
-                  headerExtra={
-                    <Select
-                      data-onboarding-step="programSelect"
-                      value={selectedProgram}
-                      onChange={(e) =>
-                        handleProgramChange(e.target.value as ProgramKey)
-                      }
-                      className={cn(
-                        "h-7 w-40 text-xs",
-                        onboardingStep === "programSelect" &&
-                          "origin-center animate-onboarding-pulse",
-                      )}
-                      style={
-                        {
-                          "--onboarding-pulse-x": "-15%",
-                          "--onboarding-pulse-y": "10%",
-                          "--onboarding-pulse-scale": "1.5",
-                        } as React.CSSProperties
-                      }
-                    >
-                      {Object.entries(programs).map(([key, { name }]) => (
-                        <option key={key} value={key}>
-                          {name}
-                        </option>
-                      ))}
-                    </Select>
-                  }
+                  headerExtra={programSelectorHeader}
                   className="flex h-full min-w-0 flex-col"
                 />
               </div>
@@ -231,33 +300,7 @@ export function MainLayout() {
               onValueChange={setEditorTabId}
               onProgramContentChange={handleProgramContentChange}
               typesReady={webContainer.typesReady}
-              headerExtra={
-                <Select
-                  data-onboarding-step="programSelect"
-                  value={selectedProgram}
-                  onChange={(e) =>
-                    handleProgramChange(e.target.value as ProgramKey)
-                  }
-                  className={cn(
-                    "h-7 w-40 text-xs",
-                    onboardingStep === "programSelect" &&
-                      "origin-center animate-onboarding-pulse",
-                  )}
-                  style={
-                    {
-                      "--onboarding-pulse-x": "-15%",
-                      "--onboarding-pulse-y": "10%",
-                      "--onboarding-pulse-scale": "1.5",
-                    } as React.CSSProperties
-                  }
-                >
-                  {Object.entries(programs).map(([key, { name }]) => (
-                    <option key={key} value={key}>
-                      {name}
-                    </option>
-                  ))}
-                </Select>
-              }
+              headerExtra={programSelectorHeader}
               className="flex h-full min-w-0 flex-col"
             />
           </div>
