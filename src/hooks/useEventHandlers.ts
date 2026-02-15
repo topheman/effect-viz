@@ -12,7 +12,13 @@ import { useFiberStore } from "@/stores/fiberStore";
 import { useTraceStore } from "@/stores/traceStore";
 
 export interface WebContainerBridge {
-  runPlay: (callbacks: SpawnAndParseCallbacks) => Promise<{
+  runPlay: ({
+    callbacks,
+    onFirstChunk,
+  }: {
+    callbacks: SpawnAndParseCallbacks;
+    onFirstChunk: () => void;
+  }) => Promise<{
     success: boolean;
     exitCode?: number;
   }>;
@@ -29,15 +35,18 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
     null,
   );
 
-  const handlePlay = () => {
+  const handlePlay = ({ onFirstChunk }: { onFirstChunk: () => void }) => {
     clearEvents();
     clearFibers();
 
     if (webContainer?.isReady) {
       return webContainer
         .runPlay({
-          addEvent,
-          processEvent,
+          callbacks: {
+            addEvent,
+            processEvent,
+          },
+          onFirstChunk,
         })
         .then((result) => {
           if (!result.success) {
@@ -47,6 +56,10 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
         });
     }
 
+    return runFallbackPlay();
+  };
+
+  function runFallbackPlay() {
     const program = programs[selectedProgram].program as Effect.Effect<
       unknown,
       unknown,
@@ -73,7 +86,7 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
         return { success: false, error };
       },
     );
-  };
+  }
 
   const handleReset = () => {
     if (webContainer?.isReady) {

@@ -85,9 +85,13 @@ export function useWebContainerBoot() {
   }, [addLog]);
 
   const runPlay = useCallback(
-    (
-      callbacks: SpawnAndParseCallbacks,
-    ): Promise<{ success: boolean; exitCode?: number }> => {
+    ({
+      callbacks,
+      onFirstChunk,
+    }: {
+      callbacks: SpawnAndParseCallbacks;
+      onFirstChunk: () => void;
+    }): Promise<{ success: boolean; exitCode?: number }> => {
       const handle = handleRef.current;
       if (!handle || status !== "ready") {
         return Promise.resolve({ success: false });
@@ -96,7 +100,9 @@ export function useWebContainerBoot() {
       // Provide the existing handle so spawnAndParseTraceEvents gets WebContainer without booting again
       const layer = Layer.succeed(WebContainer, handle);
       const program = Effect.scoped(
-        spawnAndParseTraceEvents(callbacks).pipe(Effect.provide(layer)),
+        spawnAndParseTraceEvents({ callbacks, onFirstChunk }).pipe(
+          Effect.provide(layer),
+        ),
       );
       // Use runFork (not scoped fork): scoped(fork(program)) closes the scope
       // immediately when fork returns, which interrupts the play fiber.

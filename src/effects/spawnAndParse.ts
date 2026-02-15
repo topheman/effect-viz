@@ -2,7 +2,7 @@
  * Effect that spawns `npx tsx program.ts` in the WebContainer and parses
  * TRACE_EVENT: lines from stdout, pushing to addEvent and processEvent.
  */
-import { Duration, Effect, Option, Stream } from "effect";
+import { Duration, Effect, Option, Ref, Stream } from "effect";
 
 import { WebContainer } from "@/services/webcontainer";
 import type { TraceEvent } from "@/types/trace";
@@ -39,7 +39,13 @@ export interface SpawnAndParseCallbacks {
  *
  * The process is killed when the Effect scope closes (e.g. on Reset).
  */
-export function spawnAndParseTraceEvents(callbacks: SpawnAndParseCallbacks) {
+export function spawnAndParseTraceEvents({
+  callbacks,
+  onFirstChunk,
+}: {
+  callbacks: SpawnAndParseCallbacks;
+  onFirstChunk: () => void;
+}) {
   return Effect.gen(function* () {
     const wc = yield* WebContainer;
     const proc = yield* Effect.acquireRelease(
@@ -55,13 +61,18 @@ export function spawnAndParseTraceEvents(callbacks: SpawnAndParseCallbacks) {
       Stream.filterMap((line) => Option.fromNullable(parseTraceEvent(line))),
     );
 
+    const firstChunkCalledRef = yield* Ref.make(false);
     // Run stream consumer in background; don't block on stream EOF.
     // WebContainer's output stream may not close when process exits.
     yield* Effect.fork(
       Stream.runForEach(traceStream, (event) =>
-        Effect.sync(() => {
-          callbacks.addEvent(event);
-          callbacks.processEvent(event);
+        Effect.gen(function* () {
+          const wasFirst = yield* Ref.getAndSet(firstChunkCalledRef, true);
+          if (!wasFirst) yield* Effect.sync(onFirstChunk);
+          yield* Effect.sync(() => {
+            callbacks.addEvent(event);
+            callbacks.processEvent(event);
+          });
         }),
       ),
     );

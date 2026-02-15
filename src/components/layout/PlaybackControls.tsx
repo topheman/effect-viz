@@ -25,7 +25,12 @@ const STEP_IS_IMPLEMENTED = false;
 const STEP_OVER_IS_IMPLEMENTED = false;
 const PAUSE_IS_IMPLEMENTED = false;
 
-export type PlaybackState = "idle" | "running" | "paused" | "finished";
+export type PlaybackState =
+  | "idle"
+  | "compiling"
+  | "running"
+  | "paused"
+  | "finished";
 
 interface PlaybackControlsProps {
   state?: PlaybackState;
@@ -232,11 +237,13 @@ export function PlaybackControls({
                 ${
                   state === "running"
                     ? "animate-pulse bg-green-500"
-                    : state === "paused"
-                      ? "bg-yellow-500"
-                      : state === "finished"
-                        ? "bg-blue-500"
-                        : "bg-muted-foreground"
+                    : state === "compiling"
+                      ? "animate-pulse bg-orange-500"
+                      : state === "paused"
+                        ? "bg-yellow-500"
+                        : state === "finished"
+                          ? "bg-blue-500"
+                          : "bg-muted-foreground"
                 }
               `}
             />

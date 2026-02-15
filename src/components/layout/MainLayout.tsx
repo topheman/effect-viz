@@ -202,9 +202,9 @@ export function MainLayout() {
   );
 
   const onPlay = () => {
-    setPlaybackState("running");
+    setPlaybackState("compiling");
     setShowVisualizer(true);
-    handlePlay()
+    handlePlay({ onFirstChunk: () => setPlaybackState("running") })
       .then(() => setPlaybackState("idle"))
       .catch(() => setPlaybackState("idle")); // e.g. interrupt on program switch
   };
