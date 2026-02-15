@@ -204,9 +204,9 @@ export function MainLayout() {
   const onPlay = () => {
     setPlaybackState("running");
     setShowVisualizer(true);
-    handlePlay().then(() => {
-      setPlaybackState("idle");
-    });
+    handlePlay()
+      .then(() => setPlaybackState("idle"))
+      .catch(() => setPlaybackState("idle")); // e.g. interrupt on program switch
   };
 
   const handlePause = () => {

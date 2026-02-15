@@ -109,17 +109,26 @@ export function useWebContainerBoot() {
             playFiberRef.current = null;
             return { success: exitCode === 0, exitCode };
           }),
-          Effect.catchAll((err) => {
+          Effect.catchAllCause((cause) => {
             playFiberRef.current = null;
-            const msg = err instanceof Error ? err.message : String(err);
-            console.error("[useWebContainerBoot] Play failed:", msg, err);
+            const msg = String(cause);
+            console.error(
+              "[useWebContainerBoot] Play failed (interrupt/error):",
+              msg,
+            );
             return Effect.succeed({
               success: false,
               error: msg,
             });
           }),
         ),
-      );
+      ).catch((err) => {
+        // Safety net: runPromise may reject on interrupt before Effect.catchAllCause runs
+        playFiberRef.current = null;
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error("[useWebContainerBoot] Play promise rejected:", msg);
+        return { success: false, error: msg };
+      });
     },
     [status],
   );
