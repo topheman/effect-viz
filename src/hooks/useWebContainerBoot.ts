@@ -98,7 +98,9 @@ export function useWebContainerBoot() {
       const program = Effect.scoped(
         spawnAndParseTraceEvents(callbacks).pipe(Effect.provide(layer)),
       );
-      const playFiber = Effect.runSync(Effect.scoped(Effect.fork(program)));
+      // Use runFork (not scoped fork): scoped(fork(program)) closes the scope
+      // immediately when fork returns, which interrupts the play fiber.
+      const playFiber = Effect.runFork(program);
       playFiberRef.current = playFiber;
 
       return Effect.runPromise(
@@ -109,9 +111,11 @@ export function useWebContainerBoot() {
           }),
           Effect.catchAll((err) => {
             playFiberRef.current = null;
+            const msg = err instanceof Error ? err.message : String(err);
+            console.error("[useWebContainerBoot] Play failed:", msg, err);
             return Effect.succeed({
               success: false,
-              error: err instanceof Error ? err.message : String(err),
+              error: msg,
             });
           }),
         ),
