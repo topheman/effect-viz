@@ -56,10 +56,10 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
         });
     }
 
-    return runFallbackPlay();
+    return runFallbackPlay({ onFirstChunk });
   };
 
-  function runFallbackPlay() {
+  function runFallbackPlay({ onFirstChunk }: { onFirstChunk: () => void }) {
     const program = programs[selectedProgram].program as Effect.Effect<
       unknown,
       unknown,
@@ -71,6 +71,7 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
       processEvent(event); // For FiberTreeView
     });
 
+    onFirstChunk(); // No compile step on mobile; program runs immediately
     const fiber = Effect.runFork(traced.pipe(Effect.provide(layer)));
     runningFiberRef.current = fiber;
 

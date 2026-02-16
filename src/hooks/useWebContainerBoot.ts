@@ -9,14 +9,18 @@ import {
   spawnAndParseTraceEvents,
   type SpawnAndParseCallbacks,
 } from "@/effects/spawnAndParse";
-import { acquireMonacoTypes } from "@/effects/typeAcquisition";
+import {
+  acquireMonacoTypes,
+  acquireMonacoTypesFallback,
+} from "@/effects/typeAcquisition";
+import { isMobileUserAgent } from "@/lib/mobileDetection";
 import { transformForContainer } from "@/lib/transformForContainer";
 import type { WebContainerHandle } from "@/services/webcontainer";
 import { WebContainer, WebContainerLive } from "@/services/webcontainer";
 import { makeWebContainerLogsLayer } from "@/services/webContainerLogs";
 import { useWebContainerLogsStore } from "@/stores/webContainerLogsStore";
 
-export type BootStatus = "idle" | "booting" | "ready" | "error";
+export type BootStatus = "idle" | "booting" | "ready" | "fallback" | "error";
 
 export function useWebContainerBoot() {
   const { addLog } = useWebContainerLogsStore();
@@ -30,6 +34,25 @@ export function useWebContainerBoot() {
   );
 
   useEffect(() => {
+    if (isMobileUserAgent()) {
+      setStatus("booting");
+      setError(null);
+      addLog("boot", "Mobile detected, using fallback (no WebContainer)");
+      Effect.runPromise(acquireMonacoTypesFallback)
+        .then(() => {
+          setTypesReady(true);
+          setStatus("fallback");
+          addLog("boot", "Fallback types acquired");
+        })
+        .catch((err) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          addLog("boot", `Fallback types failed: ${msg}`);
+          setStatus("error");
+          setError(msg);
+        });
+      return () => {};
+    }
+
     setStatus("booting");
     setError(null);
     addLog("boot", "Boot effect starting...");
@@ -173,6 +196,6 @@ export function useWebContainerBoot() {
     interruptPlay,
     syncToContainer,
     syncToContainerDebounced,
-    isReady: status === "ready",
+    isReady: status === "ready", // true only when WebContainer is ready; "fallback" means use runFallbackPlay
   };
 }

@@ -16,15 +16,16 @@ import { WebContainer } from "@/services/webcontainer";
  * App lib types emitted by `npm run build:tracedrunner` (tsc -p tsconfig.tracedrunner.json).
  * Served from public/app/ and added to Monaco for @/ paths resolution.
  */
+/** Order matters: trace and traceEmitter before tracedRunner (deps) */
 const APP_LIB_URLS = [
-  {
-    url: "/app/runtime/tracedRunner.d.ts",
-    path: "file:///runtime/tracedRunner.d.ts",
-  },
   { url: "/app/types/trace.d.ts", path: "file:///types/trace.d.ts" },
   {
     url: "/app/runtime/traceEmitter.d.ts",
     path: "file:///runtime/traceEmitter.d.ts",
+  },
+  {
+    url: "/app/runtime/tracedRunner.d.ts",
+    path: "file:///runtime/tracedRunner.d.ts",
   },
   { url: "/app/lib/crypto.d.ts", path: "file:///lib/crypto.d.ts" },
 ] as const;
@@ -89,9 +90,12 @@ function acquireAppLibs(
 
 /**
  * Configure Monaco TypeScript compiler options for module resolution.
- * - baseUrl + paths: @/ resolves to file:///, effect resolves to node_modules/effect
+ * baseUrl + @/* are always set. pathsOverride is merged into paths (can add or override).
  */
-function configureMonacoPaths(monaco: Awaited<ReturnType<typeof loader.init>>) {
+function configureMonacoPaths(
+  monaco: Awaited<ReturnType<typeof loader.init>>,
+  pathsOverride?: Record<string, string[]>,
+) {
   const opts =
     monaco.languages.typescript.typescriptDefaults.getCompilerOptions();
   monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
@@ -100,11 +104,28 @@ function configureMonacoPaths(monaco: Awaited<ReturnType<typeof loader.init>>) {
     paths: {
       ...(opts.paths ?? {}),
       "@/*": ["*"],
-      effect: ["node_modules/effect/dist/dts/index.d.ts"],
-      "effect/*": ["node_modules/effect/dist/dts/*"],
+      ...pathsOverride,
     },
   });
 }
+
+/**
+ * Acquire Monaco types for mobile fallback (no WebContainer).
+ * Fetches fallback-types.d.ts (Effect stubs) and app libs from public/app/.
+ */
+export const acquireMonacoTypesFallback: Effect.Effect<void, Error> =
+  Effect.gen(function* () {
+    const monaco = yield* Effect.promise(() => loader.init());
+    configureMonacoPaths(monaco);
+
+    const fallbackContent = yield* Effect.tryPromise({
+      try: () => fetch("/fallback-types.d.ts").then((r) => r.text()),
+      catch: (e) => new Error(`Failed to fetch fallback-types.d.ts: ${e}`),
+    });
+    addExtraLib(fallbackContent, "file:///fallback-types.d.ts", monaco);
+
+    yield* acquireAppLibs(monaco);
+  });
 
 /**
  * Acquire all types for Monaco: Effect from container, app libs from public.
@@ -117,7 +138,10 @@ export const acquireMonacoTypes: Effect.Effect<
 > = Effect.gen(function* () {
   const handle = yield* WebContainer;
   const monaco = yield* Effect.promise(() => loader.init());
-  configureMonacoPaths(monaco);
+  configureMonacoPaths(monaco, {
+    effect: ["node_modules/effect/dist/dts/index.d.ts"],
+    "effect/*": ["node_modules/effect/dist/dts/*"],
+  });
   const added = new Set<string>();
   yield* acquireNodeModulesTypes(handle, "node_modules/effect", monaco, added);
   yield* acquireAppLibs(monaco);
