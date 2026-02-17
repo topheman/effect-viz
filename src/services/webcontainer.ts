@@ -20,7 +20,7 @@ const PACKAGE_JSON = `{
   "private": true,
   "type": "module",
   "scripts": {
-    "run": "npx tsx program.ts"
+    "run": "pnpm exec tsx program.ts"
   },
   "dependencies": {
     "effect": "^3.19.15",
@@ -169,6 +169,19 @@ export const WebContainerLive = Layer.scoped(
     }
 
     yield* logs.log("boot", "6/6 Boot complete, returning handle");
+
+    // Pre-warm tsx: spawn no-op run so first Play has warmer process/tsx state
+    yield* Effect.fork(
+      Effect.gen(function* () {
+        const proc = yield* Effect.promise(() =>
+          container.spawn("pnpm", ["exec", "tsx", "-e", "console.log('ok')"], {
+            output: false,
+          }),
+        );
+        yield* Effect.promise(() => proc.exit);
+      }),
+    );
+
     const handle: WebContainerHandle = {
       writeFile: (path, content) =>
         Effect.promise(() => container.fs.writeFile(path, content)),
