@@ -14,21 +14,11 @@ import { WebContainer } from "@/services/webcontainer";
 
 /**
  * App lib types emitted by `npm run build:tracedrunner` (tsc -p tsconfig.tracedrunner.json).
- * Served from public/app/ and added to Monaco for @/ paths resolution.
+ * `scripts/extract-dts-from-tracedrunner.mjs` extracts the .d.ts files into this JSON file.
+ *
+ * The files are served from public/app/ and added to Monaco for @/ paths resolution.
  */
-/** Order matters: trace and traceEmitter before tracedRunner (deps) */
-const APP_LIB_URLS = [
-  { url: "/app/types/trace.d.ts", path: "file:///types/trace.d.ts" },
-  {
-    url: "/app/runtime/traceEmitter.d.ts",
-    path: "file:///runtime/traceEmitter.d.ts",
-  },
-  {
-    url: "/app/runtime/tracedRunner.d.ts",
-    path: "file:///runtime/tracedRunner.d.ts",
-  },
-  { url: "/app/lib/crypto.d.ts", path: "file:///lib/crypto.d.ts" },
-] as const;
+import APP_LIB_URLS from "./app-lib-dts-urls.json";
 
 function addExtraLib(
   content: string,

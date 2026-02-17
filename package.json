@@ -26,7 +26,7 @@
   "scripts": {
     "dev": "npm run build:tracedrunner && vite",
     "build": "npm run build:tracedrunner && tsc -b && vite build",
-    "build:tracedrunner": "vite build --config vite.tracedrunner.config.ts && tsc -p tsconfig.tracedrunner.json && node scripts/copy-tracedrunner.mjs",
+    "build:tracedrunner": "vite build --config vite.tracedrunner.config.ts && tsc -p tsconfig.tracedrunner.json && node scripts/extract-dts-from-tracedrunner.mjs --src=dist/tracedrunner > src/effects/app-lib-dts-urls.json && node scripts/copy-tracedrunner.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "preview": "vite preview",
