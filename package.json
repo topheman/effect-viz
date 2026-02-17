@@ -24,8 +24,9 @@
     "formatting"
   ],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev": "npm run build:tracedrunner && vite",
+    "build": "npm run build:tracedrunner && tsc -b && vite build",
+    "build:tracedrunner": "vite build --config vite.tracedrunner.config.ts && tsc -p tsconfig.tracedrunner.json && node scripts/extract-dts-from-tracedrunner.mjs --src=dist/tracedrunner > src/effects/app-lib-dts-urls.json && node scripts/copy-tracedrunner.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "preview": "vite preview",
@@ -34,8 +35,6 @@
     "typecheck:app": "tsc --noEmit -p ./tsconfig.app.json",
     "typecheck:node": "tsc --noEmit -p ./tsconfig.node.json",
     "typecheck": "npm run typecheck:app && npm run typecheck:node",
-    "typedef:bundled:dev:start": "cp public/editor-bundled-definitions.d.ts src/types/editor-bundled-definitions.d.ts",
-    "typedef:bundled:dev:stop": "cp src/types/editor-bundled-definitions.d.ts public/editor-bundled-definitions.d.ts; rm src/types/editor-bundled-definitions.d.ts",
     "prepare": "husky",
     "bootstrap": "./scripts/bootstrap.ts"
   },
@@ -45,6 +44,7 @@
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@webcontainer/api": "^1.6.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "effect": "^3.19.15",

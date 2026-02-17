@@ -42,10 +42,7 @@ export default defineConfig({
         // Service worker will NOT call skipWaiting; updates will only activate when all tabs are closed.
         // This provides "prompt-only" updates, requiring a full reload (see snackbar notification).
         skipWaiting: false,
-        globPatterns: [
-          "**/*.{js,css,html,ico,png,svg,woff2}",
-          "editor-bundled-definitions.d.ts",
-        ],
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         runtimeCaching: [
           {
             urlPattern:
@@ -67,6 +64,13 @@ export default defineConfig({
     }),
   ],
   base: "./",
+  server: {
+    headers: {
+      "Cross-Origin-Embedder-Policy": "require-corp",
+      "Cross-Origin-Opener-Policy": "same-origin",
+    },
+    allowedHosts: [".ngrok-free.app"],
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

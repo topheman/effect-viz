@@ -1,15 +1,30 @@
-import { useState } from "react";
+import { RotateCcw } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { MultiModelEditor } from "@/components/editor/MultiModelEditor";
+import { WebContainerLogsPanel } from "@/components/editor/WebContainerLogsPanel";
+import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { Select } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { VisualizerPanel } from "@/components/visualizer/VisualizerPanel";
 import { useEventHandlers } from "@/hooks/useEventHandlers";
 import { useOnboarding } from "@/hooks/useOnboarding";
+import { useWebContainerBoot } from "@/hooks/useWebContainerBoot";
+import { useIsMobile } from "@/lib/mobileDetection";
+import {
+  computeProgramSwitch,
+  computeResetToTemplate,
+} from "@/lib/programCache";
 import type { ProgramKey } from "@/lib/programs";
 import { cn } from "@/lib/utils";
 import tracedRunnerSource from "@/runtime/tracedRunner.ts?raw";
@@ -20,13 +35,30 @@ import { Header } from "./Header";
 import { PlaybackControls, type PlaybackState } from "./PlaybackControls";
 
 export function MainLayout() {
+  const isMobile = useIsMobile();
+  const webContainer = useWebContainerBoot();
+  const webContainerBridge = webContainer.isReady
+    ? {
+        runPlay: webContainer.runPlay,
+        interruptPlay: webContainer.interruptPlay,
+        isReady: true,
+      }
+    : null;
+
   const {
     handlePlay,
     handleReset,
     selectedProgram,
     setSelectedProgram,
     programs,
-  } = useEventHandlers();
+  } = useEventHandlers(webContainerBridge);
+
+  // Session cache: per-program editor content. Lost on refresh.
+  const editorCacheRef = useRef<Partial<Record<ProgramKey, string>>>({});
+
+  const [editorContent, setEditorContent] = useState<string>(
+    () => programs[selectedProgram].source,
+  );
 
   const {
     currentStep: onboardingStep,
@@ -36,20 +68,77 @@ export function MainLayout() {
 
   const [playbackState, setPlaybackState] = useState<PlaybackState>("idle");
   const [showVisualizer, setShowVisualizer] = useState(false);
+  const [showLogsPanel, setShowLogsPanel] = useState(true);
   const [editorTabId, setEditorTabId] = useState("program");
 
-  // Get the source code for the selected program
-  const programSource = programs[selectedProgram].source;
+  const handleProgramChange = useCallback(
+    (programKey: ProgramKey) => {
+      const { newContent, updatedCache } = computeProgramSwitch(
+        selectedProgram,
+        programKey,
+        editorContent,
+        editorCacheRef.current,
+        programs,
+      );
+      editorCacheRef.current = updatedCache;
 
-  const handleProgramChange = (programKey: ProgramKey) => {
-    setSelectedProgram(programKey);
-    completeOnboardingStep("programSelect");
-    handleReset();
-    setEditorTabId("program");
+      setSelectedProgram(programKey);
+      setEditorContent(newContent);
+      completeOnboardingStep("programSelect");
+      handleReset();
+      setEditorTabId("program");
+      if (webContainer.isReady) {
+        webContainer.syncToContainer(newContent);
+      }
+    },
+    [
+      selectedProgram,
+      editorContent,
+      programs,
+      setSelectedProgram,
+      completeOnboardingStep,
+      handleReset,
+      webContainer,
+    ],
+  );
+
+  const handleResetToTemplate = useCallback(() => {
+    const { newContent, updatedCache } = computeResetToTemplate(
+      selectedProgram,
+      programs,
+      editorCacheRef.current,
+    );
+    editorCacheRef.current = updatedCache;
+    setEditorContent(newContent);
+    if (webContainer.isReady) {
+      webContainer.syncToContainer(newContent);
+    }
+  }, [selectedProgram, programs, webContainer]);
+
+  const handleProgramContentChange = (content: string) => {
+    setEditorContent(content);
+    if (webContainer.isReady) {
+      webContainer.syncToContainerDebounced(content);
+    }
   };
 
+  useEffect(() => {
+    if (webContainer.isReady) {
+      webContainer.syncToContainer(editorContent);
+    }
+    // Only sync when container becomes ready; editorContent is intentionally
+    // excluded to avoid syncing on every keystroke (debounced sync handles edits).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [webContainer.isReady]);
+
   const editorTabs = [
-    { id: "program", title: "Program", source: programSource },
+    {
+      id: "program",
+      title: "Program",
+      source: editorContent,
+      readOnly: isMobile,
+      path: `program-${selectedProgram}.ts`,
+    },
     {
       id: "tracedRunner",
       title: "tracedRunner.ts",
@@ -67,12 +156,59 @@ export function MainLayout() {
     },
   ];
 
+  const programSelectorHeader = (
+    <TooltipProvider>
+      <div className="flex items-center gap-1">
+        <Select
+          data-onboarding-step="programSelect"
+          value={selectedProgram}
+          onChange={(e) => handleProgramChange(e.target.value as ProgramKey)}
+          className={cn(
+            "h-7 w-[85%] text-xs",
+            onboardingStep === "programSelect" &&
+              "origin-center animate-onboarding-pulse",
+          )}
+          style={
+            {
+              "--onboarding-pulse-x": "-15%",
+              "--onboarding-pulse-y": "10%",
+              "--onboarding-pulse-scale": "1.5",
+            } as React.CSSProperties
+          }
+        >
+          {Object.entries(programs).map(([key, { name }]) => (
+            <option key={key} value={key}>
+              {name}
+            </option>
+          ))}
+        </Select>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0"
+              onClick={handleResetToTemplate}
+              aria-label="Reset to template"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Reset to template</p>
+          </TooltipContent>
+        </Tooltip>
+      </div>
+    </TooltipProvider>
+  );
+
   const onPlay = () => {
-    setPlaybackState("running");
+    setPlaybackState("compiling");
     setShowVisualizer(true);
-    handlePlay().then(() => {
-      setPlaybackState("idle");
-    });
+    handlePlay({ onFirstChunk: () => setPlaybackState("running") })
+      .then(() => setPlaybackState("idle"))
+      .catch(() => setPlaybackState("idle")); // e.g. interrupt on program switch
   };
 
   const handlePause = () => {
@@ -111,38 +247,20 @@ export function MainLayout() {
         <ResizablePanelGroup orientation="horizontal" className="h-full">
           <ResizablePanel defaultSize={40} minSize={25}>
             <div className="flex h-full min-w-0 flex-col">
-              <MultiModelEditor
-                tabs={editorTabs}
-                value={editorTabId}
-                onValueChange={setEditorTabId}
-                headerExtra={
-                  <Select
-                    data-onboarding-step="programSelect"
-                    value={selectedProgram}
-                    onChange={(e) =>
-                      handleProgramChange(e.target.value as ProgramKey)
-                    }
-                    className={cn(
-                      "h-7 w-40 text-xs",
-                      onboardingStep === "programSelect" &&
-                        "origin-center animate-onboarding-pulse",
-                    )}
-                    style={
-                      {
-                        "--onboarding-pulse-x": "-15%",
-                        "--onboarding-pulse-y": "10%",
-                        "--onboarding-pulse-scale": "1.5",
-                      } as React.CSSProperties
-                    }
-                  >
-                    {Object.entries(programs).map(([key, { name }]) => (
-                      <option key={key} value={key}>
-                        {name}
-                      </option>
-                    ))}
-                  </Select>
-                }
-                className="flex h-full min-w-0 flex-col"
+              <div className="min-h-0 flex-1">
+                <MultiModelEditor
+                  tabs={editorTabs}
+                  value={editorTabId}
+                  onValueChange={setEditorTabId}
+                  onProgramContentChange={handleProgramContentChange}
+                  typesReady={webContainer.typesReady}
+                  headerExtra={programSelectorHeader}
+                  className="flex h-full min-w-0 flex-col"
+                />
+              </div>
+              <WebContainerLogsPanel
+                expanded={showLogsPanel}
+                onToggle={() => setShowLogsPanel((v) => !v)}
               />
             </div>
           </ResizablePanel>
@@ -177,38 +295,20 @@ export function MainLayout() {
       >
         {/* Editor - always full width */}
         <div className="flex h-full min-w-0 flex-col">
-          <MultiModelEditor
-            tabs={editorTabs}
-            value={editorTabId}
-            onValueChange={setEditorTabId}
-            headerExtra={
-              <Select
-                data-onboarding-step="programSelect"
-                value={selectedProgram}
-                onChange={(e) =>
-                  handleProgramChange(e.target.value as ProgramKey)
-                }
-                className={cn(
-                  "h-7 w-40 text-xs",
-                  onboardingStep === "programSelect" &&
-                    "origin-center animate-onboarding-pulse",
-                )}
-                style={
-                  {
-                    "--onboarding-pulse-x": "-15%",
-                    "--onboarding-pulse-y": "10%",
-                    "--onboarding-pulse-scale": "1.5",
-                  } as React.CSSProperties
-                }
-              >
-                {Object.entries(programs).map(([key, { name }]) => (
-                  <option key={key} value={key}>
-                    {name}
-                  </option>
-                ))}
-              </Select>
-            }
-            className="flex h-full min-w-0 flex-col"
+          <div className="min-h-0 flex-1">
+            <MultiModelEditor
+              tabs={editorTabs}
+              value={editorTabId}
+              onValueChange={setEditorTabId}
+              onProgramContentChange={handleProgramContentChange}
+              typesReady={webContainer.typesReady}
+              headerExtra={programSelectorHeader}
+              className="flex h-full min-w-0 flex-col"
+            />
+          </div>
+          <WebContainerLogsPanel
+            expanded={showLogsPanel}
+            onToggle={() => setShowLogsPanel((v) => !v)}
           />
         </div>
 
@@ -247,6 +347,7 @@ export function MainLayout() {
         onboardingStep={onboardingStep}
         onOnboardingComplete={completeOnboardingStep}
         onRestartOnboarding={restartOnboarding}
+        isPlayDisabled={!isMobile && webContainer.status === "booting"}
       />
     </div>
   );

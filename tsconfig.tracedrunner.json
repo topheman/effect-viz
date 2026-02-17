@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "noEmit": false,
+    "outDir": "dist/tracedrunner",
+    "rootDir": "src"
+  },
+  "include": [
+    "src/runtime/tracedRunner.ts",
+    "src/runtime/traceEmitter.ts",
+    "src/lib/crypto.ts",
+    "src/types/trace.ts"
+  ]
+}

@@ -1,6 +1,7 @@
 import { Effect, Fiber } from "effect";
 import { useRef, useState } from "react";
 
+import type { SpawnAndParseCallbacks } from "@/effects/spawnAndParse";
 import { type ProgramKey, programs } from "@/lib/programs";
 import {
   makeTraceEmitterLayer,
@@ -10,43 +11,70 @@ import { TraceEmitter } from "@/runtime/traceEmitter";
 import { useFiberStore } from "@/stores/fiberStore";
 import { useTraceStore } from "@/stores/traceStore";
 
-export function useEventHandlers() {
+export interface WebContainerBridge {
+  runPlay: ({
+    callbacks,
+    onFirstChunk,
+  }: {
+    callbacks: SpawnAndParseCallbacks;
+    onFirstChunk: () => void;
+  }) => Promise<{
+    success: boolean;
+    exitCode?: number;
+  }>;
+  interruptPlay: () => void;
+  isReady: boolean;
+}
+
+export function useEventHandlers(webContainer?: WebContainerBridge | null) {
   const { addEvent, clear: clearEvents } = useTraceStore();
   const { processEvent, clear: clearFibers } = useFiberStore();
 
-  // Currently selected program
   const [selectedProgram, setSelectedProgram] = useState<ProgramKey>("basic");
-
-  // Track the running fiber so we can interrupt it
   const runningFiberRef = useRef<Fiber.RuntimeFiber<unknown, unknown> | null>(
     null,
   );
 
-  const handlePlay = () => {
-    // Reset previous state
+  const handlePlay = ({ onFirstChunk }: { onFirstChunk: () => void }) => {
     clearEvents();
     clearFibers();
 
-    // Get the selected program (cast to generic effect; programs have varying A/E)
+    if (webContainer?.isReady) {
+      return webContainer
+        .runPlay({
+          callbacks: {
+            addEvent,
+            processEvent,
+          },
+          onFirstChunk,
+        })
+        .then((result) => {
+          if (!result.success) {
+            console.error("Play failed:", result);
+          }
+          return result;
+        });
+    }
+
+    return runFallbackPlay({ onFirstChunk });
+  };
+
+  function runFallbackPlay({ onFirstChunk }: { onFirstChunk: () => void }) {
     const program = programs[selectedProgram].program as Effect.Effect<
       unknown,
       unknown,
       TraceEmitter
     >;
-
     const traced = runProgramWithTrace(program, selectedProgram);
-
-    // Create layer that emits to BOTH stores
     const layer = makeTraceEmitterLayer((event) => {
       addEvent(event); // For ExecutionLog
       processEvent(event); // For FiberTreeView
     });
 
-    // Run the program using runFork to get a fiber handle
+    onFirstChunk(); // No compile step on mobile; program runs immediately
     const fiber = Effect.runFork(traced.pipe(Effect.provide(layer)));
     runningFiberRef.current = fiber;
 
-    // Log when complete
     return Effect.runPromise(Fiber.join(fiber)).then(
       (result) => {
         console.log("Program completed:", result);
@@ -59,10 +87,12 @@ export function useEventHandlers() {
         return { success: false, error };
       },
     );
-  };
+  }
 
   const handleReset = () => {
-    if (runningFiberRef.current) {
+    if (webContainer?.isReady) {
+      webContainer.interruptPlay();
+    } else if (runningFiberRef.current) {
       Effect.runPromise(Fiber.interrupt(runningFiberRef.current));
       runningFiberRef.current = null;
     }
