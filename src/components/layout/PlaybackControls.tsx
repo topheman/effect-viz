@@ -27,7 +27,7 @@ const PAUSE_IS_IMPLEMENTED = false;
 
 export type PlaybackState =
   | "idle"
-  | "compiling"
+  | "starting"
   | "running"
   | "paused"
   | "finished";
@@ -237,7 +237,7 @@ export function PlaybackControls({
                 ${
                   state === "running"
                     ? "animate-pulse bg-green-500"
-                    : state === "compiling"
+                    : state === "starting"
                       ? "animate-pulse bg-orange-500"
                       : state === "paused"
                         ? "bg-yellow-500"
@@ -247,7 +247,9 @@ export function PlaybackControls({
                 }
               `}
             />
-            <span className="capitalize">{state}</span>
+            <span className="capitalize">
+              {state === "starting" ? "starting..." : state}
+            </span>
           </div>
         </div>
 

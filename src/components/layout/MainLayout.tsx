@@ -204,7 +204,7 @@ export function MainLayout() {
   );
 
   const onPlay = () => {
-    setPlaybackState("compiling");
+    setPlaybackState("starting");
     setShowVisualizer(true);
     handlePlay({ onFirstChunk: () => setPlaybackState("running") })
       .then(() => setPlaybackState("idle"))
