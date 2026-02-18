@@ -8,9 +8,13 @@ import { WebContainer } from "@/services/webcontainer";
 import type { TraceEvent } from "@/types/trace";
 
 const TRACE_EVENT_PREFIX = "TRACE_EVENT:";
+const PERF_PREFIX = "PERF:";
 
-/** Enable with ?perf=1 in URL or sessionStorage.setItem('perf_play','1'). */
-function isPerfPlayEnabled(): boolean {
+/**
+ * Enable with ?perf=1 in URL or sessionStorage.setItem('perf_play','1').
+ * When enabled: host logs t0–t3; container logs [container] ready (ms until Effect.runFork).
+ */
+export function isPerfPlayEnabled(): boolean {
   if (typeof window === "undefined") return false;
   return (
     new URLSearchParams(window.location.search).get("perf") === "1" ||
@@ -72,8 +76,12 @@ export function spawnAndParseTraceEvents({
     const t0 = performance.now();
     logPerf("t0 (before spawn)", t0);
 
+    const spawnOptions = {
+      output: true as const,
+      ...(isPerfPlayEnabled() && { env: { PERF_PLAY: "1" } }),
+    };
     const proc = yield* Effect.acquireRelease(
-      wc.spawn("pnpm", ["exec", "tsx", "program.ts"], { output: true }),
+      wc.spawn("pnpm", ["exec", "tsx", "program.ts"], spawnOptions),
       (p) => Effect.sync(() => p.kill()),
     );
 
@@ -104,8 +112,24 @@ export function spawnAndParseTraceEvents({
       ),
     );
 
-    const traceStream = rawStream.pipe(
+    const lineStream = rawStream.pipe(
       Stream.mapConcat((chunk) => chunk.split("\n")),
+    );
+    const traceStream = lineStream.pipe(
+      Stream.tap((line) =>
+        line.startsWith(PERF_PREFIX)
+          ? Effect.sync(() => {
+              const rest = line.slice(PERF_PREFIX.length).trim();
+              const spaceIdx = rest.indexOf(" ");
+              const label = spaceIdx >= 0 ? rest.slice(0, spaceIdx) : rest;
+              const ts = spaceIdx >= 0 ? rest.slice(spaceIdx + 1).trim() : "";
+              const t1 = ts ? Number.parseFloat(ts) : undefined;
+              if (t1 !== undefined && !Number.isNaN(t1)) {
+                logPerf(`[container] ${label}`, 0, t1);
+              }
+            })
+          : Effect.void,
+      ),
       Stream.filterMap((line) => Option.fromNullable(parseTraceEvent(line))),
     );
 

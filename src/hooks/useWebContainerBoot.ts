@@ -6,6 +6,7 @@ import { Effect, Fiber, Layer } from "effect";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
+  isPerfPlayEnabled,
   spawnAndParseTraceEvents,
   type SpawnAndParseCallbacks,
 } from "@/effects/spawnAndParse";
@@ -172,7 +173,7 @@ export function useWebContainerBoot() {
   const syncToContainer = useCallback((content: string) => {
     const handle = handleRef.current;
     if (!handle) return;
-    const transformed = transformForContainer(content);
+    const transformed = transformForContainer(content, isPerfPlayEnabled());
     Effect.runPromise(handle.writeFile("program.ts", transformed));
   }, []);
 

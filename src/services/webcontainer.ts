@@ -55,6 +55,15 @@ const layer = makeTraceEmitterLayer((event) =>
 Effect.runFork(traced.pipe(Effect.provide(layer)));
 `;
 
+/** Minimal traced Effect program for pre-warm — loads effect, tracedRunner, emits one trace event */
+const PREWARM_PROGRAM = `import { Effect } from "effect";
+import { runProgramWithTrace, makeTraceEmitterLayer } from "./tracedRunner";
+const program = Effect.succeed("prewarm");
+const traced = runProgramWithTrace(program, "prewarm");
+const layer = makeTraceEmitterLayer(() => {});
+Effect.runFork(traced.pipe(Effect.provide(layer)));
+`;
+
 // ---
 // Semaphore: only one WebContainer at a time
 // ---
@@ -143,6 +152,7 @@ export const WebContainerLive = Layer.scoped(
       "tsconfig.json": TSCONFIG_JSON,
       "tracedRunner.js": tracedRunnerJs,
       "program.ts": INITIAL_PROGRAM,
+      "prewarm.ts": PREWARM_PROGRAM,
     };
 
     yield* logs.log("boot", "4/6 Mounting files...");
@@ -170,11 +180,11 @@ export const WebContainerLive = Layer.scoped(
 
     yield* logs.log("boot", "6/6 Boot complete, returning handle");
 
-    // Pre-warm tsx: spawn no-op run so first Play has warmer process/tsx state
+    // Pre-warm traced path: run minimal traced Effect so first Play has warmer tsx/Effect/tracedRunner
     yield* Effect.fork(
       Effect.gen(function* () {
         const proc = yield* Effect.promise(() =>
-          container.spawn("pnpm", ["exec", "tsx", "-e", "console.log('ok')"], {
+          container.spawn("pnpm", ["exec", "tsx", "prewarm.ts"], {
             output: false,
           }),
         );
