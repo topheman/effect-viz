@@ -56,3 +56,5 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for design decisions.
 ## WebContainers: Editable Programs
 
 - [webcontainers-spec.md](./webcontainers-spec.md) - Specification for running edited programs in a WebContainer (boot on mount, install sequence, root vs inner project structure). This step is **necessary for v2** — the editable editor and WebContainer runtime must be in place before refactoring to runtime hooks.
+- [webcontainer-impl.md](./webcontainer-impl.md) - Phased implementation plan (Effect services, sync, spawn).
+- [webcontainer-perf-and-sync.md](./webcontainer-perf-and-sync.md) - Pre-compile optimization, sync UX (500ms debounce, flush-on-Play, Syncing...), perf instrumentation, and remaining todos (stdout→WebContainerLogsPanel).

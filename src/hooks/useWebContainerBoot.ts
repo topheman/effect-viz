@@ -16,6 +16,7 @@ import {
 } from "@/effects/typeAcquisition";
 import { isMobileUserAgent } from "@/lib/mobileDetection";
 import { transformForContainer } from "@/lib/transformForContainer";
+import { transpileForContainer } from "@/lib/transpileForContainer";
 import type { WebContainerHandle } from "@/services/webcontainer";
 import { WebContainer, WebContainerLive } from "@/services/webcontainer";
 import { makeWebContainerLogsLayer } from "@/services/webContainerLogs";
@@ -33,6 +34,8 @@ export function useWebContainerBoot() {
   const playFiberRef = useRef<Fiber.RuntimeFiber<unknown, unknown> | null>(
     null,
   );
+  const lastSyncedContentRef = useRef<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     if (isMobileUserAgent()) {
@@ -170,12 +173,32 @@ export function useWebContainerBoot() {
     }
   }, []);
 
-  const syncToContainer = useCallback((content: string) => {
-    const handle = handleRef.current;
-    if (!handle) return;
-    const transformed = transformForContainer(content, isPerfPlayEnabled());
-    Effect.runPromise(handle.writeFile("program.ts", transformed));
-  }, []);
+  const syncToContainer = useCallback(
+    async (content: string): Promise<void> => {
+      const handle = handleRef.current;
+      if (!handle) return;
+      if (content === lastSyncedContentRef.current) return;
+
+      setIsSyncing(true);
+      try {
+        const transformed = transformForContainer(content, isPerfPlayEnabled());
+        await Effect.runPromise(handle.writeFile("program.ts", transformed));
+
+        try {
+          const js = await transpileForContainer(transformed);
+          await Effect.runPromise(handle.writeFile("program.js", js));
+        } catch (e) {
+          console.error("[useWebContainerBoot] Transpile failed:", e);
+          return;
+        }
+
+        lastSyncedContentRef.current = content;
+      } finally {
+        setIsSyncing(false);
+      }
+    },
+    [],
+  );
 
   const debouncedSyncRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const syncToContainerDebounced = useCallback(
@@ -184,7 +207,18 @@ export function useWebContainerBoot() {
       debouncedSyncRef.current = setTimeout(() => {
         debouncedSyncRef.current = null;
         syncToContainer(content);
-      }, 2000);
+      }, 500);
+    },
+    [syncToContainer],
+  );
+
+  const flushSync = useCallback(
+    async (content: string): Promise<void> => {
+      if (debouncedSyncRef.current) {
+        clearTimeout(debouncedSyncRef.current);
+        debouncedSyncRef.current = null;
+      }
+      await syncToContainer(content);
     },
     [syncToContainer],
   );
@@ -197,6 +231,8 @@ export function useWebContainerBoot() {
     interruptPlay,
     syncToContainer,
     syncToContainerDebounced,
+    flushSync,
+    isSyncing,
     isReady: status === "ready", // true only when WebContainer is ready; "fallback" means use runFallbackPlay
   };
 }

@@ -2,7 +2,7 @@
  * Transforms editor content for execution inside the WebContainer.
  *
  * Applies:
- * 1. Import path: @/runtime/tracedRunner → ./tracedRunner
+ * 1. Import path: @/runtime/tracedRunner → ./tracedRunner.js (Node ESM requires .js extension)
  * 2. Trace emitter bridge: replace makeTraceEmitterLayer callback with stdout writer
  * 3. Program key: runProgramWithTrace(program, "user")
  * 4. In-container perf instrumentation when perfEnabled (single "ready" checkpoint before Effect.runFork)
@@ -37,7 +37,7 @@ function injectPerfInstrumentation(result: string): string {
 
 /**
  * Transform editor source for container execution.
- * - Replaces @/ imports with ./tracedRunner
+ * - Replaces @/ imports with ./tracedRunner.js
  * - Replaces makeTraceEmitterLayer callback with stdout writer
  * - Uses "user" as program key for runProgramWithTrace
  * - When perfEnabled: injects perf checkpoint before Effect.runFork
@@ -48,10 +48,15 @@ export function transformForContainer(
 ): string {
   let result = source;
 
-  // 1. Replace import path: @/runtime/tracedRunner, @/..., etc. with ./tracedRunner
+  // 1. Replace import path: @/runtime/tracedRunner → ./tracedRunner.js (Node ESM requires .js)
   result = result.replace(
     /from\s+["']@\/[^"']*tracedRunner["']/g,
-    'from "./tracedRunner"',
+    'from "./tracedRunner.js"',
+  );
+  // Also fix ./tracedRunner without .js (e.g. INITIAL_PROGRAM, user edits)
+  result = result.replace(
+    /from\s+["']\.\/tracedRunner["']/g,
+    'from "./tracedRunner.js"',
   );
 
   // 2. Replace makeTraceEmitterLayer callback with stdout writer

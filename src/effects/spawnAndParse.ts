@@ -1,5 +1,5 @@
 /**
- * Effect that spawns `pnpm exec tsx program.ts` in the WebContainer and parses
+ * Effect that spawns `node --enable-source-maps program.js` in the WebContainer and parses
  * TRACE_EVENT: lines from stdout, pushing to addEvent and processEvent.
  */
 import { Duration, Effect, Option, Ref, Stream } from "effect";
@@ -81,7 +81,7 @@ export function spawnAndParseTraceEvents({
       ...(isPerfPlayEnabled() && { env: { PERF_PLAY: "1" } }),
     };
     const proc = yield* Effect.acquireRelease(
-      wc.spawn("pnpm", ["exec", "tsx", "program.ts"], spawnOptions),
+      wc.spawn("node", ["--enable-source-maps", "program.js"], spawnOptions),
       (p) => Effect.sync(() => p.kill()),
     );
 
@@ -105,7 +105,7 @@ export function spawnAndParseTraceEvents({
                   const t2 = performance.now();
                   yield* Ref.set(t2Ref, t2);
                   logPerf("t2 (first stdout chunk)", t0, t2);
-                  logPerf("t1→t2 npx/tsx/exec", t1, t2);
+                  logPerf("t1→t2 node program.js", t1, t2);
                 }),
           ),
         ),
@@ -116,6 +116,8 @@ export function spawnAndParseTraceEvents({
       Stream.mapConcat((chunk) => chunk.split("\n")),
     );
     const traceStream = lineStream.pipe(
+      // Any line not starting with TRACE_EVENT or PERF comes from something writing
+      // to stdout inside the container (e.g. Node errors, stack traces, user's console.log).
       Stream.tap((line) =>
         line.startsWith(PERF_PREFIX)
           ? Effect.sync(() => {
@@ -128,7 +130,11 @@ export function spawnAndParseTraceEvents({
                 logPerf(`[container] ${label}`, 0, t1);
               }
             })
-          : Effect.void,
+          : line.startsWith(TRACE_EVENT_PREFIX) || line.trim() === ""
+            ? Effect.void
+            : Effect.sync(() =>
+                console.warn("[spawnAndParse] container output:", line),
+              ),
       ),
       Stream.filterMap((line) => Option.fromNullable(parseTraceEvent(line))),
     );

@@ -46,6 +46,8 @@ interface PlaybackControlsProps {
   onRestartOnboarding?: () => void;
   /** When true, Play is disabled (e.g. WebContainer still booting) */
   isPlayDisabled?: boolean;
+  /** When true, show "Syncing..." in status (e.g. flushing editor to container) */
+  isSyncing?: boolean;
 }
 
 export function PlaybackControls({
@@ -61,6 +63,7 @@ export function PlaybackControls({
   onOnboardingComplete,
   onRestartOnboarding,
   isPlayDisabled = false,
+  isSyncing = false,
 }: PlaybackControlsProps) {
   const isRunning = state === "running";
   const canPlay = (state === "idle" || state === "paused") && !isPlayDisabled;
@@ -228,27 +231,34 @@ export function PlaybackControls({
           {/* Status indicator */}
           <div
             className={`
-              ml-4 flex w-20 items-center gap-2 text-sm text-muted-foreground
+              ml-4 flex w-24 min-w-24 items-center gap-2 text-sm
+              text-muted-foreground
             `}
           >
             <div
               className={`
                 h-2 w-2 shrink-0 rounded-full
                 ${
-                  state === "running"
-                    ? "animate-pulse bg-green-500"
-                    : state === "starting"
-                      ? "animate-pulse bg-orange-500"
-                      : state === "paused"
-                        ? "bg-yellow-500"
-                        : state === "finished"
-                          ? "bg-blue-500"
-                          : "bg-muted-foreground"
+                  isSyncing
+                    ? "animate-pulse bg-orange-500"
+                    : state === "running"
+                      ? "animate-pulse bg-green-500"
+                      : state === "starting"
+                        ? "animate-pulse bg-orange-500"
+                        : state === "paused"
+                          ? "bg-yellow-500"
+                          : state === "finished"
+                            ? "bg-blue-500"
+                            : "bg-muted-foreground"
                 }
               `}
             />
             <span className="capitalize">
-              {state === "starting" ? "starting..." : state}
+              {isSyncing
+                ? "Syncing..."
+                : state === "starting"
+                  ? "starting..."
+                  : state}
             </span>
           </div>
         </div>

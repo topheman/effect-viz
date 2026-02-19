@@ -48,6 +48,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "effect": "^3.19.15",
+    "esbuild-wasm": "^0.27.3",
     "lucide-react": "^0.563.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.0",

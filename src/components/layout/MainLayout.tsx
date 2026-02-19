@@ -203,9 +203,12 @@ export function MainLayout() {
     </TooltipProvider>
   );
 
-  const onPlay = () => {
-    setPlaybackState("starting");
+  const onPlay = async () => {
     setShowVisualizer(true);
+    if (webContainer.isReady) {
+      await webContainer.flushSync(editorContent);
+    }
+    setPlaybackState("starting");
     handlePlay({ onFirstChunk: () => setPlaybackState("running") })
       .then(() => setPlaybackState("idle"))
       .catch(() => setPlaybackState("idle")); // e.g. interrupt on program switch
@@ -347,7 +350,11 @@ export function MainLayout() {
         onboardingStep={onboardingStep}
         onOnboardingComplete={completeOnboardingStep}
         onRestartOnboarding={restartOnboarding}
-        isPlayDisabled={!isMobile && webContainer.status === "booting"}
+        isPlayDisabled={
+          !isMobile &&
+          (webContainer.status === "booting" || webContainer.isSyncing)
+        }
+        isSyncing={!isMobile && webContainer.isSyncing}
       />
     </div>
   );
