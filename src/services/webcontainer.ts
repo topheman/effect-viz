@@ -9,6 +9,10 @@
 import { WebContainer as WC, type FileSystemTree } from "@webcontainer/api";
 import { Context, Effect, GlobalValue, Layer } from "effect";
 
+import {
+  initEsbuildWasm,
+  transpileForContainer,
+} from "@/lib/transpileForContainer";
 import { WebContainerLogs } from "@/services/webContainerLogs";
 
 // ---
@@ -20,7 +24,7 @@ const PACKAGE_JSON = `{
   "private": true,
   "type": "module",
   "scripts": {
-    "run": "npx tsx program.ts"
+    "run": "pnpm exec tsx program.ts"
   },
   "dependencies": {
     "effect": "^3.19.15",
@@ -45,13 +49,22 @@ const TSCONFIG_JSON = `{
 
 const INITIAL_PROGRAM = `// Program will be synced from editor
 import { Effect } from "effect";
-import { runProgramWithTrace, makeTraceEmitterLayer } from "./tracedRunner";
+import { runProgramWithTrace, makeTraceEmitterLayer } from "./tracedRunner.js";
 
 const program = Effect.succeed("Hello from WebContainer!");
 const traced = runProgramWithTrace(program, "user");
 const layer = makeTraceEmitterLayer((event) =>
   process.stdout.write("TRACE_EVENT:" + JSON.stringify(event) + "\\n")
 );
+Effect.runFork(traced.pipe(Effect.provide(layer)));
+`;
+
+/** Minimal traced Effect program for pre-warm — loads effect, tracedRunner, emits one trace event */
+const PREWARM_PROGRAM = `import { Effect } from "effect";
+import { runProgramWithTrace, makeTraceEmitterLayer } from "./tracedRunner.js";
+const program = Effect.succeed("prewarm");
+const traced = runProgramWithTrace(program, "prewarm");
+const layer = makeTraceEmitterLayer(() => {});
 Effect.runFork(traced.pipe(Effect.provide(layer)));
 `;
 
@@ -138,11 +151,20 @@ export const WebContainerLive = Layer.scoped(
       `3/6 tracedRunner.js fetched ${JSON.stringify({ length: tracedRunnerJs.length })}`,
     );
 
+    yield* logs.log("boot", "3b/6 Initializing esbuild-wasm...");
+    yield* Effect.promise(() => initEsbuildWasm());
+    yield* logs.log("boot", "3b/6 Transpiling initial program.js...");
+    const initialJs = yield* Effect.promise(() =>
+      transpileForContainer(INITIAL_PROGRAM),
+    );
+
     const files: Record<string, string> = {
       "package.json": PACKAGE_JSON,
       "tsconfig.json": TSCONFIG_JSON,
       "tracedRunner.js": tracedRunnerJs,
       "program.ts": INITIAL_PROGRAM,
+      "program.js": initialJs,
+      "prewarm.ts": PREWARM_PROGRAM,
     };
 
     yield* logs.log("boot", "4/6 Mounting files...");
@@ -169,6 +191,19 @@ export const WebContainerLive = Layer.scoped(
     }
 
     yield* logs.log("boot", "6/6 Boot complete, returning handle");
+
+    // Pre-warm traced path: run minimal traced Effect so first Play has warmer tsx/Effect/tracedRunner
+    yield* Effect.fork(
+      Effect.gen(function* () {
+        const proc = yield* Effect.promise(() =>
+          container.spawn("pnpm", ["exec", "tsx", "prewarm.ts"], {
+            output: false,
+          }),
+        );
+        yield* Effect.promise(() => proc.exit);
+      }),
+    );
+
     const handle: WebContainerHandle = {
       writeFile: (path, content) =>
         Effect.promise(() => container.fs.writeFile(path, content)),
