@@ -14,7 +14,7 @@ import {
   acquireMonacoTypes,
   acquireMonacoTypesFallback,
 } from "@/effects/typeAcquisition";
-import { isMobileUserAgent } from "@/lib/mobileDetection";
+import { canSupportWebContainer } from "@/lib/mobileDetection";
 import { transformForContainer } from "@/lib/transformForContainer";
 import { transpileForContainer } from "@/lib/transpileForContainer";
 import type { WebContainerHandle } from "@/services/webcontainer";
@@ -38,10 +38,13 @@ export function useWebContainerBoot() {
   const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
-    if (isMobileUserAgent()) {
+    if (!canSupportWebContainer()) {
       setStatus("booting");
       setError(null);
-      addLog("boot", "Mobile detected, using fallback (no WebContainer)");
+      addLog(
+        "boot",
+        "Mobile or Safari detected, using fallback (no WebContainer)",
+      );
       Effect.runPromise(acquireMonacoTypesFallback)
         .then(() => {
           setTypesReady(true);

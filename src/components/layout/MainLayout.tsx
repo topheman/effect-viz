@@ -20,7 +20,7 @@ import { VisualizerPanel } from "@/components/visualizer/VisualizerPanel";
 import { useEventHandlers } from "@/hooks/useEventHandlers";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useWebContainerBoot } from "@/hooks/useWebContainerBoot";
-import { useIsMobile } from "@/lib/mobileDetection";
+import { useCanSupportWebContainer } from "@/lib/mobileDetection";
 import {
   computeProgramSwitch,
   computeResetToTemplate,
@@ -35,7 +35,7 @@ import { Header } from "./Header";
 import { PlaybackControls, type PlaybackState } from "./PlaybackControls";
 
 export function MainLayout() {
-  const isMobile = useIsMobile();
+  const canSupportWebContainer = useCanSupportWebContainer();
   const webContainer = useWebContainerBoot();
   const webContainerBridge = webContainer.isReady
     ? {
@@ -136,7 +136,7 @@ export function MainLayout() {
       id: "program",
       title: "Program",
       source: editorContent,
-      readOnly: isMobile,
+      readOnly: !canSupportWebContainer,
       path: `program-${selectedProgram}.ts`,
     },
     {
@@ -351,10 +351,10 @@ export function MainLayout() {
         onOnboardingComplete={completeOnboardingStep}
         onRestartOnboarding={restartOnboarding}
         isPlayDisabled={
-          !isMobile &&
+          canSupportWebContainer &&
           (webContainer.status === "booting" || webContainer.isSyncing)
         }
-        isSyncing={!isMobile && webContainer.isSyncing}
+        isSyncing={canSupportWebContainer && webContainer.isSyncing}
       />
     </div>
   );

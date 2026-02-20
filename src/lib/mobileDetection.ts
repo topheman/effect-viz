@@ -2,7 +2,7 @@ import { useState } from "react";
 
 /**
  * Mobile detection via user agent.
- * Used to skip WebContainer boot and use fallback path (readonly editor, in-browser play).
+ * Used for viewport-independent mobile device detection.
  */
 export function isMobileUserAgent(): boolean {
   if (typeof navigator === "undefined") return false;
@@ -15,4 +15,29 @@ export function isMobileUserAgent(): boolean {
 export function useIsMobile(): boolean {
   const [isMobile] = useState(() => isMobileUserAgent());
   return isMobile;
+}
+
+/**
+ * Safari detection via user agent (desktop and iOS).
+ * WebContainer has limited support on Safari (e.g. Play fails without devtools).
+ */
+export function isSafariUserAgent(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  return (
+    ua.includes("Safari") && !ua.includes("Chrome") && !ua.includes("Chromium")
+  );
+}
+
+/**
+ * Whether the browser supports WebContainer.
+ * Returns false for mobile and Safari (use fallback path).
+ */
+export function canSupportWebContainer(): boolean {
+  return !isMobileUserAgent() && !isSafariUserAgent();
+}
+
+export function useCanSupportWebContainer(): boolean {
+  const [can] = useState(() => canSupportWebContainer());
+  return can;
 }

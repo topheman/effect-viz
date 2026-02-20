@@ -1,12 +1,12 @@
-# Mobile Fallback
+# Mobile and Safari Fallback
 
 ## Why a Fallback Path?
 
-WebContainer does not boot correctly on mobile devices. The boot sequence typically fails at the `pnpm install` step. To provide a usable experience on phones and tablets, the app uses a fallback path when the user agent indicates a mobile device.
+WebContainer does not run reliably on mobile devices (boot often fails at `pnpm install`) or Safari (desktop and iOS). Play can fail on Safari without devtools open due to WebAssembly instantiation issues. To provide a usable experience, the app uses a fallback path when the user agent indicates a mobile device or Safari.
 
 ## What the Fallback Provides
 
-| Feature          | Desktop (WebContainer)              | Mobile (Fallback)                          |
+| Feature          | Supported (WebContainer)             | Fallback (Mobile / Safari)                 |
 | ---------------- | ------------------------------------ | ------------------------------------------ |
 | Editor           | Editable                             | Readonly                                   |
 | Execution        | WebContainer (`pnpm run`, etc.)      | In-browser Effect (`runFallbackPlay`)      |
@@ -22,17 +22,21 @@ Types for the Monaco editor are split as follows:
 
 This split ensures tracedRunner-related types remain up to date via the build pipeline, while Effect stubs are maintained manually in `fallback-types.d.ts` since they are minimal and stable.
 
-## Mobile Detection
+## WebContainer Support Detection
 
-Mobile is detected via **user agent** (not media queries), matching common mobile substrings: Android, iPhone, iPad, iPod, webOS, BlackBerry, IEMobile, Opera Mini.
+WebContainer support is determined via **user agent** (not media queries):
 
-See `src/lib/mobileDetection.ts` for `isMobileUserAgent()` and `useIsMobile()`.
+- **`canSupportWebContainer()`** returns `true` when the browser can run WebContainer (Chrome, Firefox, non-Safari Chromium).
+- **`useCanSupportWebContainer()`** is the React hook version.
+- Fallback is used when `!canSupportWebContainer()` — i.e. mobile (Android, iPhone, iPad, iPod, webOS, BlackBerry, IEMobile, Opera Mini) or Safari (desktop and iOS).
+
+See `src/lib/mobileDetection.ts` for `canSupportWebContainer()`, `useCanSupportWebContainer()`, `isMobileUserAgent()`, and `isSafariUserAgent()`.
 
 ## Future: Conditional Imports
 
 In a future step, we can:
 
-- Conditionally import WebContainer-related code only on desktop
-- Conditionally import fallback type acquisition only on mobile
+- Conditionally import WebContainer-related code only when `canSupportWebContainer()`
+- Conditionally import fallback type acquisition only when using fallback
 
-This would reduce bundle size and avoid loading WebContainer code on mobile.
+This would reduce bundle size and avoid loading WebContainer code on mobile and Safari.
