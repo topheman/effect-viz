@@ -1,8 +1,16 @@
+import AnsiModule from "ansi-to-react";
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { useRef, useEffect } from "react";
+import type { ComponentType } from "react";
 
 import { cn } from "@/lib/utils";
 import { useWebContainerLogsStore } from "@/stores/webContainerLogsStore";
+
+// ansi-to-react is CJS; Vite/ESM may give us { default: Component } instead of
+// the component. React expects a function/class, not an object — extract default.
+const Ansi =
+  (AnsiModule as { default?: ComponentType<{ children?: string }> }).default ??
+  AnsiModule;
 
 interface WebContainerLogsPanelProps {
   expanded?: boolean;
@@ -46,7 +54,7 @@ export function WebContainerLogsPanel({
             `,
           )}
         >
-          WebContainer
+          Console
           {expanded ? (
             <ChevronDownIcon className="size-3.5" aria-hidden />
           ) : (
@@ -78,23 +86,39 @@ export function WebContainerLogsPanel({
             <p className="text-muted-foreground">No logs yet.</p>
           ) : (
             <div className="flex flex-col gap-0.5">
-              {logs.map((entry, i) => (
-                <div
-                  key={`${entry.timestamp ?? i}-${i}`}
-                  className="flex gap-2 break-all"
-                >
-                  <span
+              {logs.map((entry, i) =>
+                entry.label === "output" || entry.label === "error" ? (
+                  <div
+                    key={`${entry.timestamp ?? i}-${i}`}
                     className={cn(
-                      "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium",
-                      entry.label === "boot" && "bg-primary/20 text-primary",
-                      entry.label === "npm" && "bg-amber-500/20 text-amber-700",
+                      "px-2 py-0.5 break-all",
+                      entry.label === "output" && "bg-muted/30",
+                      entry.label === "error" && "bg-destructive/15",
                     )}
                   >
-                    {entry.label}
-                  </span>
-                  <span className="text-muted-foreground">{entry.message}</span>
-                </div>
-              ))}
+                    <Ansi>{entry.message}</Ansi>
+                  </div>
+                ) : (
+                  <div
+                    key={`${entry.timestamp ?? i}-${i}`}
+                    className="flex gap-2 break-all"
+                  >
+                    <span
+                      className={cn(
+                        "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium",
+                        entry.label === "boot" && "bg-primary/20 text-primary",
+                        entry.label === "npm" &&
+                          "bg-amber-500/20 text-amber-700",
+                      )}
+                    >
+                      {entry.label}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {entry.message}
+                    </span>
+                  </div>
+                ),
+              )}
             </div>
           )}
         </div>

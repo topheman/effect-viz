@@ -130,9 +130,11 @@ export function useWebContainerBoot() {
       // Provide the existing handle so spawnAndParseTraceEvents gets WebContainer without booting again
       const layer = Layer.succeed(WebContainer, handle);
       const program = Effect.scoped(
-        spawnAndParseTraceEvents({ callbacks, onFirstChunk }).pipe(
-          Effect.provide(layer),
-        ),
+        spawnAndParseTraceEvents({
+          callbacks,
+          onFirstChunk,
+          onStdout: (line) => addLog("output", line),
+        }).pipe(Effect.provide(layer)),
       );
       // Use runFork (not scoped fork): scoped(fork(program)) closes the scope
       // immediately when fork returns, which interrupts the play fiber.
@@ -166,7 +168,7 @@ export function useWebContainerBoot() {
         return { success: false, error: msg };
       });
     },
-    [status],
+    [status, addLog],
   );
 
   const interruptPlay = useCallback(() => {
@@ -191,6 +193,8 @@ export function useWebContainerBoot() {
           const js = await transpileForContainer(transformed);
           await Effect.runPromise(handle.writeFile("program.js", js));
         } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          addLog("error", msg);
           console.error("[useWebContainerBoot] Transpile failed:", e);
           return;
         }
@@ -200,7 +204,7 @@ export function useWebContainerBoot() {
         setIsSyncing(false);
       }
     },
-    [],
+    [addLog],
   );
 
   const debouncedSyncRef = useRef<ReturnType<typeof setTimeout> | null>(null);
