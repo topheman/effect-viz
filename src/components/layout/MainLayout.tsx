@@ -249,8 +249,31 @@ export function MainLayout() {
       >
         <ResizablePanelGroup orientation="horizontal" className="h-full">
           <ResizablePanel defaultSize={40} minSize={25}>
-            <div className="flex h-full min-w-0 flex-col">
-              <div className="min-h-0 flex-1">
+            {showLogsPanel ? (
+              <ResizablePanelGroup orientation="vertical" className="h-full">
+                <ResizablePanel defaultSize={75} minSize={30}>
+                  <div className="flex h-full min-w-0 flex-col">
+                    <MultiModelEditor
+                      tabs={editorTabs}
+                      value={editorTabId}
+                      onValueChange={setEditorTabId}
+                      onProgramContentChange={handleProgramContentChange}
+                      typesReady={webContainer.typesReady}
+                      headerExtra={programSelectorHeader}
+                      className="flex h-full min-w-0 flex-col"
+                    />
+                  </div>
+                </ResizablePanel>
+                <ResizableHandle withHandle />
+                <ResizablePanel defaultSize={25} minSize={10}>
+                  <WebContainerLogsPanel
+                    expanded={showLogsPanel}
+                    onToggle={() => setShowLogsPanel((v) => !v)}
+                  />
+                </ResizablePanel>
+              </ResizablePanelGroup>
+            ) : (
+              <div className="flex h-full min-w-0 flex-col">
                 <MultiModelEditor
                   tabs={editorTabs}
                   value={editorTabId}
@@ -260,12 +283,12 @@ export function MainLayout() {
                   headerExtra={programSelectorHeader}
                   className="flex h-full min-w-0 flex-col"
                 />
+                <WebContainerLogsPanel
+                  expanded={showLogsPanel}
+                  onToggle={() => setShowLogsPanel((v) => !v)}
+                />
               </div>
-              <WebContainerLogsPanel
-                expanded={showLogsPanel}
-                onToggle={() => setShowLogsPanel((v) => !v)}
-              />
-            </div>
+            )}
           </ResizablePanel>
 
           <ResizableHandle withHandle />
@@ -298,21 +321,49 @@ export function MainLayout() {
       >
         {/* Editor - always full width */}
         <div className="flex h-full min-w-0 flex-col">
-          <div className="min-h-0 flex-1">
-            <MultiModelEditor
-              tabs={editorTabs}
-              value={editorTabId}
-              onValueChange={setEditorTabId}
-              onProgramContentChange={handleProgramContentChange}
-              typesReady={webContainer.typesReady}
-              headerExtra={programSelectorHeader}
-              className="flex h-full min-w-0 flex-col"
-            />
-          </div>
-          <WebContainerLogsPanel
-            expanded={showLogsPanel}
-            onToggle={() => setShowLogsPanel((v) => !v)}
-          />
+          {showLogsPanel ? (
+            <ResizablePanelGroup
+              orientation="vertical"
+              className="min-h-0 flex-1"
+            >
+              <ResizablePanel defaultSize={75} minSize={30}>
+                <MultiModelEditor
+                  tabs={editorTabs}
+                  value={editorTabId}
+                  onValueChange={setEditorTabId}
+                  onProgramContentChange={handleProgramContentChange}
+                  typesReady={webContainer.typesReady}
+                  headerExtra={programSelectorHeader}
+                  className="flex h-full min-w-0 flex-col"
+                />
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={25} minSize={10}>
+                <WebContainerLogsPanel
+                  expanded={showLogsPanel}
+                  onToggle={() => setShowLogsPanel((v) => !v)}
+                />
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          ) : (
+            <>
+              <div className="min-h-0 flex-1">
+                <MultiModelEditor
+                  tabs={editorTabs}
+                  value={editorTabId}
+                  onValueChange={setEditorTabId}
+                  onProgramContentChange={handleProgramContentChange}
+                  typesReady={webContainer.typesReady}
+                  headerExtra={programSelectorHeader}
+                  className="flex h-full min-w-0 flex-col"
+                />
+              </div>
+              <WebContainerLogsPanel
+                expanded={showLogsPanel}
+                onToggle={() => setShowLogsPanel((v) => !v)}
+              />
+            </>
+          )}
         </div>
 
         {/* Visualizer - slides in from right */}
