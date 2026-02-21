@@ -150,7 +150,7 @@ export function WebContainerLogsPanel({
             <div
               ref={logsScrollRef}
               className={cn(
-                "min-h-0 flex-1 overflow-x-auto overflow-y-auto p-2 pb-10",
+                "min-h-0 flex-1 overflow-x-auto overflow-y-auto p-2",
                 "font-mono text-xs",
               )}
             >
@@ -206,7 +206,7 @@ export function WebContainerLogsPanel({
               <div
                 ref={errorsScrollRef}
                 className={cn(
-                  "min-h-0 flex-1 overflow-x-auto overflow-y-auto p-2 pb-10",
+                  "min-h-0 flex-1 overflow-x-auto overflow-y-auto p-2",
                   "font-mono text-xs",
                 )}
               >

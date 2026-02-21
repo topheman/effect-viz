@@ -1,4 +1,4 @@
-import { RotateCcw } from "lucide-react";
+import { GripHorizontal, RotateCcw } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { MultiModelEditor } from "@/components/editor/MultiModelEditor";
@@ -264,7 +264,20 @@ export function MainLayout() {
                     />
                   </div>
                 </ResizablePanel>
-                <ResizableHandle withHandle />
+                <ResizableHandle className="h-auto w-full">
+                  <div
+                    className={cn(
+                      "flex h-4 cursor-row-resize items-center justify-center",
+                      "border-y border-border bg-muted/20",
+                    )}
+                    aria-hidden
+                  >
+                    <GripHorizontal
+                      className="size-3.5 text-muted-foreground/50"
+                      aria-hidden
+                    />
+                  </div>
+                </ResizableHandle>
                 <ResizablePanel defaultSize={25} minSize={10}>
                   <WebContainerLogsPanel
                     expanded={showLogsPanel}
@@ -339,7 +352,20 @@ export function MainLayout() {
                   className="flex h-full min-w-0 flex-col"
                 />
               </ResizablePanel>
-              <ResizableHandle withHandle />
+              <ResizableHandle className="h-auto w-full">
+                <div
+                  className={cn(
+                    "flex h-4 cursor-row-resize items-center justify-center",
+                    "border-y border-border bg-muted/20",
+                  )}
+                  aria-hidden
+                >
+                  <GripHorizontal
+                    className="size-3.5 text-muted-foreground/50"
+                    aria-hidden
+                  />
+                </div>
+              </ResizableHandle>
               <ResizablePanel defaultSize={25} minSize={10}>
                 <WebContainerLogsPanel
                   expanded={showLogsPanel}
