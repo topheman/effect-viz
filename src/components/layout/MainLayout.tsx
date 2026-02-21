@@ -269,6 +269,7 @@ export function MainLayout() {
                   <WebContainerLogsPanel
                     expanded={showLogsPanel}
                     onToggle={() => setShowLogsPanel((v) => !v)}
+                    webContainerMode={canSupportWebContainer}
                   />
                 </ResizablePanel>
               </ResizablePanelGroup>
@@ -286,6 +287,7 @@ export function MainLayout() {
                 <WebContainerLogsPanel
                   expanded={showLogsPanel}
                   onToggle={() => setShowLogsPanel((v) => !v)}
+                  webContainerMode={canSupportWebContainer}
                 />
               </div>
             )}
@@ -342,6 +344,7 @@ export function MainLayout() {
                 <WebContainerLogsPanel
                   expanded={showLogsPanel}
                   onToggle={() => setShowLogsPanel((v) => !v)}
+                  webContainerMode={canSupportWebContainer}
                 />
               </ResizablePanel>
             </ResizablePanelGroup>
@@ -361,6 +364,7 @@ export function MainLayout() {
               <WebContainerLogsPanel
                 expanded={showLogsPanel}
                 onToggle={() => setShowLogsPanel((v) => !v)}
+                webContainerMode={canSupportWebContainer}
               />
             </>
           )}

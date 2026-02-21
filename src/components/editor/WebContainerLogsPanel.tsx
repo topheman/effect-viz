@@ -16,11 +16,13 @@ const Ansi =
 interface WebContainerLogsPanelProps {
   expanded?: boolean;
   onToggle?: () => void;
+  webContainerMode?: boolean;
 }
 
 export function WebContainerLogsPanel({
   expanded = true,
   onToggle,
+  webContainerMode = true,
 }: WebContainerLogsPanelProps) {
   const { logs, clearLogs, clearErrors } = useWebContainerLogsStore();
   const [activeTab, setActiveTab] = useState<"logs" | "errors">("logs");
@@ -33,11 +35,19 @@ export function WebContainerLogsPanel({
   const hasErrors = errorEntries.length > 0;
 
   const handleClear = () => {
-    if (activeTab === "logs") clearLogs();
-    else clearErrors();
+    if (webContainerMode) {
+      if (activeTab === "logs") clearLogs();
+      else clearErrors();
+    } else {
+      clearLogs();
+    }
   };
 
-  const canClear = activeTab === "logs" ? hasLogs : hasErrors;
+  const canClear = webContainerMode
+    ? activeTab === "logs"
+      ? hasLogs
+      : hasErrors
+    : hasLogs;
 
   const scrollToBottom = (el: HTMLDivElement | null) => {
     if (el) el.scrollTop = el.scrollHeight;
@@ -66,7 +76,9 @@ export function WebContainerLogsPanel({
       {expanded ? (
         <Tabs
           value={activeTab}
-          onValueChange={(v) => setActiveTab(v as "logs" | "errors")}
+          onValueChange={(v) =>
+            webContainerMode && setActiveTab(v as "logs" | "errors")
+          }
           className="flex h-full min-h-0 flex-1 flex-col overflow-hidden"
         >
           <div
@@ -93,26 +105,28 @@ export function WebContainerLogsPanel({
                   `,
                 )}
               >
-                Console
+                {webContainerMode ? "Console" : "Logs"}
                 <ChevronDownIcon className="size-3.5" aria-hidden />
               </button>
-              <TabsList variant="line" className="h-7 gap-1">
-                <TabsTrigger value="logs" className="px-2 text-xs">
-                  Logs
-                </TabsTrigger>
-                <TabsTrigger value="errors" className="px-2 text-xs">
-                  Errors
-                  {hasErrors && (
-                    <span
-                      className={`
-                        ml-1 rounded bg-destructive/20 px-1 text-[10px]
-                      `}
-                    >
-                      {errorEntries.length}
-                    </span>
-                  )}
-                </TabsTrigger>
-              </TabsList>
+              {webContainerMode && (
+                <TabsList variant="line" className="h-7 gap-1">
+                  <TabsTrigger value="logs" className="px-2 text-xs">
+                    Logs
+                  </TabsTrigger>
+                  <TabsTrigger value="errors" className="px-2 text-xs">
+                    Errors
+                    {hasErrors && (
+                      <span
+                        className={`
+                          ml-1 rounded bg-destructive/20 px-1 text-[10px]
+                        `}
+                      >
+                        {errorEntries.length}
+                      </span>
+                    )}
+                  </TabsTrigger>
+                </TabsList>
+              )}
             </div>
             {canClear && (
               <button
@@ -181,35 +195,38 @@ export function WebContainerLogsPanel({
               )}
             </div>
           </TabsContent>
-          <TabsContent
-            value="errors"
-            className={`
-              mt-0 flex h-0 min-h-0 flex-1 flex-col overflow-hidden outline-none
-            `}
-          >
-            <div
-              ref={errorsScrollRef}
-              className={cn(
-                "min-h-0 flex-1 overflow-x-auto overflow-y-auto p-2 pb-10",
-                "font-mono text-xs",
-              )}
+          {webContainerMode && (
+            <TabsContent
+              value="errors"
+              className={`
+                mt-0 flex h-0 min-h-0 flex-1 flex-col overflow-hidden
+                outline-none
+              `}
             >
-              {errorEntries.length === 0 ? (
-                <p className="text-muted-foreground">No errors.</p>
-              ) : (
-                <div className="flex flex-col gap-0.5">
-                  {errorEntries.map((entry, i) => (
-                    <div
-                      key={`${entry.timestamp ?? i}-${i}`}
-                      className="bg-destructive/15 px-2 py-0.5 break-all"
-                    >
-                      <Ansi>{entry.message}</Ansi>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </TabsContent>
+              <div
+                ref={errorsScrollRef}
+                className={cn(
+                  "min-h-0 flex-1 overflow-x-auto overflow-y-auto p-2 pb-10",
+                  "font-mono text-xs",
+                )}
+              >
+                {errorEntries.length === 0 ? (
+                  <p className="text-muted-foreground">No errors.</p>
+                ) : (
+                  <div className="flex flex-col gap-0.5">
+                    {errorEntries.map((entry, i) => (
+                      <div
+                        key={`${entry.timestamp ?? i}-${i}`}
+                        className="bg-destructive/15 px-2 py-0.5 break-all"
+                      >
+                        <Ansi>{entry.message}</Ansi>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          )}
         </Tabs>
       ) : (
         <div
@@ -229,7 +246,7 @@ export function WebContainerLogsPanel({
               `,
             )}
           >
-            Console
+            {webContainerMode ? "Console" : "Logs"}
             <ChevronUpIcon className="size-3.5" aria-hidden />
           </button>
         </div>
