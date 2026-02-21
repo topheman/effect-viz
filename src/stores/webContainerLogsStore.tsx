@@ -19,6 +19,10 @@ interface WebContainerLogsStore {
   addLog: (label: string, message: string) => void;
   /** Clear all logs */
   clear: () => void;
+  /** Clear logs only (keeps errors) */
+  clearLogs: () => void;
+  /** Clear errors only */
+  clearErrors: () => void;
 }
 
 const WebContainerLogsStoreContext =
@@ -41,13 +45,23 @@ export function WebContainerLogsStoreProvider({
     setLogs([]);
   }, []);
 
+  const clearLogs = useCallback(() => {
+    setLogs((prev) => prev.filter((e) => e.label === "error"));
+  }, []);
+
+  const clearErrors = useCallback(() => {
+    setLogs((prev) => prev.filter((e) => e.label !== "error"));
+  }, []);
+
   const store = useMemo(
     () => ({
       logs,
       addLog,
       clear,
+      clearLogs,
+      clearErrors,
     }),
-    [logs, addLog, clear],
+    [logs, addLog, clear, clearLogs, clearErrors],
   );
 
   return (

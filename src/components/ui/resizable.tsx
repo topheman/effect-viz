@@ -57,6 +57,14 @@ function ResizableHandle({
           data-[panel-group-direction=vertical]:after:-translate-y-1/2
           [&[data-panel-group-direction=vertical]>div]:rotate-90
         `,
+        `
+          data-[separator=active]:ring-1 data-[separator=active]:ring-ring
+          data-[separator=hover]:ring-1 data-[separator=hover]:ring-ring
+          data-[separator=inactive]:ring-0
+          data-[separator=inactive]:focus-visible:ring-0
+          data-[separator=inactive]:focus-visible:ring-offset-0
+          data-[separator=inactive]:focus-visible:outline-none
+        `,
         className,
       )}
       {...props}

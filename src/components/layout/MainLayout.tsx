@@ -1,4 +1,4 @@
-import { RotateCcw } from "lucide-react";
+import { GripHorizontal, RotateCcw } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { MultiModelEditor } from "@/components/editor/MultiModelEditor";
@@ -249,8 +249,45 @@ export function MainLayout() {
       >
         <ResizablePanelGroup orientation="horizontal" className="h-full">
           <ResizablePanel defaultSize={40} minSize={25}>
-            <div className="flex h-full min-w-0 flex-col">
-              <div className="min-h-0 flex-1">
+            {showLogsPanel ? (
+              <ResizablePanelGroup orientation="vertical" className="h-full">
+                <ResizablePanel defaultSize={75} minSize={30}>
+                  <div className="flex h-full min-w-0 flex-col">
+                    <MultiModelEditor
+                      tabs={editorTabs}
+                      value={editorTabId}
+                      onValueChange={setEditorTabId}
+                      onProgramContentChange={handleProgramContentChange}
+                      typesReady={webContainer.typesReady}
+                      headerExtra={programSelectorHeader}
+                      className="flex h-full min-w-0 flex-col"
+                    />
+                  </div>
+                </ResizablePanel>
+                <ResizableHandle className="h-auto w-full">
+                  <div
+                    className={cn(
+                      "flex h-4 cursor-row-resize items-center justify-center",
+                      "border-y border-border bg-muted/20",
+                    )}
+                    aria-hidden
+                  >
+                    <GripHorizontal
+                      className="size-3.5 text-muted-foreground/50"
+                      aria-hidden
+                    />
+                  </div>
+                </ResizableHandle>
+                <ResizablePanel defaultSize={25} minSize={10}>
+                  <WebContainerLogsPanel
+                    expanded={showLogsPanel}
+                    onToggle={() => setShowLogsPanel((v) => !v)}
+                    webContainerMode={canSupportWebContainer}
+                  />
+                </ResizablePanel>
+              </ResizablePanelGroup>
+            ) : (
+              <div className="flex h-full min-w-0 flex-col">
                 <MultiModelEditor
                   tabs={editorTabs}
                   value={editorTabId}
@@ -260,12 +297,13 @@ export function MainLayout() {
                   headerExtra={programSelectorHeader}
                   className="flex h-full min-w-0 flex-col"
                 />
+                <WebContainerLogsPanel
+                  expanded={showLogsPanel}
+                  onToggle={() => setShowLogsPanel((v) => !v)}
+                  webContainerMode={canSupportWebContainer}
+                />
               </div>
-              <WebContainerLogsPanel
-                expanded={showLogsPanel}
-                onToggle={() => setShowLogsPanel((v) => !v)}
-              />
-            </div>
+            )}
           </ResizablePanel>
 
           <ResizableHandle withHandle />
@@ -298,21 +336,64 @@ export function MainLayout() {
       >
         {/* Editor - always full width */}
         <div className="flex h-full min-w-0 flex-col">
-          <div className="min-h-0 flex-1">
-            <MultiModelEditor
-              tabs={editorTabs}
-              value={editorTabId}
-              onValueChange={setEditorTabId}
-              onProgramContentChange={handleProgramContentChange}
-              typesReady={webContainer.typesReady}
-              headerExtra={programSelectorHeader}
-              className="flex h-full min-w-0 flex-col"
-            />
-          </div>
-          <WebContainerLogsPanel
-            expanded={showLogsPanel}
-            onToggle={() => setShowLogsPanel((v) => !v)}
-          />
+          {showLogsPanel ? (
+            <ResizablePanelGroup
+              orientation="vertical"
+              className="min-h-0 flex-1"
+            >
+              <ResizablePanel defaultSize={75} minSize={30}>
+                <MultiModelEditor
+                  tabs={editorTabs}
+                  value={editorTabId}
+                  onValueChange={setEditorTabId}
+                  onProgramContentChange={handleProgramContentChange}
+                  typesReady={webContainer.typesReady}
+                  headerExtra={programSelectorHeader}
+                  className="flex h-full min-w-0 flex-col"
+                />
+              </ResizablePanel>
+              <ResizableHandle className="h-auto w-full">
+                <div
+                  className={cn(
+                    "flex h-4 cursor-row-resize items-center justify-center",
+                    "border-y border-border bg-muted/20",
+                  )}
+                  aria-hidden
+                >
+                  <GripHorizontal
+                    className="size-3.5 text-muted-foreground/50"
+                    aria-hidden
+                  />
+                </div>
+              </ResizableHandle>
+              <ResizablePanel defaultSize={25} minSize={10}>
+                <WebContainerLogsPanel
+                  expanded={showLogsPanel}
+                  onToggle={() => setShowLogsPanel((v) => !v)}
+                  webContainerMode={canSupportWebContainer}
+                />
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          ) : (
+            <>
+              <div className="min-h-0 flex-1">
+                <MultiModelEditor
+                  tabs={editorTabs}
+                  value={editorTabId}
+                  onValueChange={setEditorTabId}
+                  onProgramContentChange={handleProgramContentChange}
+                  typesReady={webContainer.typesReady}
+                  headerExtra={programSelectorHeader}
+                  className="flex h-full min-w-0 flex-col"
+                />
+              </div>
+              <WebContainerLogsPanel
+                expanded={showLogsPanel}
+                onToggle={() => setShowLogsPanel((v) => !v)}
+                webContainerMode={canSupportWebContainer}
+              />
+            </>
+          )}
         </div>
 
         {/* Visualizer - slides in from right */}

@@ -65,9 +65,11 @@ export interface SpawnAndParseCallbacks {
 export function spawnAndParseTraceEvents({
   callbacks,
   onFirstChunk,
+  onStdout,
 }: {
   callbacks: SpawnAndParseCallbacks;
   onFirstChunk: () => void;
+  onStdout?: (line: string) => void;
 }) {
   return Effect.gen(function* () {
     const wc = yield* WebContainer;
@@ -132,9 +134,9 @@ export function spawnAndParseTraceEvents({
             })
           : line.startsWith(TRACE_EVENT_PREFIX) || line.trim() === ""
             ? Effect.void
-            : Effect.sync(() =>
-                console.warn("[spawnAndParse] container output:", line),
-              ),
+            : Effect.sync(() => {
+                onStdout?.(line);
+              }),
       ),
       Stream.filterMap((line) => Option.fromNullable(parseTraceEvent(line))),
     );
