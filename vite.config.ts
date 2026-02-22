@@ -71,6 +71,9 @@ export default defineConfig({
     },
     allowedHosts: [".ngrok-free.app"],
   },
+  optimizeDeps: {
+    include: ["ansi-to-react"],
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
