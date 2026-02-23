@@ -1,60 +1,45 @@
 import { describe, expect, it } from "vitest";
 
-import { transformForContainer } from "./transformForContainer";
+import { transformImportsForContainer } from "./transformForContainer";
 
-describe("transformForContainer", () => {
-  it("injects perf instrumentation when perfEnabled", () => {
+describe("transformImportsForContainer", () => {
+  it("replaces @/runtime/tracedRunner with ./tracedRunner.js", () => {
     const source = `import { Effect } from "effect";
-import { runProgramWithTrace, makeTraceEmitterLayer } from "@/runtime/tracedRunner";
+import { withTrace } from "@/runtime/tracedRunner";
 
-const program = Effect.succeed("Hello");
-const traced = runProgramWithTrace(program, "basic");
-const layer = makeTraceEmitterLayer((event) => {});
-Effect.runFork(traced.pipe(Effect.provide(layer)));
+export const rootEffect = Effect.succeed("Hello");
+export const requirements = [];
 `;
-    const result = transformForContainer(source, true);
-    expect(result).toContain("PERF: ready");
-    expect(result).toContain("performance.now()");
-    expect(result).toMatch(/\s*Effect\.runFork\s*\(/);
+    const result = transformImportsForContainer(source);
+    expect(result).toContain('from "./tracedRunner.js"');
+    expect(result).not.toContain("@/runtime/tracedRunner");
   });
 
-  it("omits perf instrumentation when perfDisabled", () => {
-    const source = `import { Effect } from "effect";
-import { runProgramWithTrace, makeTraceEmitterLayer } from "@/runtime/tracedRunner";
-
-const program = Effect.succeed("Hello");
-const traced = runProgramWithTrace(program, "basic");
-const layer = makeTraceEmitterLayer((event) => {});
-Effect.runFork(traced.pipe(Effect.provide(layer)));
-`;
-    const result = transformForContainer(source, false);
-    expect(result).not.toContain("PERF:");
-    expect(result).toContain(
-      "Effect.runFork(traced.pipe(Effect.provide(layer)))",
-    );
+  it("replaces @/ paths with ./tracedRunner.js", () => {
+    const source = `import { forkWithTrace } from "@/runtime/tracedRunner";`;
+    const result = transformImportsForContainer(source);
+    expect(result).toBe('import { forkWithTrace } from "./tracedRunner.js";');
   });
 
-  it("handles tracedProgram variable name", () => {
-    const source = `import { Effect } from "effect";
-import { runProgramWithTrace, makeTraceEmitterLayer } from "@/runtime/tracedRunner";
-
-const program = Effect.succeed(1);
-const tracedProgram = runProgramWithTrace(program, "multiStep");
-const layer = makeTraceEmitterLayer((event) => {});
-const tracedProgramWithLayer = tracedProgram.pipe(Effect.provide(layer));
-Effect.runFork(tracedProgramWithLayer);
-`;
-    const result = transformForContainer(source, false);
-    expect(result).toContain('runProgramWithTrace(program, "user")');
-    expect(result).toContain("TRACE_EVENT:");
+  it("replaces ./tracedRunner with ./tracedRunner.js", () => {
+    const source = `import { Effect } from "./tracedRunner";`;
+    const result = transformImportsForContainer(source);
+    expect(result).toBe('import { Effect } from "./tracedRunner.js";');
   });
 
-  it("injects before const fiber = Effect.runFork(...)", () => {
-    const source = `const tracedProgramWithLayer = tracedProgram.pipe(Effect.provide(layer));
-const fiber = Effect.runFork(tracedProgramWithLayer);
+  it("leaves program content unchanged aside from imports", () => {
+    const source = `import { Effect } from "effect";
+import { withTrace } from "@/runtime/tracedRunner";
+
+export const rootEffect = Effect.gen(function* () {
+  yield* withTrace(Effect.succeed(1), "step");
+  return "done";
+});
+export const requirements = [];
 `;
-    const result = transformForContainer(source, true);
-    expect(result).toContain("PERF: ready");
-    expect(result).toContain("const fiber = Effect.runFork");
+    const result = transformImportsForContainer(source);
+    expect(result).toContain("export const rootEffect");
+    expect(result).toContain("export const requirements = []");
+    expect(result).toContain('yield* withTrace(Effect.succeed(1), "step")');
   });
 });

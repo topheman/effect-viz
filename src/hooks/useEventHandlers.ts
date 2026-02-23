@@ -1,4 +1,4 @@
-import { Effect, Fiber } from "effect";
+import { Effect, Fiber, Layer } from "effect";
 import { useRef, useState } from "react";
 
 import type { SpawnAndParseCallbacks } from "@/effects/spawnAndParse";
@@ -7,7 +7,6 @@ import {
   makeTraceEmitterLayer,
   runProgramWithTrace,
 } from "@/runtime/tracedRunner";
-import { TraceEmitter } from "@/runtime/traceEmitter";
 import { useFiberStore } from "@/stores/fiberStore";
 import { useTraceStore } from "@/stores/traceStore";
 
@@ -60,19 +59,24 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
   };
 
   function runFallbackPlay({ onFirstChunk }: { onFirstChunk: () => void }) {
-    const program = programs[selectedProgram].program as Effect.Effect<
-      unknown,
-      unknown,
-      TraceEmitter
-    >;
-    const traced = runProgramWithTrace(program, selectedProgram);
-    const layer = makeTraceEmitterLayer((event) => {
+    const { rootEffect, requirements } = programs[selectedProgram];
+    const scoped = Effect.scoped(
+      rootEffect as Effect.Effect<unknown, unknown, unknown>,
+    );
+    const traced = runProgramWithTrace(scoped, selectedProgram);
+    const traceLayer = makeTraceEmitterLayer((event) => {
       addEvent(event); // For ExecutionLog
       processEvent(event); // For FiberTreeView
     });
+    const allLayers = Layer.mergeAll(traceLayer, ...requirements);
 
     onFirstChunk(); // No compile step on mobile; program runs immediately
-    const fiber = Effect.runFork(traced.pipe(Effect.provide(layer)));
+    const program = traced.pipe(Effect.provide(allLayers)) as Effect.Effect<
+      unknown,
+      unknown,
+      never
+    >;
+    const fiber = Effect.runFork(program);
     runningFiberRef.current = fiber;
 
     return Effect.runPromise(Fiber.join(fiber)).then(

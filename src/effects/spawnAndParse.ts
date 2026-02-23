@@ -1,6 +1,7 @@
 /**
- * Effect that spawns `node --enable-source-maps program.js` in the WebContainer and parses
- * TRACE_EVENT: lines from stdout, pushing to addEvent and processEvent.
+ * Effect that spawns `node --enable-source-maps runner.js` in the WebContainer and parses
+ * TRACE_EVENT: lines from stdout. The runner imports program.js (rootEffect, requirements)
+ * and injects the trace layer before running.
  */
 import { Duration, Effect, Option, Ref, Stream } from "effect";
 
@@ -83,7 +84,7 @@ export function spawnAndParseTraceEvents({
       ...(isPerfPlayEnabled() && { env: { PERF_PLAY: "1" } }),
     };
     const proc = yield* Effect.acquireRelease(
-      wc.spawn("node", ["--enable-source-maps", "program.js"], spawnOptions),
+      wc.spawn("node", ["--enable-source-maps", "runner.js"], spawnOptions),
       (p) => Effect.sync(() => p.kill()),
     );
 
@@ -107,7 +108,7 @@ export function spawnAndParseTraceEvents({
                   const t2 = performance.now();
                   yield* Ref.set(t2Ref, t2);
                   logPerf("t2 (first stdout chunk)", t0, t2);
-                  logPerf("t1→t2 node program.js", t1, t2);
+                  logPerf("t1→t2 node runner.js", t1, t2);
                 }),
           ),
         ),
