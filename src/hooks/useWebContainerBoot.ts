@@ -6,7 +6,6 @@ import { Effect, Fiber, Layer } from "effect";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
-  isPerfPlayEnabled,
   spawnAndParseTraceEvents,
   type SpawnAndParseCallbacks,
 } from "@/effects/spawnAndParse";
@@ -15,7 +14,7 @@ import {
   acquireMonacoTypesFallback,
 } from "@/effects/typeAcquisition";
 import { canSupportWebContainer } from "@/lib/mobileDetection";
-import { transformForContainer } from "@/lib/transformForContainer";
+import { transformImportsForContainer } from "@/lib/transformForContainer";
 import { transpileForContainer } from "@/lib/transpileForContainer";
 import type { WebContainerHandle } from "@/services/webcontainer";
 import { WebContainer, WebContainerLive } from "@/services/webcontainer";
@@ -186,7 +185,7 @@ export function useWebContainerBoot() {
 
       setIsSyncing(true);
       try {
-        const transformed = transformForContainer(content, isPerfPlayEnabled());
+        const transformed = transformImportsForContainer(content);
         await Effect.runPromise(handle.writeFile("program.ts", transformed));
 
         try {

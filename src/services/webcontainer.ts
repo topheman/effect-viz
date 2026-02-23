@@ -49,14 +49,43 @@ const TSCONFIG_JSON = `{
 
 const INITIAL_PROGRAM = `// Program will be synced from editor
 import { Effect } from "effect";
+
+export const rootEffect = Effect.succeed("Hello from WebContainer!");
+export const requirements = [];
+`;
+
+const ROOT_EFFECT_MISSING_MSG = `Error: Your program must export "rootEffect" (the Effect to run).
+You can optionally export "requirements" (array of Layer) for custom services.
+
+Example:
+  export const rootEffect = Effect.succeed("Hello!");
+  export const requirements = [];
+`;
+
+/** Runner: imports program.js, injects trace layer, runs. Fixed bootstrap — no user code transformation for tracing. */
+const RUNNER_JS = `import { Effect, Layer } from "effect";
 import { runProgramWithTrace, makeTraceEmitterLayer } from "./tracedRunner.js";
 
-const program = Effect.succeed("Hello from WebContainer!");
-const traced = runProgramWithTrace(program, "user");
-const layer = makeTraceEmitterLayer((event) =>
-  process.stdout.write("TRACE_EVENT:" + JSON.stringify(event) + "\\n")
-);
-Effect.runFork(traced.pipe(Effect.provide(layer)));
+const ROOT_EFFECT_MISSING_MSG = ${JSON.stringify(ROOT_EFFECT_MISSING_MSG)};
+
+async function main() {
+  const mod = await import("./program.js");
+  const rootEffect = mod.rootEffect;
+  const requirements = mod.requirements ?? [];
+
+  if (rootEffect == null) {
+    process.stderr.write(ROOT_EFFECT_MISSING_MSG + "\\n");
+    process.exit(1);
+  }
+
+  const traceLayer = makeTraceEmitterLayer((event) =>
+    process.stdout.write("TRACE_EVENT:" + JSON.stringify(event) + "\\n")
+  );
+  const allLayers = Layer.mergeAll(traceLayer, ...requirements);
+  const traced = runProgramWithTrace(Effect.scoped(rootEffect), "user");
+  Effect.runFork(traced.pipe(Effect.provide(allLayers)));
+}
+main();
 `;
 
 /** Minimal traced Effect program for pre-warm — loads effect, tracedRunner, emits one trace event */
@@ -164,6 +193,7 @@ export const WebContainerLive = Layer.scoped(
       "tracedRunner.js": tracedRunnerJs,
       "program.ts": INITIAL_PROGRAM,
       "program.js": initialJs,
+      "runner.js": RUNNER_JS,
       "prewarm.ts": PREWARM_PROGRAM,
     };
 

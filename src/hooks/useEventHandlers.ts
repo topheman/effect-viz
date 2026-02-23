@@ -1,15 +1,15 @@
-import { Effect, Fiber } from "effect";
+import { Effect, Fiber, Layer } from "effect";
 import { useRef, useState } from "react";
 
 import type { SpawnAndParseCallbacks } from "@/effects/spawnAndParse";
-import { type ProgramKey, programs } from "@/lib/programs";
+import { type ProgramKey, makeLoggerLayer, programs } from "@/lib/programs";
 import {
   makeTraceEmitterLayer,
   runProgramWithTrace,
 } from "@/runtime/tracedRunner";
-import { TraceEmitter } from "@/runtime/traceEmitter";
 import { useFiberStore } from "@/stores/fiberStore";
 import { useTraceStore } from "@/stores/traceStore";
+import { useWebContainerLogsStore } from "@/stores/webContainerLogsStore";
 
 export interface WebContainerBridge {
   runPlay: ({
@@ -29,6 +29,7 @@ export interface WebContainerBridge {
 export function useEventHandlers(webContainer?: WebContainerBridge | null) {
   const { addEvent, clear: clearEvents } = useTraceStore();
   const { processEvent, clear: clearFibers } = useFiberStore();
+  const { addLog } = useWebContainerLogsStore();
 
   const [selectedProgram, setSelectedProgram] = useState<ProgramKey>("basic");
   const runningFiberRef = useRef<Fiber.RuntimeFiber<unknown, unknown> | null>(
@@ -60,19 +61,32 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
   };
 
   function runFallbackPlay({ onFirstChunk }: { onFirstChunk: () => void }) {
-    const program = programs[selectedProgram].program as Effect.Effect<
-      unknown,
-      unknown,
-      TraceEmitter
-    >;
-    const traced = runProgramWithTrace(program, selectedProgram);
-    const layer = makeTraceEmitterLayer((event) => {
+    const { rootEffect, requirements } = programs[selectedProgram];
+    const scoped = Effect.scoped(
+      rootEffect as Effect.Effect<unknown, unknown, unknown>,
+    );
+    const traced = runProgramWithTrace(scoped, selectedProgram);
+    const traceLayer = makeTraceEmitterLayer((event) => {
       addEvent(event); // For ExecutionLog
       processEvent(event); // For FiberTreeView
     });
+    // Fallback Logger layer: logs to panel (addLog) instead of console, so mobile users see output
+    const fallbackLoggerLayer = makeLoggerLayer((msg) =>
+      addLog("output", `[logger] ${msg}`),
+    );
+    const allLayers = Layer.mergeAll(
+      traceLayer,
+      ...requirements,
+      fallbackLoggerLayer,
+    );
 
     onFirstChunk(); // No compile step on mobile; program runs immediately
-    const fiber = Effect.runFork(traced.pipe(Effect.provide(layer)));
+    const program = traced.pipe(Effect.provide(allLayers)) as Effect.Effect<
+      unknown,
+      unknown,
+      never
+    >;
+    const fiber = Effect.runFork(program);
     runningFiberRef.current = fiber;
 
     return Effect.runPromise(Fiber.join(fiber)).then(
