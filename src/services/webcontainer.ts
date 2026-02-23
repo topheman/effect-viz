@@ -54,16 +54,34 @@ export const rootEffect = Effect.succeed("Hello from WebContainer!");
 export const requirements = [];
 `;
 
+const ROOT_EFFECT_MISSING_MSG = `Error: Your program must export "rootEffect" (the Effect to run).
+You can optionally export "requirements" (array of Layer) for custom services.
+
+Example:
+  export const rootEffect = Effect.succeed("Hello!");
+  export const requirements = [];
+`;
+
 /** Runner: imports program.js, injects trace layer, runs. Fixed bootstrap — no user code transformation for tracing. */
 const RUNNER_JS = `import { Effect, Layer } from "effect";
 import { runProgramWithTrace, makeTraceEmitterLayer } from "./tracedRunner.js";
 
+const ROOT_EFFECT_MISSING_MSG = ${JSON.stringify(ROOT_EFFECT_MISSING_MSG)};
+
 async function main() {
-  const { rootEffect, requirements } = await import("./program.js");
+  const mod = await import("./program.js");
+  const rootEffect = mod.rootEffect;
+  const requirements = mod.requirements ?? [];
+
+  if (rootEffect == null) {
+    process.stderr.write(ROOT_EFFECT_MISSING_MSG + "\\n");
+    process.exit(1);
+  }
+
   const traceLayer = makeTraceEmitterLayer((event) =>
     process.stdout.write("TRACE_EVENT:" + JSON.stringify(event) + "\\n")
   );
-  const allLayers = Layer.mergeAll(traceLayer, ...(requirements ?? []));
+  const allLayers = Layer.mergeAll(traceLayer, ...requirements);
   const traced = runProgramWithTrace(Effect.scoped(rootEffect), "user");
   Effect.runFork(traced.pipe(Effect.provide(allLayers)));
 }
