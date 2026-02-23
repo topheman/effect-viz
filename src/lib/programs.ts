@@ -286,7 +286,11 @@ interface Logger {
 
 const Logger = Context.GenericTag<Logger>("app/Logger");
 
-const makeLoggerLayer = (
+/**
+ * Create a Logger layer. Export for fallback mode
+ * (in order to log directly to panel instead of console).
+ */
+export const makeLoggerLayer = (
   onLog: (message: string) => void,
 ): Layer.Layer<Logger> =>
   Layer.succeed(Logger, {
