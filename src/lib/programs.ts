@@ -3,6 +3,7 @@
  * These demonstrate different Effect patterns with tracing.
  */
 
+import type { Layer } from "effect";
 import { Effect, Fiber, Ref } from "effect";
 
 import {
@@ -280,11 +281,23 @@ export const acquireReleaseExample = Effect.scoped(
 // Program Registry (with source code for display)
 // =============================================================================
 
+/**
+ * Contract for visualizable programs.
+ * Programs export rootEffect (the effect to run) and requirements (layers to provide).
+ * TraceEmitter is injected by the runner; do not include it in requirements.
+ */
+export interface VisualizableProgramContract {
+  readonly rootEffect: Effect.Effect<unknown, unknown, unknown>;
+  readonly requirements: ReadonlyArray<Layer.Layer<unknown>>;
+}
+
 export const programs = {
   basic: {
     name: "Basic Example",
     description: "Sequential + concurrent execution with fiber joins",
     program: basicExample,
+    rootEffect: basicExample,
+    requirements: [] as const,
     source: `import { Effect, Fiber } from "effect";
 import {
   forkWithTrace,
@@ -353,6 +366,8 @@ const fiber = Effect.runFork(tracedProgramWithLayer);
     name: "Multi-Step Worker",
     description: "A fiber performing multiple sequential steps",
     program: multiStepExample,
+    rootEffect: multiStepExample,
+    requirements: [] as const,
     source: `import { Effect, Fiber } from "effect";
 import {
   forkWithTrace,
@@ -397,6 +412,8 @@ const fiber = Effect.runFork(tracedProgramWithLayer);`,
     name: "Nested Forks",
     description: "Parent -> child -> grandchild fiber hierarchy",
     program: nestedForksExample,
+    rootEffect: nestedForksExample,
+    requirements: [] as const,
     source: `import { Effect, Fiber } from "effect";
 import {
   forkWithTrace,
@@ -463,6 +480,8 @@ const fiber = Effect.runFork(tracedProgramWithLayer);
     description:
       "Two fibers racing - first to complete wins, loser interrupted",
     program: racingExample,
+    rootEffect: racingExample,
+    requirements: [] as const,
     source: `import { Effect, Fiber } from "effect";
 import {
   forkWithTrace,
@@ -521,6 +540,8 @@ const fiber = Effect.runFork(tracedProgramWithLayer);
     name: "Failure & Recovery",
     description: "A step fails, then we recover and continue",
     program: failureExample,
+    rootEffect: failureExample,
+    requirements: [] as const,
     source: `import { Effect } from "effect";
 import {
   withTrace,
@@ -574,6 +595,8 @@ const fiber = Effect.runFork(tracedProgramWithLayer);
     description:
       "Effect fails twice then succeeds; retryWithTrace retries until success",
     program: retryExample,
+    rootEffect: retryExample,
+    requirements: [] as const,
     source: `import { Effect, Ref } from "effect";
 import {
   retryWithTrace,
@@ -624,6 +647,8 @@ const fiber = Effect.runFork(tracedProgramWithLayer);
     description:
       "Register 3 finalizers; they run in LIFO order when the scope closes",
     program: basicFinalizersExample,
+    rootEffect: basicFinalizersExample,
+    requirements: [] as const,
     source: `import { Effect } from "effect";
 import {
   addFinalizerWithTrace,
@@ -669,6 +694,8 @@ const fiber = Effect.runFork(tracedProgramWithLayer);
     description:
       "acquireReleaseWithTrace: acquire a resource, use it, release on scope exit",
     program: acquireReleaseExample,
+    rootEffect: acquireReleaseExample,
+    requirements: [] as const,
     source: `import { Effect } from "effect";
 import {
   acquireReleaseWithTrace,
