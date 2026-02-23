@@ -3,8 +3,7 @@
  * These demonstrate different Effect patterns with tracing.
  */
 
-import type { Layer } from "effect";
-import { Effect, Fiber, Ref } from "effect";
+import { Context, Effect, Fiber, Layer, Ref } from "effect";
 
 import {
   addFinalizerWithTrace,
@@ -276,6 +275,38 @@ export const acquireReleaseExample = Effect.scoped(
     return connection;
   }),
 );
+
+// =============================================================================
+// Custom Requirements Example (Logger service)
+// =============================================================================
+
+interface Logger {
+  readonly log: (message: string) => Effect.Effect<void>;
+}
+
+const Logger = Context.GenericTag<Logger>("app/Logger");
+
+const makeLoggerLayer = (
+  onLog: (message: string) => void,
+): Layer.Layer<Logger> =>
+  Layer.succeed(Logger, {
+    log: (msg) => Effect.sync(() => onLog(msg)),
+  });
+
+const loggerLayer = makeLoggerLayer((msg) => console.log("[logger]", msg));
+
+/**
+ * Demonstrates requirements: rootEffect depends on a custom Logger service.
+ * The runner injects TraceEmitter; we provide Logger via requirements.
+ */
+export const loggerWithRequirementsExample = Effect.gen(function* () {
+  const logger = yield* Logger;
+  yield* withTrace(
+    logger.log("Hello from custom Logger service!"),
+    "log-message",
+  );
+  return "Logged via requirements";
+});
 
 // =============================================================================
 // Program Registry (with source code for display)
@@ -590,6 +621,39 @@ export const rootEffect = Effect.scoped(
 );
 
 export const requirements = [];
+`,
+  },
+  loggerWithRequirements: {
+    name: "Logger (custom requirements)",
+    description: "Uses a custom Logger service provided via requirements array",
+    rootEffect: loggerWithRequirementsExample,
+    requirements: [loggerLayer] as const,
+    source: `import { Effect, Context, Layer } from "effect";
+import { withTrace } from "@/runtime/tracedRunner";
+
+interface Logger {
+  readonly log: (message: string) => Effect.Effect<void>;
+}
+
+const Logger = Context.GenericTag<Logger>("app/Logger");
+
+const makeLoggerLayer = (onLog: (msg: string) => void): Layer.Layer<Logger> =>
+  Layer.succeed(Logger, {
+    log: (msg) => Effect.sync(() => onLog(msg)),
+  });
+
+const loggerLayer = makeLoggerLayer((msg) => console.log("[logger]", msg));
+
+export const rootEffect = Effect.gen(function* () {
+  const logger = yield* Logger;
+  yield* withTrace(
+    logger.log("Hello from custom Logger service!"),
+    "log-message"
+  );
+  return "Logged via requirements";
+});
+
+export const requirements = [loggerLayer];
 `,
   },
 } as const;

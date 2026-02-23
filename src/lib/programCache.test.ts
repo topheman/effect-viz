@@ -16,6 +16,7 @@ const mockPrograms: ProgramsMap = {
   retry: { source: "// retry template" },
   basicFinalizers: { source: "// basicFinalizers template" },
   acquireRelease: { source: "// acquireRelease template" },
+  loggerWithRequirements: { source: "// loggerWithRequirements template" },
 };
 
 describe("programCache", () => {
