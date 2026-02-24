@@ -31,13 +31,14 @@ Learn Effect concepts through explicit tracing wrappers (`withTrace`, `forkWithT
 - [Phase 4: Errors & Retries](./phase-4.md) ✅
 - [Phase 5: Scopes & Resources](./phase-5.md) ✅
 
-### Version 2: Runtime Hooks (Future)
+### Version 2: Runtime Hooks
 
 Refactor to use Effect's built-in observability, removing manual wrappers.
 
+- **[v2-spec.md](./v2-spec.md)** — Full specification for v2 workshop phases
 - Phase 6: Supervisor for automatic fiber lifecycle tracking
 - Phase 7: Tracer integration for effect spans
-- Phase 8: Custom Clock/Scheduler for suspension visibility
+- Phase 8: Supervisor onSuspend/onResume for sleep visibility
 
 **Why two versions?**
 - **V1** teaches concepts explicitly - you see exactly what gets traced
