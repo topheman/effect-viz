@@ -1,20 +1,20 @@
 /**
- * Extracts .d.ts files from a tracedRunner bundle and outputs them as JSON to stdout.
+ * Extracts .d.ts files from a runtime bundle and outputs them as JSON to stdout.
  */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-// Retrieve src path from --src flag using the built-in Node.js API (process.argv), fallback to "dist/tracedrunner" if not provided.
+// Retrieve src path from --src flag using the built-in Node.js API (process.argv), fallback to "dist/runtime" if not provided.
 const parsed = process.argv.find((arg) => arg.startsWith("--src="));
 if (!parsed) {
-  console.error("extract-dts-from-tracedrunner: missing --src flag (e.g. --src=dist/tracedrunner)");
+  console.error("extract-dts-from-runtime: missing --src flag (e.g. --src=dist/runtime)");
   process.exit(1);
 }
 const src = path.resolve(parsed.split("=")[1]);
 
 if (!fs.existsSync(src)) {
-  console.error("extract-dts-from-tracedrunner: dist/tracedrunner not found. Run build:tracedrunner first.");
+  console.error("extract-dts-from-runtime: dist/runtime not found. Run build:runtime first.");
   process.exit(1);
 }
 

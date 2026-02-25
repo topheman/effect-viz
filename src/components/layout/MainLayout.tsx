@@ -27,6 +27,7 @@ import {
 } from "@/lib/programCache";
 import type { ProgramKey } from "@/lib/programs";
 import { cn } from "@/lib/utils";
+import runtimeSource from "@/runtime/index.ts?raw";
 import tracedRunnerSource from "@/runtime/tracedRunner.ts?raw";
 import traceEmitterSource from "@/runtime/traceEmitter.ts?raw";
 import typesSource from "@/types/trace.ts?raw";
@@ -138,6 +139,11 @@ export function MainLayout() {
       source: editorContent,
       readOnly: !canSupportWebContainer,
       path: `program-${selectedProgram}.ts`,
+    },
+    {
+      id: "runtime",
+      title: "runtime",
+      source: runtimeSource,
     },
     {
       id: "tracedRunner",

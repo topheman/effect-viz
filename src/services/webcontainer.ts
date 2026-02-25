@@ -64,7 +64,7 @@ Example:
 
 /** Runner: imports program.js, injects trace layer, runs. Fixed bootstrap — no user code transformation for tracing. */
 const RUNNER_JS = `import { Effect, Layer } from "effect";
-import { runProgramWithTrace, makeTraceEmitterLayer } from "./tracedRunner.js";
+import { runProgramWithTrace, makeTraceEmitterLayer } from "./runtime.js";
 
 const ROOT_EFFECT_MISSING_MSG = ${JSON.stringify(ROOT_EFFECT_MISSING_MSG)};
 
@@ -88,9 +88,9 @@ async function main() {
 main();
 `;
 
-/** Minimal traced Effect program for pre-warm — loads effect, tracedRunner, emits one trace event */
+/** Minimal traced Effect program for pre-warm — loads effect, runtime, emits one trace event */
 const PREWARM_PROGRAM = `import { Effect } from "effect";
-import { runProgramWithTrace, makeTraceEmitterLayer } from "./tracedRunner.js";
+import { runProgramWithTrace, makeTraceEmitterLayer } from "./runtime.js";
 const program = Effect.succeed("prewarm");
 const traced = runProgramWithTrace(program, "prewarm");
 const layer = makeTraceEmitterLayer(() => {});
@@ -170,14 +170,14 @@ export const WebContainerLive = Layer.scoped(
     );
     yield* logs.log("boot", "2/6 WebContainer booted");
 
-    yield* logs.log("boot", "3/6 Fetching tracedRunner.js...");
-    const tracedRunnerJs = yield* Effect.tryPromise({
-      try: () => fetch("/app/tracedRunner.js").then((r) => r.text()),
-      catch: (e) => new Error(`Failed to fetch tracedRunner.js: ${e}`),
+    yield* logs.log("boot", "3/6 Fetching runtime.js...");
+    const runtimeJs = yield* Effect.tryPromise({
+      try: () => fetch("/app/runtime.js").then((r) => r.text()),
+      catch: (e) => new Error(`Failed to fetch runtime.js: ${e}`),
     });
     yield* logs.log(
       "boot",
-      `3/6 tracedRunner.js fetched ${JSON.stringify({ length: tracedRunnerJs.length })}`,
+      `3/6 runtime.js fetched ${JSON.stringify({ length: runtimeJs.length })}`,
     );
 
     yield* logs.log("boot", "3b/6 Initializing esbuild-wasm...");
@@ -190,7 +190,7 @@ export const WebContainerLive = Layer.scoped(
     const files: Record<string, string> = {
       "package.json": PACKAGE_JSON,
       "tsconfig.json": TSCONFIG_JSON,
-      "tracedRunner.js": tracedRunnerJs,
+      "runtime.js": runtimeJs,
       "program.ts": INITIAL_PROGRAM,
       "program.js": initialJs,
       "runner.js": RUNNER_JS,
@@ -222,7 +222,7 @@ export const WebContainerLive = Layer.scoped(
 
     yield* logs.log("boot", "6/6 Boot complete, returning handle");
 
-    // Pre-warm traced path: run minimal traced Effect so first Play has warmer tsx/Effect/tracedRunner
+    // Pre-warm traced path: run minimal traced Effect so first Play has warmer tsx/Effect/runtime
     yield* Effect.fork(
       Effect.gen(function* () {
         const proc = yield* Effect.promise(() =>

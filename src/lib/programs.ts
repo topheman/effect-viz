@@ -12,7 +12,7 @@ import {
   withTrace,
   sleepWithTrace,
   retryWithTrace,
-} from "@/runtime/tracedRunner";
+} from "@/runtime";
 
 // =============================================================================
 // Basic Example: Sequential + Concurrent Execution
@@ -337,7 +337,7 @@ import {
   forkWithTrace,
   withTrace,
   sleepWithTrace,
-} from "@/runtime/tracedRunner";
+} from "@/runtime";
 
 export const rootEffect = Effect.gen(function* () {
   // Step 1: Sequential initialization
@@ -389,7 +389,7 @@ import {
   forkWithTrace,
   withTrace,
   sleepWithTrace,
-} from "@/runtime/tracedRunner";
+} from "@/runtime";
 
 export const rootEffect = Effect.gen(function* () {
   const worker = yield* forkWithTrace(
@@ -417,7 +417,7 @@ import {
   forkWithTrace,
   withTrace,
   sleepWithTrace,
-} from "@/runtime/tracedRunner";
+} from "@/runtime";
 
 export const rootEffect = Effect.gen(function* () {
   const parent = yield* forkWithTrace(
@@ -467,7 +467,7 @@ import {
   forkWithTrace,
   withTrace,
   sleepWithTrace,
-} from "@/runtime/tracedRunner";
+} from "@/runtime";
 
 export const rootEffect = Effect.gen(function* () {
   yield* withTrace(Effect.succeed("starting race"), "race-start");
@@ -505,7 +505,7 @@ export const requirements = [];
     rootEffect: failureExample,
     requirements: [] as const,
     source: `import { Effect } from "effect";
-import { withTrace } from "@/runtime/tracedRunner";
+import { withTrace } from "@/runtime";
 
 export const rootEffect = Effect.gen(function* () {
   // Step 1: Setup succeeds
@@ -540,7 +540,7 @@ export const requirements = [];
     rootEffect: retryExample,
     requirements: [] as const,
     source: `import { Effect, Ref } from "effect";
-import { retryWithTrace } from "@/runtime/tracedRunner";
+import { retryWithTrace } from "@/runtime";
 
 export const rootEffect = Effect.gen(function* () {
   // Step 1: Ref to count attempts
@@ -575,7 +575,7 @@ export const requirements = [];
 import {
   addFinalizerWithTrace,
   withTrace,
-} from "@/runtime/tracedRunner";
+} from "@/runtime";
 
 export const rootEffect = Effect.scoped(
   Effect.gen(function* () {
@@ -604,7 +604,7 @@ export const requirements = [];
 import {
   acquireReleaseWithTrace,
   withTrace,
-} from "@/runtime/tracedRunner";
+} from "@/runtime";
 
 export const rootEffect = Effect.scoped(
   Effect.gen(function* () {
@@ -633,7 +633,7 @@ export const requirements = [];
     rootEffect: loggerWithRequirementsExample,
     requirements: [loggerLayer] as const,
     source: `import { Effect, Context, Layer } from "effect";
-import { withTrace } from "@/runtime/tracedRunner";
+import { withTrace } from "@/runtime";
 
 interface Logger {
   readonly log: (message: string) => Effect.Effect<void>;

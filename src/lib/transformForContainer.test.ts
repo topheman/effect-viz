@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { transformImportsForContainer } from "./transformForContainer";
 
 describe("transformImportsForContainer", () => {
-  it("replaces @/runtime/tracedRunner with ./tracedRunner.js", () => {
+  it("replaces @/runtime/tracedRunner with ./runtime.js", () => {
     const source = `import { Effect } from "effect";
 import { withTrace } from "@/runtime/tracedRunner";
 
@@ -11,20 +11,32 @@ export const rootEffect = Effect.succeed("Hello");
 export const requirements = [];
 `;
     const result = transformImportsForContainer(source);
-    expect(result).toContain('from "./tracedRunner.js"');
+    expect(result).toContain('from "./runtime.js"');
     expect(result).not.toContain("@/runtime/tracedRunner");
   });
 
-  it("replaces @/ paths with ./tracedRunner.js", () => {
+  it("replaces @/runtime paths with ./runtime.js", () => {
     const source = `import { forkWithTrace } from "@/runtime/tracedRunner";`;
     const result = transformImportsForContainer(source);
-    expect(result).toBe('import { forkWithTrace } from "./tracedRunner.js";');
+    expect(result).toBe('import { forkWithTrace } from "./runtime.js";');
   });
 
-  it("replaces ./tracedRunner with ./tracedRunner.js", () => {
+  it("replaces @/runtime with ./runtime.js", () => {
+    const source = `import { withTrace } from "@/runtime";`;
+    const result = transformImportsForContainer(source);
+    expect(result).toBe('import { withTrace } from "./runtime.js";');
+  });
+
+  it("replaces ./tracedRunner with ./runtime.js", () => {
     const source = `import { Effect } from "./tracedRunner";`;
     const result = transformImportsForContainer(source);
-    expect(result).toBe('import { Effect } from "./tracedRunner.js";');
+    expect(result).toBe('import { Effect } from "./runtime.js";');
+  });
+
+  it("replaces ./runtime with ./runtime.js", () => {
+    const source = `import { Effect } from "./runtime";`;
+    const result = transformImportsForContainer(source);
+    expect(result).toBe('import { Effect } from "./runtime.js";');
   });
 
   it("leaves program content unchanged aside from imports", () => {

@@ -3,10 +3,7 @@ import { useRef, useState } from "react";
 
 import type { SpawnAndParseCallbacks } from "@/effects/spawnAndParse";
 import { type ProgramKey, makeLoggerLayer, programs } from "@/lib/programs";
-import {
-  makeTraceEmitterLayer,
-  runProgramWithTrace,
-} from "@/runtime/tracedRunner";
+import { makeTraceEmitterLayer, runProgramWithTrace } from "@/runtime";
 import { useFiberStore } from "@/stores/fiberStore";
 import { useTraceStore } from "@/stores/traceStore";
 import { useWebContainerLogsStore } from "@/stores/webContainerLogsStore";

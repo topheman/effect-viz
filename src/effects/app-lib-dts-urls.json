@@ -4,12 +4,20 @@
     "path": "file:///types/trace.d.ts"
   },
   {
+    "url": "/app/runtime/index.d.ts",
+    "path": "file:///runtime/index.d.ts"
+  },
+  {
     "url": "/app/runtime/traceEmitter.d.ts",
     "path": "file:///runtime/traceEmitter.d.ts"
   },
   {
     "url": "/app/runtime/tracedRunner.d.ts",
     "path": "file:///runtime/tracedRunner.d.ts"
+  },
+  {
+    "url": "/app/runtime/vizSupervisor.d.ts",
+    "path": "file:///runtime/vizSupervisor.d.ts"
   },
   {
     "url": "/app/lib/crypto.d.ts",
