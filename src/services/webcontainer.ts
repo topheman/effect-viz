@@ -64,7 +64,7 @@ Example:
 
 /** Runner: imports program.js, injects trace layer, runs. Fixed bootstrap — no user code transformation for tracing. */
 const RUNNER_JS = `import { Effect, Layer } from "effect";
-import { runProgramWithTrace, makeTraceEmitterLayer, makeVizLayers } from "./runtime.js";
+import { makeTraceEmitterLayer, makeVizLayers, runProgramFork } from "./runtime.js";
 
 const ROOT_EFFECT_MISSING_MSG = ${JSON.stringify(ROOT_EFFECT_MISSING_MSG)};
 
@@ -83,19 +83,22 @@ async function main() {
   const traceLayer = makeTraceEmitterLayer(onEmit);
   const supervisorLayer = makeVizLayers(onEmit);
   const allLayers = Layer.mergeAll(traceLayer, supervisorLayer, ...requirements);
-  const traced = runProgramWithTrace(Effect.scoped(rootEffect), "user");
-  Effect.runFork(traced.pipe(Effect.provide(allLayers)));
+  const program = Effect.scoped(rootEffect).pipe(Effect.provide(allLayers));
+  const { promise } = runProgramFork(program, onEmit);
+  promise.then(
+    (result) => console.log("Program completed:", result),
+    (error) => console.error("Program failed:", error),
+  );
 }
 main();
 `;
 
 /** Minimal traced Effect program for pre-warm — loads effect, runtime, emits one trace event */
 const PREWARM_PROGRAM = `import { Effect } from "effect";
-import { runProgramWithTrace, makeTraceEmitterLayer } from "./runtime.js";
+import { runProgramFork } from "./runtime.js";
 const program = Effect.succeed("prewarm");
-const traced = runProgramWithTrace(program, "prewarm");
-const layer = makeTraceEmitterLayer(() => {});
-Effect.runFork(traced.pipe(Effect.provide(layer)));
+const { promise } = runProgramFork(program, () => {});
+promise.then(() => {}, (error) => console.error("Warmup program failed:", error));
 `;
 
 // ---

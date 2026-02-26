@@ -3,7 +3,11 @@ import { useRef, useState } from "react";
 
 import type { SpawnAndParseCallbacks } from "@/effects/spawnAndParse";
 import { type ProgramKey, makeLoggerLayer, programs } from "@/lib/programs";
-import { makeTraceEmitterLayer, makeVizLayers } from "@/runtime";
+import {
+  makeTraceEmitterLayer,
+  makeVizLayers,
+  runProgramFork,
+} from "@/runtime";
 import { useFiberStore } from "@/stores/fiberStore";
 import { useTraceStore } from "@/stores/traceStore";
 import { useWebContainerLogsStore } from "@/stores/webContainerLogsStore";
@@ -86,10 +90,10 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
       unknown,
       never
     >;
-    const fiber = Effect.runFork(program);
+    const { fiber, promise } = runProgramFork(program, onEmit);
     runningFiberRef.current = fiber;
 
-    return Effect.runPromise(Fiber.join(fiber)).then(
+    return promise.then(
       (result) => {
         console.log("Program completed:", result);
         runningFiberRef.current = null;

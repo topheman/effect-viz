@@ -35,6 +35,12 @@ class VizSupervisor extends Supervisor.AbstractSupervisor<void> {
     parent: Option.Option<Fiber.RuntimeFiber<unknown, unknown>>,
     fiber: Fiber.RuntimeFiber<A, E>,
   ): void {
+    // console.log("onStart", {
+    //   fiber,
+    //   _context,
+    //   _effect,
+    //   parent,
+    // });
     if (shouldIgnoreFiber(fiber)) {
       return;
     }
@@ -52,11 +58,11 @@ class VizSupervisor extends Supervisor.AbstractSupervisor<void> {
     });
   }
   onEnd<A, E>(exit: Exit.Exit<A, E>, fiber: Fiber.RuntimeFiber<A, E>): void {
+    // console.log("onEnd", { exit, fiber });
     if (shouldIgnoreFiber(fiber)) {
       return;
     }
     const fiberId = FiberId.threadName(fiber.id());
-    console.log("onEnd", { fiberId, exit, fiber });
     this.onEmit({
       type: Exit.isSuccess(exit) ? "fiber:end" : "fiber:interrupt",
       fiberId,

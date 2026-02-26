@@ -8,6 +8,10 @@
     "path": "file:///runtime/index.d.ts"
   },
   {
+    "url": "/app/runtime/runProgram.d.ts",
+    "path": "file:///runtime/runProgram.d.ts"
+  },
+  {
     "url": "/app/runtime/traceEmitter.d.ts",
     "path": "file:///runtime/traceEmitter.d.ts"
   },
