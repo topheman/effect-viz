@@ -12,6 +12,15 @@ import type { TraceEvent } from "@/types/trace";
 
 type OnEmit = (event: TraceEvent) => void;
 
+/**
+ * If the fiber has no context, it is a runtime fiber and we don't want to emit an event for it.
+ */
+function shouldIgnoreFiber(
+  fiber: Fiber.RuntimeFiber<unknown, unknown>,
+): boolean {
+  return fiber.currentContext.unsafeMap.size === 0;
+}
+
 class VizSupervisor extends Supervisor.AbstractSupervisor<void> {
   value: Effect.Effect<void, never, never>;
   onEmit: OnEmit;
@@ -26,12 +35,14 @@ class VizSupervisor extends Supervisor.AbstractSupervisor<void> {
     parent: Option.Option<Fiber.RuntimeFiber<unknown, unknown>>,
     fiber: Fiber.RuntimeFiber<A, E>,
   ): void {
+    if (shouldIgnoreFiber(fiber)) {
+      return;
+    }
     const parentId = Option.match(parent, {
       onNone: () => undefined,
       onSome: (p) => FiberId.threadName(p.id()),
     });
     const fiberId = FiberId.threadName(fiber.id());
-    console.log("onStart", { parentId, fiberId });
     this.onEmit({
       type: "fiber:fork",
       fiberId,
@@ -41,8 +52,11 @@ class VizSupervisor extends Supervisor.AbstractSupervisor<void> {
     });
   }
   onEnd<A, E>(exit: Exit.Exit<A, E>, fiber: Fiber.RuntimeFiber<A, E>): void {
+    if (shouldIgnoreFiber(fiber)) {
+      return;
+    }
     const fiberId = FiberId.threadName(fiber.id());
-    console.log("onEnd", { fiberId });
+    console.log("onEnd", { fiberId, exit, fiber });
     this.onEmit({
       type: Exit.isSuccess(exit) ? "fiber:end" : "fiber:interrupt",
       fiberId,
