@@ -31,6 +31,7 @@ class VizSupervisor extends Supervisor.AbstractSupervisor<void> {
       onSome: (p) => FiberId.threadName(p.id()),
     });
     const fiberId = FiberId.threadName(fiber.id());
+    console.log("onStart", { parentId, fiberId });
     this.onEmit({
       type: "fiber:fork",
       fiberId,
@@ -40,9 +41,11 @@ class VizSupervisor extends Supervisor.AbstractSupervisor<void> {
     });
   }
   onEnd<A, E>(exit: Exit.Exit<A, E>, fiber: Fiber.RuntimeFiber<A, E>): void {
+    const fiberId = FiberId.threadName(fiber.id());
+    console.log("onEnd", { fiberId });
     this.onEmit({
       type: Exit.isSuccess(exit) ? "fiber:end" : "fiber:interrupt",
-      fiberId: FiberId.threadName(fiber.id()),
+      fiberId,
       timestamp: Date.now(),
     });
   }

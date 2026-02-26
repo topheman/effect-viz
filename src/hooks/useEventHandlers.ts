@@ -3,10 +3,11 @@ import { useRef, useState } from "react";
 
 import type { SpawnAndParseCallbacks } from "@/effects/spawnAndParse";
 import { type ProgramKey, makeLoggerLayer, programs } from "@/lib/programs";
-import { makeTraceEmitterLayer, runProgramWithTrace } from "@/runtime";
+import { makeTraceEmitterLayer, makeVizLayers } from "@/runtime";
 import { useFiberStore } from "@/stores/fiberStore";
 import { useTraceStore } from "@/stores/traceStore";
 import { useWebContainerLogsStore } from "@/stores/webContainerLogsStore";
+import type { TraceEvent } from "@/types/trace";
 
 export interface WebContainerBridge {
   runPlay: ({
@@ -62,23 +63,25 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
     const scoped = Effect.scoped(
       rootEffect as Effect.Effect<unknown, unknown, unknown>,
     );
-    const traced = runProgramWithTrace(scoped, selectedProgram);
-    const traceLayer = makeTraceEmitterLayer((event) => {
+    const onEmit = (event: TraceEvent) => {
       addEvent(event); // For ExecutionLog
       processEvent(event); // For FiberTreeView
-    });
+    };
+    const traceLayer = makeTraceEmitterLayer(onEmit);
+    const supervisorLayer = makeVizLayers(onEmit);
     // Fallback Logger layer: logs to panel (addLog) instead of console, so mobile users see output
     const fallbackLoggerLayer = makeLoggerLayer((msg) =>
       addLog("output", `[logger] ${msg}`),
     );
     const allLayers = Layer.mergeAll(
       traceLayer,
+      supervisorLayer,
       ...requirements,
       fallbackLoggerLayer,
     );
 
     onFirstChunk(); // No compile step on mobile; program runs immediately
-    const program = traced.pipe(Effect.provide(allLayers)) as Effect.Effect<
+    const program = scoped.pipe(Effect.provide(allLayers)) as Effect.Effect<
       unknown,
       unknown,
       never

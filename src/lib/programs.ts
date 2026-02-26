@@ -8,7 +8,6 @@ import { Context, Effect, Fiber, Layer, Ref } from "effect";
 import {
   addFinalizerWithTrace,
   acquireReleaseWithTrace,
-  forkWithTrace,
   withTrace,
   sleepWithTrace,
   retryWithTrace,
@@ -21,7 +20,7 @@ import {
 /**
  * A basic example that demonstrates:
  * - Sequential effect execution with withTrace
- * - Concurrent fiber execution with forkWithTrace
+ * - Concurrent fiber execution with Effect.fork
  * - Fiber joining (waiting for completion)
  */
 export const basicExample = Effect.gen(function* () {
@@ -32,20 +31,18 @@ export const basicExample = Effect.gen(function* () {
   );
 
   // Step 2: Fork two concurrent workers
-  const worker1 = yield* forkWithTrace(
+  const worker1 = yield* Effect.fork(
     withTrace(
       sleepWithTrace("1 second").pipe(Effect.as("Worker 1 complete")),
       "worker-1-task",
     ),
-    "worker-1",
   );
 
-  const worker2 = yield* forkWithTrace(
+  const worker2 = yield* Effect.fork(
     withTrace(
       sleepWithTrace("1.5 seconds").pipe(Effect.as("Worker 2 complete")),
       "worker-2-task",
     ),
-    "worker-2",
   );
 
   // Step 3: Wait for both workers
@@ -69,14 +66,13 @@ export const basicExample = Effect.gen(function* () {
  * Demonstrates a fiber that performs multiple sequential steps.
  */
 export const multiStepExample = Effect.gen(function* () {
-  const worker = yield* forkWithTrace(
+  const worker = yield* Effect.fork(
     Effect.gen(function* () {
       yield* withTrace(sleepWithTrace("500 millis"), "step-1-prepare");
       yield* withTrace(sleepWithTrace("500 millis"), "step-2-process");
       yield* withTrace(sleepWithTrace("500 millis"), "step-3-cleanup");
       return "Multi-step complete";
     }),
-    "multi-step-worker",
   );
 
   return yield* Fiber.join(worker);
@@ -90,34 +86,31 @@ export const multiStepExample = Effect.gen(function* () {
  * Demonstrates nested fiber hierarchies (parent -> child -> grandchild).
  */
 export const nestedForksExample = Effect.gen(function* () {
-  const parent = yield* forkWithTrace(
+  const parent = yield* Effect.fork(
     Effect.gen(function* () {
       yield* withTrace(Effect.succeed("parent started"), "parent-init");
 
       // Parent forks a child
-      const child = yield* forkWithTrace(
+      const child = yield* Effect.fork(
         Effect.gen(function* () {
           yield* withTrace(Effect.succeed("child started"), "child-init");
 
           // Child forks a grandchild
-          const grandchild = yield* forkWithTrace(
+          const grandchild = yield* Effect.fork(
             withTrace(
               sleepWithTrace("500 millis").pipe(Effect.as("grandchild done")),
               "grandchild-task",
             ),
-            "grandchild",
           );
 
           yield* Fiber.join(grandchild);
           return "child done";
         }),
-        "child",
       );
 
       yield* Fiber.join(child);
       return "parent done";
     }),
-    "parent",
   );
 
   return yield* Fiber.join(parent);
@@ -131,20 +124,18 @@ export const nestedForksExample = Effect.gen(function* () {
  * Demonstrates racing with explicit fiber forking.
  * First fiber to complete wins, the loser gets interrupted.
  *
- * Uses forkWithTrace so both competing fibers are visible in the timeline.
+ * Uses Effect.fork so both competing fibers are visible in the timeline.
  */
 export const racingExample = Effect.gen(function* () {
   yield* withTrace(Effect.succeed("starting race"), "race-start");
 
   // Fork two fibers explicitly so we can visualize them
-  const fastRunner = yield* forkWithTrace(
+  const fastRunner = yield* Effect.fork(
     sleepWithTrace("1 second").pipe(Effect.as("Fast runner wins!")),
-    "fast-runner",
   );
 
-  const slowRunner = yield* forkWithTrace(
+  const slowRunner = yield* Effect.fork(
     sleepWithTrace("2 seconds").pipe(Effect.as("Slow runner wins!")),
-    "slow-runner",
   );
 
   // Race by joining both - Effect.race returns when first completes
@@ -333,11 +324,7 @@ export const programs = {
     rootEffect: basicExample,
     requirements: [] as const,
     source: `import { Effect, Fiber } from "effect";
-import {
-  forkWithTrace,
-  withTrace,
-  sleepWithTrace,
-} from "@/runtime";
+import { withTrace, sleepWithTrace } from "@/runtime";
 
 export const rootEffect = Effect.gen(function* () {
   // Step 1: Sequential initialization
@@ -347,20 +334,18 @@ export const rootEffect = Effect.gen(function* () {
   );
 
   // Step 2: Fork two concurrent workers
-  const worker1 = yield* forkWithTrace(
+  const worker1 = yield* Effect.fork(
     withTrace(
       sleepWithTrace("1 second").pipe(Effect.as("Worker 1 complete")),
       "worker-1-task"
-    ),
-    "worker-1"
+    )
   );
 
-  const worker2 = yield* forkWithTrace(
+  const worker2 = yield* Effect.fork(
     withTrace(
       sleepWithTrace("1.5 seconds").pipe(Effect.as("Worker 2 complete")),
       "worker-2-task"
-    ),
-    "worker-2"
+    )
   );
 
   // Step 3: Wait for both workers
@@ -385,21 +370,16 @@ export const requirements = [];
     rootEffect: multiStepExample,
     requirements: [] as const,
     source: `import { Effect, Fiber } from "effect";
-import {
-  forkWithTrace,
-  withTrace,
-  sleepWithTrace,
-} from "@/runtime";
+import { withTrace, sleepWithTrace } from "@/runtime";
 
 export const rootEffect = Effect.gen(function* () {
-  const worker = yield* forkWithTrace(
+  const worker = yield* Effect.fork(
     Effect.gen(function* () {
       yield* withTrace(sleepWithTrace("500 millis"), "step-1-prepare");
       yield* withTrace(sleepWithTrace("500 millis"), "step-2-process");
       yield* withTrace(sleepWithTrace("500 millis"), "step-3-cleanup");
       return "Multi-step complete";
-    }),
-    "multi-step-worker"
+    })
   );
 
   return yield* Fiber.join(worker);
@@ -413,41 +393,34 @@ export const requirements = [];`,
     rootEffect: nestedForksExample,
     requirements: [] as const,
     source: `import { Effect, Fiber } from "effect";
-import {
-  forkWithTrace,
-  withTrace,
-  sleepWithTrace,
-} from "@/runtime";
+import { withTrace, sleepWithTrace } from "@/runtime";
 
 export const rootEffect = Effect.gen(function* () {
-  const parent = yield* forkWithTrace(
+  const parent = yield* Effect.fork(
     Effect.gen(function* () {
       yield* withTrace(Effect.succeed("parent started"), "parent-init");
 
       // Parent forks a child
-      const child = yield* forkWithTrace(
+      const child = yield* Effect.fork(
         Effect.gen(function* () {
           yield* withTrace(Effect.succeed("child started"), "child-init");
 
           // Child forks a grandchild
-          const grandchild = yield* forkWithTrace(
+          const grandchild = yield* Effect.fork(
             withTrace(
               sleepWithTrace("500 millis").pipe(Effect.as("grandchild done")),
               "grandchild-task"
-            ),
-            "grandchild"
+            )
           );
 
           yield* Fiber.join(grandchild);
           return "child done";
-        }),
-        "child"
+        })
       );
 
       yield* Fiber.join(child);
       return "parent done";
-    }),
-    "parent"
+    })
   );
 
   return yield* Fiber.join(parent);
@@ -463,24 +436,18 @@ export const requirements = [];
     rootEffect: racingExample,
     requirements: [] as const,
     source: `import { Effect, Fiber } from "effect";
-import {
-  forkWithTrace,
-  withTrace,
-  sleepWithTrace,
-} from "@/runtime";
+import { withTrace, sleepWithTrace } from "@/runtime";
 
 export const rootEffect = Effect.gen(function* () {
   yield* withTrace(Effect.succeed("starting race"), "race-start");
 
   // Fork two fibers explicitly so we can visualize them
-  const fastRunner = yield* forkWithTrace(
-    sleepWithTrace("1 second").pipe(Effect.as("Fast runner wins!")),
-    "fast-runner"
+  const fastRunner = yield* Effect.fork(
+    sleepWithTrace("1 second").pipe(Effect.as("Fast runner wins!"))
   );
 
-  const slowRunner = yield* forkWithTrace(
-    sleepWithTrace("2 seconds").pipe(Effect.as("Slow runner wins!")),
-    "slow-runner"
+  const slowRunner = yield* Effect.fork(
+    sleepWithTrace("2 seconds").pipe(Effect.as("Slow runner wins!"))
   );
 
   // Race by joining both - Effect.race returns when first completes
