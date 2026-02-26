@@ -13,7 +13,8 @@ import type { TraceEvent } from "@/types/trace";
 type OnEmit = (event: TraceEvent) => void;
 
 /**
- * If the fiber has no context, it is a runtime fiber and we don't want to emit an event for it.
+ * We can identify non-app fibers triggered by cleanup-like internal operations.
+ * However, we can't identify fibers created by the runtime when call to Effect.race or Effect.all etc.
  */
 function shouldIgnoreFiber(
   fiber: Fiber.RuntimeFiber<unknown, unknown>,
@@ -35,12 +36,6 @@ class VizSupervisor extends Supervisor.AbstractSupervisor<void> {
     parent: Option.Option<Fiber.RuntimeFiber<unknown, unknown>>,
     fiber: Fiber.RuntimeFiber<A, E>,
   ): void {
-    // console.log("onStart", {
-    //   fiber,
-    //   _context,
-    //   _effect,
-    //   parent,
-    // });
     if (shouldIgnoreFiber(fiber)) {
       return;
     }
@@ -58,7 +53,6 @@ class VizSupervisor extends Supervisor.AbstractSupervisor<void> {
     });
   }
   onEnd<A, E>(exit: Exit.Exit<A, E>, fiber: Fiber.RuntimeFiber<A, E>): void {
-    // console.log("onEnd", { exit, fiber });
     if (shouldIgnoreFiber(fiber)) {
       return;
     }
