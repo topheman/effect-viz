@@ -1,9 +1,7 @@
 // From tracedRunner (V1 manual instrumentation)
 export {
   withTrace,
-  forkWithTrace,
   makeTraceEmitterLayer,
-  runProgramWithTrace,
   sleepWithTrace,
   retryWithTrace,
   addFinalizerWithTrace,

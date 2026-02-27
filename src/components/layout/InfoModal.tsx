@@ -131,13 +131,14 @@ export function InfoModal({
               Effect runtime visualizer.
             </p>
             <p>
-              This is v1: I use explicit tracing wrappers like{" "}
+              This is migrating from v1 to v2: I still use some explicit tracing
+              wrappers like{" "}
               <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
                 withTrace
               </code>{" "}
               or{" "}
               <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
-                forkWithTrace
+                sleepWithTrace
               </code>{" "}
               (manual instrumentation, explicit and educational).
             </p>

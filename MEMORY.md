@@ -3,9 +3,9 @@
 **Quick Context**: See [`workshop/README.md`](workshop/README.md) for full documentation.
 
 ## Current Phase
-**Phase 5**: COMPLETE ✅
+**Phase 6**: COMPLETE ✅
 
-**Recent**: Finalizers (addFinalizerWithTrace, FinalizerEvent), acquire/release (acquireReleaseWithTrace, AcquireEvent), Basic Finalizers + Acquire Release programs
+**Recent**: VizSupervisor for automatic fiber tracking, runProgramFork, programs migrated to Effect.fork
 
 ## Completed Phases
 
@@ -43,6 +43,15 @@
 - [x] `RetryAttemptEvent` and `emitRetry` in tracedRunner
 - [x] ExecutionLog: failure styling (red), retry:attempt from current event, formatError
 
+### Phase 6: Supervisor for Automatic Fiber Tracking
+- [x] VizSupervisor extending Supervisor.AbstractSupervisor<void>
+- [x] makeVizLayers(onEmit) → Supervisor.addSupervisor layer
+- [x] runProgramFork for root fiber emission (updateRefs + promise)
+- [x] shouldIgnoreFiber filters internal/non-app fibers
+- [x] forkWithTrace, runProgramWithTrace removed
+- [x] basic, multiStep, nestedForks, racing migrated to Effect.fork
+- [x] makeVizLayers wired in fallback and WebContainer RUNNER_JS
+
 ### Phase 5: Scopes and Resources
 - [x] `FinalizerEvent`, `AcquireEvent` in trace types
 - [x] `emitFinalizer`, `emitAcquire` in tracedRunner
@@ -64,6 +73,11 @@
 - Ref for state across retry attempts (e.g. fail N times then succeed)
 - ExecutionLog must use current event for retry:attempt (not first match)
 
+### Key Learning (Phase 6)
+- Supervisor is a runtime hook: onStart/onEnd fire for every fiber; no user code changes
+- Root fiber: Supervisor sees child fibers but not the root (created before program runs); runProgramFork uses updateRefs + promise
+- Internal fibers: cleanup fibers (Effect.scoped) can be filtered (no services injected); Effect.race/all fibers cannot be identified (inherit parent context)
+
 ### Key Learning (Phase 5)
 - addFinalizer callback must **return** an Effect (emit then run user finalizer); runtime provides env when it runs
 - Finalizers run LIFO; use Effect.scoped(effect) so programs have a scope
@@ -77,6 +91,8 @@
 - **Runtime hooks** planned for V2 (automatic, production-ready)
 
 ## Key Files
+- `src/runtime/vizSupervisor.ts` - VizSupervisor, makeVizLayers (Phase 6)
+- `src/runtime/runProgram.ts` - runProgramFork (root fiber emission)
 - `src/types/trace.ts` - TraceEvent definitions (includes sleep, finalizer, acquire events)
 - `src/stores/traceStore.tsx` - Event state
 - `src/stores/fiberStore.tsx` - Fiber state (handles suspension)
@@ -93,6 +109,7 @@
 3. ~~**Phase 3**: Scheduling, delays, suspended fibers~~ ✅ See [`workshop/phase-3.md`](workshop/phase-3.md)
 4. ~~**Phase 4**: Errors, retries~~ ✅ See [`workshop/phase-4.md`](workshop/phase-4.md)
 5. ~~**Phase 5**: Scopes, resources, finalizers~~ ✅ See [`workshop/phase-5.md`](workshop/phase-5.md)
+6. ~~**Phase 6**: Supervisor for automatic fiber tracking~~ ✅ See [`workshop/phase-6.md`](workshop/phase-6.md)
 
 ## Documentation
 - [`workshop/README.md`](workshop/README.md) - Documentation overview

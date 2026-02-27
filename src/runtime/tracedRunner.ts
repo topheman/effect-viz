@@ -65,34 +65,6 @@ export const makeTraceEmitterLayer = (
 };
 
 // ---
-// Fiber Tracing (Effect's real FiberId)
-// ---
-
-/**
- * Fork an effect and emit fiber lifecycle events.
- * Uses Effect's real FiberId for accurate parent-child tracking.
- *
- * @deprecated no-op - Now automatically handled by VizSupervisor
- */
-export const forkWithTrace = <A, E, R>(
-  effect: Effect.Effect<A, E, R>,
-): Effect.Effect<A, E, R> => {
-  return effect;
-};
-
-/**
- * Run a program and emit fiber events for the root fiber.
- * This creates the "main" fiber that child fibers will reference as parent.
- *
- * @deprecated no-op - Now automatically handled by VizSupervisor
- */
-export const runProgramWithTrace = <A, E, R>(
-  program: Effect.Effect<A, E, R>,
-): Effect.Effect<A, E, R> => {
-  return program;
-};
-
-// ---
 // Sleep Tracing (Phase 3)
 // ---
 

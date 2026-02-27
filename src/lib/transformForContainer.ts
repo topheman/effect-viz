@@ -8,7 +8,7 @@
 /**
  * Transform editor source for container execution.
  * Fixes import paths: @/runtime/* or ./tracedRunner → ./runtime.js (Node ESM requires .js).
- * The runner.js bootstraps execution; user code does not need runProgramWithTrace or makeTraceEmitterLayer.
+ * The runner.js bootstraps execution; user code does not need makeTraceEmitterLayer.
  */
 export function transformImportsForContainer(source: string): string {
   let result = source;

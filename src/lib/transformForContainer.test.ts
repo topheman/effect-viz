@@ -16,9 +16,9 @@ export const requirements = [];
   });
 
   it("replaces @/runtime paths with ./runtime.js", () => {
-    const source = `import { forkWithTrace } from "@/runtime/tracedRunner";`;
+    const source = `import { sleepWithTrace } from "@/runtime/tracedRunner";`;
     const result = transformImportsForContainer(source);
-    expect(result).toBe('import { forkWithTrace } from "./runtime.js";');
+    expect(result).toBe('import { sleepWithTrace } from "./runtime.js";');
   });
 
   it("replaces @/runtime with ./runtime.js", () => {

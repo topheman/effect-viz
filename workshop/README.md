@@ -36,8 +36,8 @@ Learn Effect concepts through explicit tracing wrappers (`withTrace`, `forkWithT
 Refactor to use Effect's built-in observability, removing manual wrappers.
 
 - **[v2-spec.md](./v2-spec.md)** — Full specification for v2 workshop phases
-- Phase 6: Supervisor for automatic fiber lifecycle tracking
-- Phase 7: Tracer integration for effect spans
+- [Phase 6: Supervisor for automatic fiber lifecycle tracking](./phase-6.md) ✅
+- Phase 7: Custom Tracer for Effect.withSpan
 - Phase 8: Supervisor onSuspend/onResume for sleep visibility
 
 **Why two versions?**
