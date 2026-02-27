@@ -24,6 +24,10 @@
     "path": "file:///runtime/vizSupervisor.d.ts"
   },
   {
+    "url": "/app/runtime/vizTracer.d.ts",
+    "path": "file:///runtime/vizTracer.d.ts"
+  },
+  {
     "url": "/app/lib/crypto.d.ts",
     "path": "file:///lib/crypto.d.ts"
   }

@@ -131,16 +131,8 @@ export function InfoModal({
               Effect runtime visualizer.
             </p>
             <p>
-              This is migrating from v1 to v2: I still use some explicit tracing
-              wrappers like{" "}
-              <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
-                withTrace
-              </code>{" "}
-              or{" "}
-              <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
-                sleepWithTrace
-              </code>{" "}
-              (manual instrumentation, explicit and educational).
+              Building v2, I'm migrating away from manual instrumentation and
+              towards Effect's built-in observability features.
             </p>
             <p>
               I used AI as my Effect tutor that guided me through a multi-step

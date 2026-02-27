@@ -1,6 +1,5 @@
 // From tracedRunner (V1 manual instrumentation)
 export {
-  withTrace,
   makeTraceEmitterLayer,
   sleepWithTrace,
   retryWithTrace,
@@ -16,3 +15,5 @@ export { makeVizLayers } from "./vizSupervisor";
 
 // Run fork + join with trace emission (DRY for useEventHandlers & WebContainer)
 export { runProgramFork, type RunProgramForkResult } from "./runProgram";
+
+export { makeVizTracer } from "./vizTracer";

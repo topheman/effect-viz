@@ -6,6 +6,7 @@ import { type ProgramKey, makeLoggerLayer, programs } from "@/lib/programs";
 import {
   makeTraceEmitterLayer,
   makeVizLayers,
+  makeVizTracer,
   runProgramFork,
 } from "@/runtime";
 import { useFiberStore } from "@/stores/fiberStore";
@@ -77,9 +78,11 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
     const fallbackLoggerLayer = makeLoggerLayer((msg) =>
       addLog("output", `[logger] ${msg}`),
     );
+    const tracerLayer = Layer.setTracer(makeVizTracer(onEmit));
     const allLayers = Layer.mergeAll(
       traceLayer,
       supervisorLayer,
+      tracerLayer,
       ...requirements,
       fallbackLoggerLayer,
     );

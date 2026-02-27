@@ -64,7 +64,7 @@ Example:
 
 /** Runner: imports program.js, injects trace layer, runs. Fixed bootstrap — no user code transformation for tracing. */
 const RUNNER_JS = `import { Effect, Layer } from "effect";
-import { makeTraceEmitterLayer, makeVizLayers, runProgramFork } from "./runtime.js";
+import { makeTraceEmitterLayer, makeVizLayers, makeVizTracer, runProgramFork } from "./runtime.js";
 
 const ROOT_EFFECT_MISSING_MSG = ${JSON.stringify(ROOT_EFFECT_MISSING_MSG)};
 
@@ -82,7 +82,8 @@ async function main() {
 
   const traceLayer = makeTraceEmitterLayer(onEmit);
   const supervisorLayer = makeVizLayers(onEmit);
-  const allLayers = Layer.mergeAll(traceLayer, supervisorLayer, ...requirements);
+  const tracerLayer = Layer.setTracer(makeVizTracer(onEmit));
+  const allLayers = Layer.mergeAll(traceLayer, supervisorLayer, tracerLayer, ...requirements);
   const program = Effect.scoped(rootEffect).pipe(Effect.provide(allLayers));
   const { promise } = runProgramFork(program, onEmit);
   promise.then(

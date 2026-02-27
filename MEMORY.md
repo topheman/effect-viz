@@ -3,9 +3,9 @@
 **Quick Context**: See [`workshop/README.md`](workshop/README.md) for full documentation.
 
 ## Current Phase
-**Phase 6**: COMPLETE ✅
+**Phase 7**: COMPLETE ✅
 
-**Recent**: VizSupervisor for automatic fiber tracking, runProgramFork, programs migrated to Effect.fork
+**Recent**: makeVizTracer, Layer.setTracer, programs migrated to Effect.withSpan, withTrace removed
 
 ## Completed Phases
 
@@ -13,7 +13,6 @@
 - [x] TraceStore (`src/stores/traceStore.tsx`)
 - [x] ExecutionLog wired with color-coded events
 - [x] `TraceEmitter` service + `makeTraceEmitterLayer`
-- [x] `withTrace()` using Service + Layer pattern
 - [x] Play button wired via `useEventHandlers` hook
 
 ### Phase 2: Fibers, Fork/Join, Interruption
@@ -52,6 +51,12 @@
 - [x] basic, multiStep, nestedForks, racing migrated to Effect.fork
 - [x] makeVizLayers wired in fallback and WebContainer RUNNER_JS
 
+### Phase 7: Custom Tracer for Effect.withSpan
+- [x] makeVizTracer(onEmit) → Tracer via Tracer.make
+- [x] Layer.setTracer wired in useEventHandlers and WebContainer RUNNER_JS
+- [x] All programs migrated from withTrace to Effect.withSpan
+- [x] withTrace removed from tracedRunner and exports
+
 ### Phase 5: Scopes and Resources
 - [x] `FinalizerEvent`, `AcquireEvent` in trace types
 - [x] `emitFinalizer`, `emitAcquire` in tracedRunner
@@ -68,7 +73,7 @@
 - Manual instrumentation limitations vs runtime hooks
 
 ### Key Learning (Phase 4)
-- Typed errors: effect:end with result "failure" and error; withTrace already used onExit
+- Typed errors: effect:end with result "failure" and error
 - Retry attempt tracking: loop with Effect.exit(effect), emit retry:attempt, same span id
 - Ref for state across retry attempts (e.g. fail N times then succeed)
 - ExecutionLog must use current event for retry:attempt (not first match)
@@ -77,6 +82,11 @@
 - Supervisor is a runtime hook: onStart/onEnd fire for every fiber; no user code changes
 - Root fiber: Supervisor sees child fibers but not the root (created before program runs); runProgramFork uses updateRefs + promise
 - Internal fibers: cleanup fibers (Effect.scoped) can be filtered (no services injected); Effect.race/all fibers cannot be identified (inherit parent context)
+
+### Key Learning (Phase 7)
+- Tracer.make returns a Tracer; span() emits effect:start and returns Span; span.end() emits effect:end
+- Layer.setTracer provides the Tracer; Effect.withSpan uses it—no TraceEmitter in R
+- Same ergonomics as withTrace but standard Effect API
 
 ### Key Learning (Phase 5)
 - addFinalizer callback must **return** an Effect (emit then run user finalizer); runtime provides env when it runs
@@ -92,11 +102,12 @@
 
 ## Key Files
 - `src/runtime/vizSupervisor.ts` - VizSupervisor, makeVizLayers (Phase 6)
+- `src/runtime/vizTracer.ts` - makeVizTracer (Phase 7)
 - `src/runtime/runProgram.ts` - runProgramFork (root fiber emission)
 - `src/types/trace.ts` - TraceEvent definitions (includes sleep, finalizer, acquire events)
 - `src/stores/traceStore.tsx` - Event state
 - `src/stores/fiberStore.tsx` - Fiber state (handles suspension)
-- `src/runtime/tracedRunner.ts` - Instrumented runner (`withTrace`, `forkWithTrace`, `sleepWithTrace`, `retryWithTrace`, `addFinalizerWithTrace`, `acquireReleaseWithTrace`, `emitFinalizer`, `emitAcquire`)
+- `src/runtime/tracedRunner.ts` - Instrumented runner (`sleepWithTrace`, `retryWithTrace`, `addFinalizerWithTrace`, `acquireReleaseWithTrace`)
 - `src/hooks/useEventHandlers.ts` - Play/Reset handlers with program selection
 - `src/components/visualizer/ExecutionLog.tsx` - Event log
 - `src/components/visualizer/FiberTreeView.tsx` - Fiber tree with suspended indicator
@@ -110,6 +121,7 @@
 4. ~~**Phase 4**: Errors, retries~~ ✅ See [`workshop/phase-4.md`](workshop/phase-4.md)
 5. ~~**Phase 5**: Scopes, resources, finalizers~~ ✅ See [`workshop/phase-5.md`](workshop/phase-5.md)
 6. ~~**Phase 6**: Supervisor for automatic fiber tracking~~ ✅ See [`workshop/phase-6.md`](workshop/phase-6.md)
+7. ~~**Phase 7**: Custom Tracer for Effect.withSpan~~ ✅ See [`workshop/phase-7.md`](workshop/phase-7.md)
 
 ## Documentation
 - [`workshop/README.md`](workshop/README.md) - Documentation overview

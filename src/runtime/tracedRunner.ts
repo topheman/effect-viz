@@ -12,39 +12,6 @@ import {
 import type { TraceEvent } from "@/types/trace";
 
 // ---
-// Traced Runner
-// ---
-
-/**
- * Wrap an effect to emit trace events before and after execution.
- *
- * This returns a NEW effect that:
- * 1. Emits effect:start
- * 2. Runs the original effect
- * 3. Emits effect:end (success or failure)
- * 4. Returns the result
- *
- * Notice: The returned effect requires TraceEmitter in its R channel!
- */
-export const withTrace = <A, E, R>(
-  effect: Effect.Effect<A, E, R>,
-  label: string,
-): Effect.Effect<A, E, R | TraceEmitter> => {
-  const id = randomUUID();
-  return Effect.gen(function* () {
-    yield* emitStart(id, label);
-
-    return yield* effect.pipe(
-      Effect.onExit((exit) =>
-        Exit.isSuccess(exit)
-          ? emitEnd(id, "success", exit.value)
-          : emitEnd(id, "failure", undefined, Cause.squash(exit.cause)),
-      ),
-    );
-  });
-};
-
-// ---
 // Layer Implementation
 // ---
 

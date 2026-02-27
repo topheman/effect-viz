@@ -71,7 +71,4 @@ Plain `Effect.fork` has no label. We use `FiberId.threadName(fiber.id())` as the
 
 ## What's Next
 
-**Phase 7: Custom Tracer for Effect.withSpan** will cover:
-- Replacing `withTrace(effect, "label")` with `Effect.withSpan("label")(effect)`
-- Custom Tracer via `Layer.setTracer`
-- Effect spans mapping to effect:start/effect:end
+**Phase 7: Custom Tracer for Effect.withSpan** ✅ — See [phase-7.md](./phase-7.md).

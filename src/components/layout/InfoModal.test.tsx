@@ -85,7 +85,7 @@ describe("InfoModal", () => {
       within(dialog).getByText(/Effect runtime visualizer/i),
     ).toBeInTheDocument();
     expect(
-      within(dialog).getByText(/This is migrating from v1 to v2/i),
+      within(dialog).getByText(/migrating away from manual instrumentation/i),
     ).toBeInTheDocument();
   });
 
