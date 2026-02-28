@@ -1,4 +1,4 @@
-# Phase 9: retryWithTrace with Schedule API
+# Phase 9: retry with Schedule API
 
 ## Concepts
 
@@ -12,7 +12,13 @@ Effect's `Effect.retry(effect, schedule)` uses a **Schedule** to control retry p
 
 ### Same API as Effect.retry
 
-`retryWithTrace(effect, schedule, label)` mirrors `Effect.retry(effect, schedule)` — schedule as second argument, with our `label` as third for tracing.
+`retry(effect, schedule, label)` mirrors `Effect.retry(effect, schedule)` — schedule as second argument, with our `label` as third for tracing.
+
+### Public vs Private Runtime Exports
+
+**Public APIs** match Effect's naming so programs feel native: `retry`, `addFinalizer`, `acquireRelease`.
+
+**Private APIs** (EffectViz internals: trace emitter, viz layers, tracer, runProgramFork) are prefixed with `_` so they don't clash with user imports from `@/runtime`.
 
 ## Implementation
 
@@ -20,13 +26,15 @@ Effect's `Effect.retry(effect, schedule)` uses a **Schedule** to control retry p
 
 | File | Changes |
 |------|---------|
-| `src/runtime/tracedRunner.ts` | New signature `retryWithTrace(effect, schedule, label)`; use `Schedule.driver` + loop; keep `emitStart`/`emitEnd`/`emitRetry` (same id for association) |
-| `src/lib/programs.ts` | Update `retryExample` and `retry` program: `retryWithTrace(flakyEffect, Schedule.recurs(3), "flaky-task")` |
+| `src/runtime/tracedRunner.ts` | `retryWithTrace(effect, schedule, label)`; use `Schedule.driver` + loop; keep `emitStart`/`emitEnd`/`emitRetry` (same id for association) |
+| `src/runtime/index.ts` | Export `retryWithTrace as retry` so programs use plain `retry` |
+| `src/lib/programs.ts` | `retry(flakyEffect, Schedule.recurs(3), "flaky-task")`; exponential backoff with `Schedule.addDelay(Schedule.recurs(5), ...)` |
 | `public/fallback-types.d.ts` | Add minimal Schedule types (`Schedule.recurs`, `Schedule.addDelay`) for fallback runtime |
 
 ### Key Function
 
 ```typescript
+// tracedRunner.ts (exported as retry from @/runtime)
 export function retryWithTrace<A, E, R, X, R2>(
   effect: Effect.Effect<A, E, R>,
   schedule: Schedule.Schedule<X, E, R2>,
@@ -57,9 +65,9 @@ We keep `emitStart`, `emitEnd`, and `emitRetry` so all share the same `id`. This
 
 ## Example Programs
 
-- **Retry** (`retry`): Ref-backed effect that fails on attempts 1 and 2, succeeds on 3; `retryWithTrace(flakyEffect, Schedule.recurs(3), "flaky-task")` — two `retry:attempt` lines then `effect:end` success.
-- **Retry (Exponential Backoff)** (`retryExponentialBackoff`): Same as Retry but with `Schedule.addDelay(Schedule.recurs(3), (n) => ...)` — 100ms, 200ms, 400ms between attempts; timeline shows fiber:suspend during delays.
+- **Retry** (`retry`): Ref-backed effect that fails on attempts 1 and 2, succeeds on 3; `retry(flakyEffect, Schedule.recurs(3), "flaky-task")` — two `retry:attempt` lines then `effect:end` success.
+- **Retry (Exponential Backoff)** (`retryExponentialBackoff`): Same as Retry but with `Schedule.addDelay(Schedule.recurs(5), (n) => ...)` — 100ms, 200ms, 400ms, ... between attempts; timeline shows fiber:suspend during delays.
 
 ## What's Next
 
-Phase 9 completes the retry refactor. Future phases may explore the acquire/finalizer refactor (Effect.withSpan for acquire) or additional Schedule patterns (exponential backoff, jitter).
+Phase 9 completes the retry refactor. Future phases may explore the acquire/finalizer refactor (Effect.withSpan for acquire) or additional Schedule patterns (jitter).

@@ -5,11 +5,7 @@
 
 import { Context, Effect, Fiber, Layer, Ref, Schedule } from "effect";
 
-import {
-  addFinalizerWithTrace,
-  acquireReleaseWithTrace,
-  retryWithTrace,
-} from "@/runtime";
+import { addFinalizer, acquireRelease, retry } from "@/runtime";
 
 // =============================================================================
 // Basic Example: Sequential + Concurrent Execution
@@ -181,9 +177,9 @@ export const failureExample = Effect.gen(function* () {
 // =============================================================================
 
 /**
- * Demonstrates retryWithTrace: an effect that fails twice then succeeds.
+ * Demonstrates retry: an effect that fails twice then succeeds.
  * A Ref counts attempts; the inner effect fails when count < 3.
- * retryWithTrace retries until success (or max retries).
+ * retry retries until success (or max retries).
  */
 export const retryExample = Effect.gen(function* () {
   // Step 1: Ref to count attempts
@@ -198,8 +194,8 @@ export const retryExample = Effect.gen(function* () {
     return "success";
   });
 
-  // Step 3: retryWithTrace retries until success (Schedule.recurs(3) = 3 retries)
-  return yield* retryWithTrace(flakyEffect, Schedule.recurs(3), "flaky-task");
+  // Step 3: retry retries until success (Schedule.recurs(3) = 3 retries)
+  return yield* retry(flakyEffect, Schedule.recurs(3), "flaky-task");
 });
 
 // =============================================================================
@@ -207,7 +203,7 @@ export const retryExample = Effect.gen(function* () {
 // =============================================================================
 
 /**
- * Demonstrates retryWithTrace with exponential backoff.
+ * Demonstrates retry with exponential backoff.
  * Same structure as retryExample but Schedule.addDelay adds 100ms, 200ms, 400ms between attempts.
  * Timeline shows fiber:suspend during the delays.
  */
@@ -224,12 +220,12 @@ export const retryExponentialBackoffExample = Effect.gen(function* () {
     return "success";
   });
 
-  // Step 3: retryWithTrace with exponential backoff (100ms, 200ms, 400ms, ... between attempts)
+  // Step 3: retry with exponential backoff (100ms, 200ms, 400ms, ... between attempts)
   const schedule = Schedule.addDelay(
     Schedule.recurs(5),
     (n) => `${100 * 2 ** n} millis`,
   );
-  return yield* retryWithTrace(flakyEffect, schedule, "flaky-task");
+  return yield* retry(flakyEffect, schedule, "flaky-task");
 });
 
 // =============================================================================
@@ -237,7 +233,7 @@ export const retryExponentialBackoffExample = Effect.gen(function* () {
 // =============================================================================
 
 /**
- * Demonstrates addFinalizerWithTrace: register 3 finalizers to show LIFO
+ * Demonstrates addFinalizer: register 3 finalizers to show LIFO
  * order (last registered runs first). Log shows effect steps then
  * "Finalizer ran: finalizer-3", "finalizer-2", "finalizer-1".
  * Must run inside Effect.scoped so the finalizers have a scope to run in.
@@ -245,9 +241,9 @@ export const retryExponentialBackoffExample = Effect.gen(function* () {
 export const basicFinalizersExample = Effect.scoped(
   Effect.gen(function* () {
     // Step 1: Register 3 finalizers (LIFO: 3 runs first, then 2, then 1)
-    yield* addFinalizerWithTrace(() => Effect.sync(() => {}), "finalizer-1");
-    yield* addFinalizerWithTrace(() => Effect.sync(() => {}), "finalizer-2");
-    yield* addFinalizerWithTrace(() => Effect.sync(() => {}), "finalizer-3");
+    yield* addFinalizer(() => Effect.sync(() => {}), "finalizer-1");
+    yield* addFinalizer(() => Effect.sync(() => {}), "finalizer-2");
+    yield* addFinalizer(() => Effect.sync(() => {}), "finalizer-3");
     // Step 2: Run two traced steps
     yield* Effect.withSpan("step-1")(Effect.succeed("step 1"));
     yield* Effect.withSpan("step-2")(Effect.succeed("step 2"));
@@ -261,7 +257,7 @@ export const basicFinalizersExample = Effect.scoped(
 // =============================================================================
 
 /**
- * Demonstrates acquireReleaseWithTrace: acquire a resource, use it, then
+ * Demonstrates acquireRelease: acquire a resource, use it, then
  * release when the scope closes. Log shows "Resource acquired", steps,
  * then "Finalizer ran: connection:release".
  * Must run inside Effect.scoped so the release finalizer has a scope.
@@ -269,7 +265,7 @@ export const basicFinalizersExample = Effect.scoped(
 export const acquireReleaseExample = Effect.scoped(
   Effect.gen(function* () {
     // Step 1: Acquire resource (release runs when scope closes)
-    const connection = yield* acquireReleaseWithTrace(
+    const connection = yield* acquireRelease(
       Effect.succeed({ id: "conn-1" }),
       () => Effect.sync(() => {}),
       "connection",
@@ -505,11 +501,11 @@ export const requirements = [];
   retry: {
     name: "Retry",
     description:
-      "Effect fails twice then succeeds; retryWithTrace retries until success",
+      "Effect fails twice then succeeds; retry retries until success",
     rootEffect: retryExample,
     requirements: [] as const,
     source: `import { Effect, Ref, Schedule } from "effect";
-import { retryWithTrace } from "@/runtime";
+import { retry } from "@/runtime";
 
 export const rootEffect = Effect.gen(function* () {
   // Step 1: Ref to count attempts
@@ -524,8 +520,8 @@ export const rootEffect = Effect.gen(function* () {
     return "success";
   });
 
-  // Step 3: retryWithTrace retries until success (Schedule.recurs(3) = 3 retries)
-  return yield* retryWithTrace(flakyEffect, Schedule.recurs(3), "flaky-task");
+  // Step 3: retry retries until success (Schedule.recurs(3) = 3 retries)
+  return yield* retry(flakyEffect, Schedule.recurs(3), "flaky-task");
 });
 
 export const requirements = [];
@@ -538,7 +534,7 @@ export const requirements = [];
     rootEffect: retryExponentialBackoffExample,
     requirements: [] as const,
     source: `import { Effect, Ref, Schedule } from "effect";
-import { retryWithTrace } from "@/runtime";
+import { retry } from "@/runtime";
 
 export const rootEffect = Effect.gen(function* () {
   // Step 1: Ref to count attempts
@@ -553,12 +549,12 @@ export const rootEffect = Effect.gen(function* () {
     return "success";
   });
 
-  // Step 3: retryWithTrace with exponential backoff (100ms, 200ms, 400ms, ... between attempts)
+  // Step 3: retry with exponential backoff (100ms, 200ms, 400ms, ... between attempts)
   const schedule = Schedule.addDelay(
     Schedule.recurs(5),
     (n) => \`\${100 * 2 ** n} millis\`,
   );
-  return yield* retryWithTrace(flakyEffect, schedule, "flaky-task");
+  return yield* retry(flakyEffect, schedule, "flaky-task");
 });
 
 export const requirements = [];
@@ -571,14 +567,14 @@ export const requirements = [];
     rootEffect: basicFinalizersExample,
     requirements: [] as const,
     source: `import { Effect } from "effect";
-import { addFinalizerWithTrace } from "@/runtime";
+import { addFinalizer } from "@/runtime";
 
 export const rootEffect = Effect.scoped(
   Effect.gen(function* () {
     // Step 1: Register 3 finalizers (LIFO: 3 runs first, then 2, then 1)
-    yield* addFinalizerWithTrace(() => Effect.sync(() => {}), "finalizer-1");
-    yield* addFinalizerWithTrace(() => Effect.sync(() => {}), "finalizer-2");
-    yield* addFinalizerWithTrace(() => Effect.sync(() => {}), "finalizer-3");
+    yield* addFinalizer(() => Effect.sync(() => {}), "finalizer-1");
+    yield* addFinalizer(() => Effect.sync(() => {}), "finalizer-2");
+    yield* addFinalizer(() => Effect.sync(() => {}), "finalizer-3");
     // Step 2: Run two traced steps
     yield* Effect.withSpan("step-1")(Effect.succeed("step 1"));
     yield* Effect.withSpan("step-2")(Effect.succeed("step 2"));
@@ -593,16 +589,16 @@ export const requirements = [];
   acquireRelease: {
     name: "Acquire / Release",
     description:
-      "acquireReleaseWithTrace: acquire a resource, use it, release on scope exit",
+      "acquireRelease: acquire a resource, use it, release on scope exit",
     rootEffect: acquireReleaseExample,
     requirements: [] as const,
     source: `import { Effect } from "effect";
-import { acquireReleaseWithTrace } from "@/runtime";
+import { acquireRelease } from "@/runtime";
 
 export const rootEffect = Effect.scoped(
   Effect.gen(function* () {
     // Step 1: Acquire resource (release runs when scope closes)
-    const connection = yield* acquireReleaseWithTrace(
+    const connection = yield* acquireRelease(
       Effect.succeed({ id: "conn-1" }),
       () => Effect.sync(() => {}),
       "connection"

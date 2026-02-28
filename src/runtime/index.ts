@@ -1,18 +1,21 @@
 // From tracedRunner (V1 manual instrumentation)
 export {
-  makeTraceEmitterLayer,
-  retryWithTrace,
-  addFinalizerWithTrace,
-  acquireReleaseWithTrace,
+  makeTraceEmitterLayer as _makeTraceEmitterLayer,
+  retryWithTrace as retry,
+  addFinalizerWithTrace as addFinalizer,
+  acquireReleaseWithTrace as acquireRelease,
 } from "./tracedRunner";
 
 // TraceEmitter needed for Layer type signatures
-export { TraceEmitter } from "./traceEmitter";
+export { TraceEmitter as _TraceEmitter } from "./traceEmitter";
 
 // From vizSupervisor (V2)
-export { makeVizLayers } from "./vizSupervisor";
+export { makeVizLayers as _makeVizLayers } from "./vizSupervisor";
 
 // Run fork + join with trace emission (DRY for useEventHandlers & WebContainer)
-export { runProgramFork, type RunProgramForkResult } from "./runProgram";
+export {
+  runProgramFork as _runProgramFork,
+  type RunProgramForkResult,
+} from "./runProgram";
 
-export { makeVizTracer } from "./vizTracer";
+export { makeVizTracer as _makeVizTracer } from "./vizTracer";

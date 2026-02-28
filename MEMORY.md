@@ -3,9 +3,9 @@
 **Quick Context**: See [`workshop/README.md`](workshop/README.md) for full documentation.
 
 ## Current Phase
-**Phase 9**: IN PROGRESS
+**Phase 9**: COMPLETE ✅
 
-**Recent**: retryWithTrace now accepts Schedule + label; Schedule.driver loop; programs use Schedule.recurs(3)
+**Recent**: retry with Schedule API; public APIs (retry, addFinalizer, acquireRelease); internal APIs prefixed with _
 
 ## Completed Phases
 
@@ -37,15 +37,16 @@
 
 ### Phase 4: Errors and Retries
 - [x] Failure & Recovery program (`failureAndRecovery`)
-- [x] Retry program with Ref (`retry`) and `retryWithTrace`
-- [x] `retryWithTrace` loop-based: effect:start/effect:end + retry:attempt per failed attempt
+- [x] Retry program with Ref and retry
+- [x] retry loop-based: effect:start/effect:end + retry:attempt per failed attempt
 - [x] `RetryAttemptEvent` and `emitRetry` in tracedRunner
 - [x] ExecutionLog: failure styling (red), retry:attempt from current event, formatError
 
-### Phase 9: retryWithTrace with Schedule API
-- [x] `retryWithTrace(effect, schedule, label)` — Schedule as second arg (like Effect.retry)
+### Phase 9: retry with Schedule API
+- [x] `retry(effect, schedule, label)` — Schedule as second arg (like Effect.retry)
 - [x] Schedule.driver + loop; keep emitStart/emitEnd/emitRetry (same id for association)
-- [x] Programs use `Schedule.recurs(3)`; fallback-types.d.ts has minimal Schedule stubs
+- [x] Programs use `retry`, `Schedule.recurs`, `Schedule.addDelay`; retryExponentialBackoff example
+- [x] Public APIs match Effect; internal APIs prefixed with _
 
 ### Phase 6: Supervisor for Automatic Fiber Tracking
 - [x] VizSupervisor extending Supervisor.AbstractSupervisor<void>
@@ -106,8 +107,9 @@
 
 ### Key Learning (Phase 9)
 - Schedule.driver lets us step through a schedule; driver.next(error) sleeps for delay and returns when schedule continues
-- retryWithTrace mirrors Effect.retry(effect, schedule) with label for tracing
+- retry mirrors Effect.retry(effect, schedule) with label for tracing
 - Keep TraceEmitter for effect:start, effect:end, retry:attempt so all share same span id
+- Public APIs match Effect (retry, addFinalizer, acquireRelease); internal APIs prefixed with _
 
 ### Key Learning (Phase 5)
 - addFinalizer callback must **return** an Effect (emit then run user finalizer); runtime provides env when it runs
@@ -128,7 +130,7 @@
 - `src/types/trace.ts` - TraceEvent definitions (fiber:suspend/resume, finalizer, acquire)
 - `src/stores/traceStore.tsx` - Event state
 - `src/stores/fiberStore.tsx` - Fiber state (handles suspend/resume)
-- `src/runtime/tracedRunner.ts` - Instrumented runner (`retryWithTrace`, `addFinalizerWithTrace`, `acquireReleaseWithTrace`)
+- `src/runtime/tracedRunner.ts` - Instrumented runner (retry, addFinalizer, acquireRelease; exported from index)
 - `src/hooks/useEventHandlers.ts` - Play/Reset handlers with program selection
 - `src/components/visualizer/ExecutionLog.tsx` - Event log
 - `src/components/visualizer/FiberTreeView.tsx` - Fiber tree with suspended indicator
@@ -144,7 +146,7 @@
 6. ~~**Phase 6**: Supervisor for automatic fiber tracking~~ ✅ See [`workshop/phase-6.md`](workshop/phase-6.md)
 7. ~~**Phase 7**: Custom Tracer for Effect.withSpan~~ ✅ See [`workshop/phase-7.md`](workshop/phase-7.md)
 8. ~~**Phase 8**: Sleep visibility via onSuspend/onResume~~ ✅ See [`workshop/phase-8.md`](workshop/phase-8.md)
-9. **Phase 9**: retryWithTrace with Schedule API — See [`workshop/phase-9.md`](workshop/phase-9.md)
+9. ~~**Phase 9**: retry with Schedule API~~ ✅ See [`workshop/phase-9.md`](workshop/phase-9.md)
 
 ## Documentation
 - [`workshop/README.md`](workshop/README.md) - Documentation overview
