@@ -1,4 +1,4 @@
-import { Cause, Duration, Effect, Exit, FiberId, Layer, Scope } from "effect";
+import { Cause, Effect, Exit, Layer, Scope } from "effect";
 
 import { randomUUID } from "@/lib/crypto";
 import {
@@ -28,40 +28,6 @@ export const makeTraceEmitterLayer = (
 ): Layer.Layer<TraceEmitter> => {
   return Layer.succeed(TraceEmitter, {
     emit: (event) => Effect.sync(() => onEmit(event)),
-  });
-};
-
-// ---
-// Sleep Tracing (Phase 3)
-// ---
-
-/**
- * Sleep with tracing - emits sleep:start and sleep:end events.
- * Makes fiber suspension visible in the visualizer.
- *
- * When a fiber sleeps, it SUSPENDS (yields control) rather than blocking.
- * This function emits events so we can visualize when fibers are suspended.
- */
-export const sleepWithTrace = (
-  duration: Duration.DurationInput,
-): Effect.Effect<void, never, TraceEmitter> => {
-  return Effect.gen(function* () {
-    const { emit } = yield* TraceEmitter;
-    const currentFiberId = yield* Effect.fiberId;
-    const fiberId = FiberId.threadName(currentFiberId);
-    const durationMillis = Duration.toMillis(Duration.decode(duration));
-    yield* emit({
-      type: "sleep:start",
-      fiberId,
-      duration: durationMillis,
-      timestamp: Date.now(),
-    });
-    yield* Effect.sleep(duration);
-    yield* emit({
-      type: "sleep:end",
-      fiberId,
-      timestamp: Date.now(),
-    });
   });
 };
 

@@ -8,7 +8,6 @@ import { Context, Effect, Fiber, Layer, Ref } from "effect";
 import {
   addFinalizerWithTrace,
   acquireReleaseWithTrace,
-  sleepWithTrace,
   retryWithTrace,
 } from "@/runtime";
 
@@ -31,13 +30,13 @@ export const basicExample = Effect.gen(function* () {
   // Step 2: Fork two concurrent workers
   const worker1 = yield* Effect.fork(
     Effect.withSpan("worker-1-task")(
-      sleepWithTrace("1 second").pipe(Effect.as("Worker 1 complete")),
+      Effect.sleep("1 second").pipe(Effect.as("Worker 1 complete")),
     ),
   );
 
   const worker2 = yield* Effect.fork(
     Effect.withSpan("worker-2-task")(
-      sleepWithTrace("1.5 seconds").pipe(Effect.as("Worker 2 complete")),
+      Effect.sleep("1.5 seconds").pipe(Effect.as("Worker 2 complete")),
     ),
   );
 
@@ -63,9 +62,9 @@ export const basicExample = Effect.gen(function* () {
 export const multiStepExample = Effect.gen(function* () {
   const worker = yield* Effect.fork(
     Effect.gen(function* () {
-      yield* Effect.withSpan("step-1-prepare")(sleepWithTrace("500 millis"));
-      yield* Effect.withSpan("step-2-process")(sleepWithTrace("500 millis"));
-      yield* Effect.withSpan("step-3-cleanup")(sleepWithTrace("500 millis"));
+      yield* Effect.withSpan("step-1-prepare")(Effect.sleep("500 millis"));
+      yield* Effect.withSpan("step-2-process")(Effect.sleep("500 millis"));
+      yield* Effect.withSpan("step-3-cleanup")(Effect.sleep("500 millis"));
       return "Multi-step complete";
     }),
   );
@@ -93,7 +92,7 @@ export const nestedForksExample = Effect.gen(function* () {
           // Child forks a grandchild
           const grandchild = yield* Effect.fork(
             Effect.withSpan("grandchild-task")(
-              sleepWithTrace("500 millis").pipe(Effect.as("grandchild done")),
+              Effect.sleep("500 millis").pipe(Effect.as("grandchild done")),
             ),
           );
 
@@ -125,11 +124,11 @@ export const racingExample = Effect.gen(function* () {
 
   // Fork two fibers explicitly so we can visualize them
   const fastRunner = yield* Effect.fork(
-    sleepWithTrace("1 second").pipe(Effect.as("Fast runner wins!")),
+    Effect.sleep("1 second").pipe(Effect.as("Fast runner wins!")),
   );
 
   const slowRunner = yield* Effect.fork(
-    sleepWithTrace("2 seconds").pipe(Effect.as("Slow runner wins!")),
+    Effect.sleep("2 seconds").pipe(Effect.as("Slow runner wins!")),
   );
 
   // Race by joining both - Effect.race returns when first completes
@@ -313,7 +312,6 @@ export const programs = {
     rootEffect: basicExample,
     requirements: [] as const,
     source: `import { Effect, Fiber } from "effect";
-import { sleepWithTrace } from "@/runtime";
 
 export const rootEffect = Effect.gen(function* () {
   // Step 1: Sequential initialization
@@ -324,13 +322,13 @@ export const rootEffect = Effect.gen(function* () {
   // Step 2: Fork two concurrent workers
   const worker1 = yield* Effect.fork(
     Effect.withSpan("worker-1-task")(
-      sleepWithTrace("1 second").pipe(Effect.as("Worker 1 complete"))
+      Effect.sleep("1 second").pipe(Effect.as("Worker 1 complete"))
     )
   );
 
   const worker2 = yield* Effect.fork(
     Effect.withSpan("worker-2-task")(
-      sleepWithTrace("1.5 seconds").pipe(Effect.as("Worker 2 complete"))
+      Effect.sleep("1.5 seconds").pipe(Effect.as("Worker 2 complete"))
     )
   );
 
@@ -355,14 +353,13 @@ export const requirements = [];
     rootEffect: multiStepExample,
     requirements: [] as const,
     source: `import { Effect, Fiber } from "effect";
-import { sleepWithTrace } from "@/runtime";
 
 export const rootEffect = Effect.gen(function* () {
   const worker = yield* Effect.fork(
     Effect.gen(function* () {
-      yield* Effect.withSpan("step-1-prepare")(sleepWithTrace("500 millis"));
-      yield* Effect.withSpan("step-2-process")(sleepWithTrace("500 millis"));
-      yield* Effect.withSpan("step-3-cleanup")(sleepWithTrace("500 millis"));
+      yield* Effect.withSpan("step-1-prepare")(Effect.sleep("500 millis"));
+      yield* Effect.withSpan("step-2-process")(Effect.sleep("500 millis"));
+      yield* Effect.withSpan("step-3-cleanup")(Effect.sleep("500 millis"));
       return "Multi-step complete";
     })
   );
@@ -378,7 +375,6 @@ export const requirements = [];`,
     rootEffect: nestedForksExample,
     requirements: [] as const,
     source: `import { Effect, Fiber } from "effect";
-import { sleepWithTrace } from "@/runtime";
 
 export const rootEffect = Effect.gen(function* () {
   const parent = yield* Effect.fork(
@@ -393,7 +389,7 @@ export const rootEffect = Effect.gen(function* () {
           // Child forks a grandchild
           const grandchild = yield* Effect.fork(
             Effect.withSpan("grandchild-task")(
-              sleepWithTrace("500 millis").pipe(Effect.as("grandchild done"))
+              Effect.sleep("500 millis").pipe(Effect.as("grandchild done"))
             )
           );
 
@@ -420,18 +416,17 @@ export const requirements = [];
     rootEffect: racingExample,
     requirements: [] as const,
     source: `import { Effect, Fiber } from "effect";
-import { sleepWithTrace } from "@/runtime";
 
 export const rootEffect = Effect.gen(function* () {
   yield* Effect.withSpan("race-start")(Effect.succeed("starting race"));
 
   // Fork two fibers explicitly so we can visualize them
   const fastRunner = yield* Effect.fork(
-    sleepWithTrace("1 second").pipe(Effect.as("Fast runner wins!"))
+    Effect.sleep("1 second").pipe(Effect.as("Fast runner wins!"))
   );
 
   const slowRunner = yield* Effect.fork(
-    sleepWithTrace("2 seconds").pipe(Effect.as("Slow runner wins!"))
+    Effect.sleep("2 seconds").pipe(Effect.as("Slow runner wins!"))
   );
 
   // Race by joining both - Effect.race returns when first completes

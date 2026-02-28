@@ -3,9 +3,9 @@
 **Quick Context**: See [`workshop/README.md`](workshop/README.md) for full documentation.
 
 ## Current Phase
-**Phase 7**: COMPLETE ✅
+**Phase 8**: COMPLETE ✅
 
-**Recent**: makeVizTracer, Layer.setTracer, programs migrated to Effect.withSpan, withTrace removed
+**Recent**: VizSupervisor onSuspend/onResume, fiber:suspend/fiber:resume events, programs migrated to Effect.sleep, sleepWithTrace removed
 
 ## Completed Phases
 
@@ -57,6 +57,12 @@
 - [x] All programs migrated from withTrace to Effect.withSpan
 - [x] withTrace removed from tracedRunner and exports
 
+### Phase 8: Sleep Visibility via Supervisor onSuspend/onResume
+- [x] VizSupervisor onSuspend/onResume emit fiber:suspend, fiber:resume
+- [x] FiberStore and TimelineView handle suspend/resume; ignore spurious suspend when fiber already terminated
+- [x] All programs migrated from sleepWithTrace to Effect.sleep
+- [x] sleepWithTrace removed from tracedRunner and exports
+
 ### Phase 5: Scopes and Resources
 - [x] `FinalizerEvent`, `AcquireEvent` in trace types
 - [x] `emitFinalizer`, `emitAcquire` in tracedRunner
@@ -88,6 +94,11 @@
 - Layer.setTracer provides the Tracer; Effect.withSpan uses it—no TraceEmitter in R
 - Same ergonomics as withTrace but standard Effect API
 
+### Key Learning (Phase 8)
+- Supervisor onSuspend/onResume fire when fibers yield (sleep) and when they complete (onSuspend in finally)
+- Ignore fiber:suspend when fiber is already completed/interrupted to avoid timeline never stopping
+- Plain Effect.sleep—no wrapper needed for suspension visibility
+
 ### Key Learning (Phase 5)
 - addFinalizer callback must **return** an Effect (emit then run user finalizer); runtime provides env when it runs
 - Finalizers run LIFO; use Effect.scoped(effect) so programs have a scope
@@ -101,13 +112,13 @@
 - **Runtime hooks** planned for V2 (automatic, production-ready)
 
 ## Key Files
-- `src/runtime/vizSupervisor.ts` - VizSupervisor, makeVizLayers (Phase 6)
+- `src/runtime/vizSupervisor.ts` - VizSupervisor, makeVizLayers (Phase 6+8: onSuspend/onResume)
 - `src/runtime/vizTracer.ts` - makeVizTracer (Phase 7)
 - `src/runtime/runProgram.ts` - runProgramFork (root fiber emission)
-- `src/types/trace.ts` - TraceEvent definitions (includes sleep, finalizer, acquire events)
+- `src/types/trace.ts` - TraceEvent definitions (fiber:suspend/resume, finalizer, acquire)
 - `src/stores/traceStore.tsx` - Event state
-- `src/stores/fiberStore.tsx` - Fiber state (handles suspension)
-- `src/runtime/tracedRunner.ts` - Instrumented runner (`sleepWithTrace`, `retryWithTrace`, `addFinalizerWithTrace`, `acquireReleaseWithTrace`)
+- `src/stores/fiberStore.tsx` - Fiber state (handles suspend/resume)
+- `src/runtime/tracedRunner.ts` - Instrumented runner (`retryWithTrace`, `addFinalizerWithTrace`, `acquireReleaseWithTrace`)
 - `src/hooks/useEventHandlers.ts` - Play/Reset handlers with program selection
 - `src/components/visualizer/ExecutionLog.tsx` - Event log
 - `src/components/visualizer/FiberTreeView.tsx` - Fiber tree with suspended indicator
@@ -122,6 +133,7 @@
 5. ~~**Phase 5**: Scopes, resources, finalizers~~ ✅ See [`workshop/phase-5.md`](workshop/phase-5.md)
 6. ~~**Phase 6**: Supervisor for automatic fiber tracking~~ ✅ See [`workshop/phase-6.md`](workshop/phase-6.md)
 7. ~~**Phase 7**: Custom Tracer for Effect.withSpan~~ ✅ See [`workshop/phase-7.md`](workshop/phase-7.md)
+8. ~~**Phase 8**: Sleep visibility via onSuspend/onResume~~ ✅ See [`workshop/phase-8.md`](workshop/phase-8.md)
 
 ## Documentation
 - [`workshop/README.md`](workshop/README.md) - Documentation overview

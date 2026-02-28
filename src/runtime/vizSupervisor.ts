@@ -63,6 +63,28 @@ class VizSupervisor extends Supervisor.AbstractSupervisor<void> {
       timestamp: Date.now(),
     });
   }
+  onSuspend<A, E>(fiber: Fiber.RuntimeFiber<A, E>): void {
+    if (shouldIgnoreFiber(fiber)) {
+      return;
+    }
+    const fiberId = FiberId.threadName(fiber.id());
+    this.onEmit({
+      type: "fiber:suspend",
+      fiberId,
+      timestamp: Date.now(),
+    });
+  }
+  onResume<A, E>(fiber: Fiber.RuntimeFiber<A, E>): void {
+    if (shouldIgnoreFiber(fiber)) {
+      return;
+    }
+    const fiberId = FiberId.threadName(fiber.id());
+    this.onEmit({
+      type: "fiber:resume",
+      fiberId,
+      timestamp: Date.now(),
+    });
+  }
 }
 
 export function makeVizLayers(onEmit: OnEmit) {

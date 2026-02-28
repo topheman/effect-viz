@@ -5,7 +5,7 @@ import { transformImportsForContainer } from "./transformForContainer";
 describe("transformImportsForContainer", () => {
   it("replaces @/runtime/tracedRunner with ./runtime.js", () => {
     const source = `import { Effect } from "effect";
-import { sleepWithTrace } from "@/runtime/tracedRunner";
+import { retryWithTrace } from "@/runtime/tracedRunner";
 
 export const rootEffect = Effect.succeed("Hello");
 export const requirements = [];
@@ -16,15 +16,15 @@ export const requirements = [];
   });
 
   it("replaces @/runtime paths with ./runtime.js", () => {
-    const source = `import { sleepWithTrace } from "@/runtime/tracedRunner";`;
+    const source = `import { retryWithTrace } from "@/runtime/tracedRunner";`;
     const result = transformImportsForContainer(source);
-    expect(result).toBe('import { sleepWithTrace } from "./runtime.js";');
+    expect(result).toBe('import { retryWithTrace } from "./runtime.js";');
   });
 
   it("replaces @/runtime with ./runtime.js", () => {
-    const source = `import { sleepWithTrace } from "@/runtime";`;
+    const source = `import { retryWithTrace } from "@/runtime";`;
     const result = transformImportsForContainer(source);
-    expect(result).toBe('import { sleepWithTrace } from "./runtime.js";');
+    expect(result).toBe('import { retryWithTrace } from "./runtime.js";');
   });
 
   it("replaces ./tracedRunner with ./runtime.js", () => {
@@ -41,7 +41,7 @@ export const requirements = [];
 
   it("leaves program content unchanged aside from imports", () => {
     const source = `import { Effect } from "effect";
-import { sleepWithTrace } from "@/runtime/tracedRunner";
+import { retryWithTrace } from "@/runtime/tracedRunner";
 
 export const rootEffect = Effect.gen(function* () {
   yield* Effect.withSpan("step")(Effect.succeed(1));

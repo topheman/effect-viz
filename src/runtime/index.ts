@@ -1,7 +1,6 @@
 // From tracedRunner (V1 manual instrumentation)
 export {
   makeTraceEmitterLayer,
-  sleepWithTrace,
   retryWithTrace,
   addFinalizerWithTrace,
   acquireReleaseWithTrace,

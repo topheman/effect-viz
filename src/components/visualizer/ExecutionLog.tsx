@@ -47,10 +47,10 @@ function formatEvent(event: TraceEvent, events: TraceEvent[]): string {
     }
     case "fiber:interrupt":
       return `Fiber interrupted: ${event.fiberId}`;
-    case "sleep:start":
-      return `Sleep started: ${event.duration}ms (fiber: ${event.fiberId})`;
-    case "sleep:end":
-      return `Sleep ended (fiber: ${event.fiberId})`;
+    case "fiber:suspend":
+      return `Fiber suspend: ${event.fiberId}`;
+    case "fiber:resume":
+      return `Fiber resume: ${event.fiberId}`;
     case "retry:attempt":
       return `Retry attempt: #${event.attempt} ${event.label} (${formatError(event.lastError)})`;
     case "finalizer":
@@ -75,8 +75,8 @@ function getEventColor(event: TraceEvent): string {
       return "text-purple-300";
     case "fiber:interrupt":
       return "text-orange-400";
-    case "sleep:start":
-    case "sleep:end":
+    case "fiber:suspend":
+    case "fiber:resume":
       return "text-yellow-400";
     case "retry:attempt":
       return "text-orange-400";
