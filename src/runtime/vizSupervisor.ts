@@ -13,13 +13,20 @@ import type { TraceEvent } from "@/types/trace";
 type OnEmit = (event: TraceEvent) => void;
 
 /**
- * We can identify non-app fibers triggered by cleanup-like internal operations.
- * However, we can't identify fibers created by the runtime when call to Effect.race or Effect.all etc.
+ * Ignore fibers that are internal to the Effect runtime:
+ * - Empty context: cleanup-like internal operations
+ * - Only effect/Layer/CurrentMemoMap: layer build/memoization fibers (created when
+ *   Effect.provide(layers) evaluates Layer.mergeAll before the user's program runs)
+ *
+ * We cannot identify fibers created by Effect.race, Effect.all, etc.
  */
 function shouldIgnoreFiber(
   fiber: Fiber.RuntimeFiber<unknown, unknown>,
 ): boolean {
-  return fiber.currentContext.unsafeMap.size === 0;
+  const keys = Array.from(fiber.currentContext.unsafeMap.keys());
+  return (
+    keys.length === 0 || keys.every((k) => k === "effect/Layer/CurrentMemoMap")
+  );
 }
 
 class VizSupervisor extends Supervisor.AbstractSupervisor<void> {
