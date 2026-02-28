@@ -11,6 +11,12 @@ import {
 } from "@/runtime/traceEmitter";
 import type { TraceEvent } from "@/types/trace";
 
+/** Convert error to a form that survives JSON serialization (e.g. WebContainer stdout). */
+function errorForTrace(err: unknown): unknown {
+  if (err instanceof Error) return { message: err.message, name: err.name };
+  return err;
+}
+
 // ---
 // Layer Implementation
 // ---
@@ -69,11 +75,11 @@ export function retryWithTrace<A, E, R>(
       const lastError = Cause.squash(exit.cause);
 
       if (attempt >= maxAttempts) {
-        yield* emitEnd(id, "failure", undefined, lastError);
+        yield* emitEnd(id, "failure", undefined, errorForTrace(lastError));
         return yield* Effect.fail(exit.cause);
       }
 
-      yield* emitRetry(id, options.label, attempt, lastError);
+      yield* emitRetry(id, options.label, attempt, errorForTrace(lastError));
       attempt++;
     }
   });
@@ -124,7 +130,12 @@ export function acquireReleaseWithTrace<A, E, R, X, R2>(
       Effect.onExit((exit) =>
         Exit.isSuccess(exit)
           ? emitAcquire(id, label, "success")
-          : emitAcquire(id, label, "failure", Cause.squash(exit.cause)),
+          : emitAcquire(
+              id,
+              label,
+              "failure",
+              errorForTrace(Cause.squash(exit.cause)),
+            ),
       ),
     );
     yield* addFinalizerWithTrace(
