@@ -12,6 +12,7 @@ import { useTraceStore } from "@/stores/traceStore";
 import type {
   EffectStartEvent,
   FiberForkEvent,
+  FiberSuspendEvent,
   TraceEvent,
 } from "@/types/trace";
 
@@ -20,8 +21,19 @@ function formatError(err: unknown): string {
   return String(err);
 }
 
+/** Format duration in ms as human-readable string */
+function formatDuration(ms: number): string {
+  const clamped = Math.max(0, ms);
+  if (clamped < 1000) return `${Math.round(clamped)}ms`;
+  return `${(clamped / 1000).toFixed(2)}s`;
+}
+
 /** Format a trace event into a human-readable string */
-function formatEvent(event: TraceEvent, events: TraceEvent[]): string {
+function formatEvent(
+  event: TraceEvent,
+  events: TraceEvent[],
+  currentIndex?: number,
+): string {
   switch (event.type) {
     case "effect:start":
       return `Effect started: ${event.label}`;
@@ -49,8 +61,19 @@ function formatEvent(event: TraceEvent, events: TraceEvent[]): string {
       return `Fiber interrupted: ${event.fiberId}`;
     case "fiber:suspend":
       return `Fiber suspend: ${event.fiberId}`;
-    case "fiber:resume":
-      return `Fiber resume: ${event.fiberId}`;
+    case "fiber:resume": {
+      const priorEvents =
+        currentIndex !== undefined ? events.slice(0, currentIndex) : events;
+      const lastSuspend = [...priorEvents]
+        .reverse()
+        .find(
+          (e): e is FiberSuspendEvent =>
+            e.type === "fiber:suspend" && e.fiberId === event.fiberId,
+        );
+      if (!lastSuspend) return `Fiber resume: ${event.fiberId}`;
+      const durationMs = event.timestamp - lastSuspend.timestamp;
+      return `Fiber resume: ${event.fiberId} (after ${formatDuration(durationMs)})`;
+    }
     case "retry:attempt":
       return `Retry attempt: #${event.attempt} ${event.label} (${formatError(event.lastError)})`;
     case "finalizer":
@@ -146,7 +169,7 @@ export function ExecutionLog() {
               >
                 <span className="text-muted-foreground">[{index + 1}]</span>{" "}
                 <span className={getEventColor(event)}>
-                  {formatEvent(event, events)}
+                  {formatEvent(event, events, index)}
                 </span>
               </div>
             ))}
