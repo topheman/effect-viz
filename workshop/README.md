@@ -39,6 +39,7 @@ Refactor to use Effect's built-in observability, removing manual wrappers.
 - [Phase 6: Supervisor for automatic fiber lifecycle tracking](./phase-6.md) ✅
 - [Phase 7: Custom Tracer for Effect.withSpan](./phase-7.md) ✅
 - [Phase 8: Sleep visibility via onSuspend/onResume](./phase-8.md) ✅
+- [Phase 9: retryWithTrace with Schedule API](./phase-9.md) ✅
 
 **Why two versions?**
 - **V1** teaches concepts explicitly - you see exactly what gets traced

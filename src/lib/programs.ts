@@ -3,7 +3,7 @@
  * These demonstrate different Effect patterns with tracing.
  */
 
-import { Context, Effect, Fiber, Layer, Ref } from "effect";
+import { Context, Effect, Fiber, Layer, Ref, Schedule } from "effect";
 
 import {
   addFinalizerWithTrace,
@@ -198,11 +198,38 @@ export const retryExample = Effect.gen(function* () {
     return "success";
   });
 
-  // Step 3: retryWithTrace retries until success (or maxRetries)
-  return yield* retryWithTrace(flakyEffect, {
-    maxRetries: 3,
-    label: "flaky-task",
+  // Step 3: retryWithTrace retries until success (Schedule.recurs(3) = 3 retries)
+  return yield* retryWithTrace(flakyEffect, Schedule.recurs(3), "flaky-task");
+});
+
+// =============================================================================
+// Retry with Exponential Backoff
+// =============================================================================
+
+/**
+ * Demonstrates retryWithTrace with exponential backoff.
+ * Same structure as retryExample but Schedule.addDelay adds 100ms, 200ms, 400ms between attempts.
+ * Timeline shows fiber:suspend during the delays.
+ */
+export const retryExponentialBackoffExample = Effect.gen(function* () {
+  // Step 1: Ref to count attempts
+  const attempts = yield* Ref.make(0);
+
+  // Step 2: Effect that fails when count < 3, then succeeds
+  const flakyEffect = Effect.gen(function* () {
+    const n = yield* Ref.updateAndGet(attempts, (x) => x + 1);
+    if (n < 5) {
+      return yield* Effect.fail(new Error(`Attempt ${n} failed`));
+    }
+    return "success";
   });
+
+  // Step 3: retryWithTrace with exponential backoff (100ms, 200ms, 400ms, ... between attempts)
+  const schedule = Schedule.addDelay(
+    Schedule.recurs(5),
+    (n) => `${100 * 2 ** n} millis`,
+  );
+  return yield* retryWithTrace(flakyEffect, schedule, "flaky-task");
 });
 
 // =============================================================================
@@ -481,7 +508,7 @@ export const requirements = [];
       "Effect fails twice then succeeds; retryWithTrace retries until success",
     rootEffect: retryExample,
     requirements: [] as const,
-    source: `import { Effect, Ref } from "effect";
+    source: `import { Effect, Ref, Schedule } from "effect";
 import { retryWithTrace } from "@/runtime";
 
 export const rootEffect = Effect.gen(function* () {
@@ -497,11 +524,41 @@ export const rootEffect = Effect.gen(function* () {
     return "success";
   });
 
-  // Step 3: retryWithTrace retries until success (or maxRetries)
-  return yield* retryWithTrace(flakyEffect, {
-    maxRetries: 3,
-    label: "flaky-task",
+  // Step 3: retryWithTrace retries until success (Schedule.recurs(3) = 3 retries)
+  return yield* retryWithTrace(flakyEffect, Schedule.recurs(3), "flaky-task");
+});
+
+export const requirements = [];
+`,
+  },
+  retryExponentialBackoff: {
+    name: "Retry (Exponential Backoff)",
+    description:
+      "Same as Retry but with exponential backoff: 100ms, 200ms, 400ms, ... between attempts",
+    rootEffect: retryExponentialBackoffExample,
+    requirements: [] as const,
+    source: `import { Effect, Ref, Schedule } from "effect";
+import { retryWithTrace } from "@/runtime";
+
+export const rootEffect = Effect.gen(function* () {
+  // Step 1: Ref to count attempts
+  const attempts = yield* Ref.make(0);
+
+  // Step 2: Effect that fails when count < 3, then succeeds
+  const flakyEffect = Effect.gen(function* () {
+    const n = yield* Ref.updateAndGet(attempts, (x) => x + 1);
+    if (n < 5) {
+      return yield* Effect.fail(new Error(\`Attempt \${n} failed\`));
+    }
+    return "success";
   });
+
+  // Step 3: retryWithTrace with exponential backoff (100ms, 200ms, 400ms, ... between attempts)
+  const schedule = Schedule.addDelay(
+    Schedule.recurs(5),
+    (n) => \`\${100 * 2 ** n} millis\`,
+  );
+  return yield* retryWithTrace(flakyEffect, schedule, "flaky-task");
 });
 
 export const requirements = [];

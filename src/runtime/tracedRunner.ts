@@ -1,4 +1,4 @@
-import { Cause, Effect, Exit, Layer, Scope } from "effect";
+import { Cause, Effect, Exit, Layer, Schedule, Scope } from "effect";
 
 import { randomUUID } from "@/lib/crypto";
 import {
@@ -44,25 +44,20 @@ export const makeTraceEmitterLayer = (
  * - On each failure before the last, emits retry:attempt (id, label, attempt, lastError).
  * - When the effect finally succeeds or exhausts retries, emits effect:end with the same id.
  *
- * Semantics: total attempts = 1 + maxRetries (one initial try plus up to maxRetries retries).
- * So maxRetries: 3 ⇒ at most 4 attempts.
- *
+ * Uses Schedule.driver to step through the schedule (like Effect.retry). The schedule
+ * consumes the error and decides whether to continue (with optional delay) or stop.
  * We use a loop instead of Effect.retry so we can observe each attempt and emit retry:attempt.
- * Effect.retry runs the effect internally and only gives us one final Exit—no per-attempt callback.
  */
-export function retryWithTrace<A, E, R>(
+export function retryWithTrace<A, E, R, X, R2>(
   effect: Effect.Effect<A, E, R>,
-  options: {
-    maxRetries: number;
-    label: string;
-  },
-): Effect.Effect<A, Cause.Cause<E>, R | TraceEmitter> {
+  schedule: Schedule.Schedule<X, E, R2>,
+  label: string,
+): Effect.Effect<A, Cause.Cause<E>, R | R2 | TraceEmitter> {
   const id = randomUUID();
   return Effect.gen(function* () {
-    yield* emitStart(id, options.label);
-
+    yield* emitStart(id, label);
+    const driver = yield* Schedule.driver(schedule);
     let attempt = 1;
-    const maxAttempts = 1 + options.maxRetries;
 
     while (true) {
       const exit = yield* Effect.exit(effect);
@@ -72,15 +67,17 @@ export function retryWithTrace<A, E, R>(
         return exit.value;
       }
 
-      const lastError = Cause.squash(exit.cause);
+      const lastError = Cause.squash(exit.cause) as E;
 
-      if (attempt >= maxAttempts) {
-        yield* emitEnd(id, "failure", undefined, errorForTrace(lastError));
-        return yield* Effect.fail(exit.cause);
+      const nextExit = yield* Effect.exit(driver.next(lastError));
+      if (Exit.isSuccess(nextExit)) {
+        yield* emitRetry(id, label, attempt, errorForTrace(lastError));
+        attempt++;
+        continue;
       }
 
-      yield* emitRetry(id, options.label, attempt, errorForTrace(lastError));
-      attempt++;
+      yield* emitEnd(id, "failure", undefined, errorForTrace(lastError));
+      return yield* Effect.fail(exit.cause);
     }
   });
 }

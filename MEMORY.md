@@ -3,9 +3,9 @@
 **Quick Context**: See [`workshop/README.md`](workshop/README.md) for full documentation.
 
 ## Current Phase
-**Phase 8**: COMPLETE ✅
+**Phase 9**: IN PROGRESS
 
-**Recent**: VizSupervisor onSuspend/onResume, fiber:suspend/fiber:resume events, programs migrated to Effect.sleep, sleepWithTrace removed
+**Recent**: retryWithTrace now accepts Schedule + label; Schedule.driver loop; programs use Schedule.recurs(3)
 
 ## Completed Phases
 
@@ -41,6 +41,11 @@
 - [x] `retryWithTrace` loop-based: effect:start/effect:end + retry:attempt per failed attempt
 - [x] `RetryAttemptEvent` and `emitRetry` in tracedRunner
 - [x] ExecutionLog: failure styling (red), retry:attempt from current event, formatError
+
+### Phase 9: retryWithTrace with Schedule API
+- [x] `retryWithTrace(effect, schedule, label)` — Schedule as second arg (like Effect.retry)
+- [x] Schedule.driver + loop; keep emitStart/emitEnd/emitRetry (same id for association)
+- [x] Programs use `Schedule.recurs(3)`; fallback-types.d.ts has minimal Schedule stubs
 
 ### Phase 6: Supervisor for Automatic Fiber Tracking
 - [x] VizSupervisor extending Supervisor.AbstractSupervisor<void>
@@ -99,6 +104,11 @@
 - Ignore fiber:suspend when fiber is already completed/interrupted to avoid timeline never stopping
 - Plain Effect.sleep—no wrapper needed for suspension visibility
 
+### Key Learning (Phase 9)
+- Schedule.driver lets us step through a schedule; driver.next(error) sleeps for delay and returns when schedule continues
+- retryWithTrace mirrors Effect.retry(effect, schedule) with label for tracing
+- Keep TraceEmitter for effect:start, effect:end, retry:attempt so all share same span id
+
 ### Key Learning (Phase 5)
 - addFinalizer callback must **return** an Effect (emit then run user finalizer); runtime provides env when it runs
 - Finalizers run LIFO; use Effect.scoped(effect) so programs have a scope
@@ -134,6 +144,7 @@
 6. ~~**Phase 6**: Supervisor for automatic fiber tracking~~ ✅ See [`workshop/phase-6.md`](workshop/phase-6.md)
 7. ~~**Phase 7**: Custom Tracer for Effect.withSpan~~ ✅ See [`workshop/phase-7.md`](workshop/phase-7.md)
 8. ~~**Phase 8**: Sleep visibility via onSuspend/onResume~~ ✅ See [`workshop/phase-8.md`](workshop/phase-8.md)
+9. **Phase 9**: retryWithTrace with Schedule API — See [`workshop/phase-9.md`](workshop/phase-9.md)
 
 ## Documentation
 - [`workshop/README.md`](workshop/README.md) - Documentation overview

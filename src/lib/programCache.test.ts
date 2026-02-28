@@ -14,6 +14,7 @@ const mockPrograms: ProgramsMap = {
   racing: { source: "// racing template" },
   failureAndRecovery: { source: "// failureAndRecovery template" },
   retry: { source: "// retry template" },
+  retryExponentialBackoff: { source: "// retryExponentialBackoff template" },
   basicFinalizers: { source: "// basicFinalizers template" },
   acquireRelease: { source: "// acquireRelease template" },
   loggerWithRequirements: { source: "// loggerWithRequirements template" },
