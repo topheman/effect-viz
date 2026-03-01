@@ -82,10 +82,7 @@ describe("InfoModal", () => {
       within(dialog).getByLabelText("About the project"),
     ).toBeInTheDocument();
     expect(
-      within(dialog).getByText(/Effect runtime visualizer/i),
-    ).toBeInTheDocument();
-    expect(
-      within(dialog).getByText(/migrating away from manual instrumentation/i),
+      within(dialog).getByText(/effect runtime in real time/i),
     ).toBeInTheDocument();
   });
 

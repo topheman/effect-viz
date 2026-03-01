@@ -17,6 +17,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { OnboardingStepId } from "@/hooks/useOnboarding";
+import { useCanSupportWebContainer } from "@/lib/mobileDetection";
 import { cn } from "@/lib/utils";
 
 const GITHUB_REPO_URL = "https://github.com/topheman/effect-viz";
@@ -41,6 +42,8 @@ export function InfoModal({
     const [url] = window.location.href.split("#");
     return url;
   });
+
+  const canSupportWebContainer = useCanSupportWebContainer();
 
   const [isMobile, setIsMobile] = useState(() => {
     if (
@@ -126,30 +129,17 @@ export function InfoModal({
             className="flex flex-col gap-3 text-sm text-muted-foreground"
             aria-label="About the project"
           >
-            <p>
-              The goal of this project is for me to learn Effect by building an
-              Effect runtime visualizer.
-            </p>
-            <p>
-              Building v2, I'm migrating away from manual instrumentation and
-              towards Effect's built-in observability features.
-            </p>
-            <p>
-              I used AI as my Effect tutor that guided me through a multi-step
-              workshop (read about it on the{" "}
-              <a
-                href={GITHUB_REPO_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`
-                  text-primary underline-offset-4
-                  hover:underline
-                `}
-              >
-                GitHub repo
-              </a>
-              ).
-            </p>
+            {canSupportWebContainer ? (
+              <p>
+                You can edit the example programs and see the effect runtime in
+                real time.
+              </p>
+            ) : (
+              <>
+                <p>You can see the effect runtime in real time.</p>
+                <p>On desktop, you can also edit the example programs.</p>
+              </>
+            )}
           </section>
 
           <div className="flex flex-col items-center gap-6">

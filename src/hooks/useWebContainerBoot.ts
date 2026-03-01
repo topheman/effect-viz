@@ -42,7 +42,11 @@ export function useWebContainerBoot() {
       setError(null);
       addLog(
         "boot",
-        "Mobile or Safari detected, using fallback (no WebContainer)",
+        "Mobile or Safari detected, using fallback (no WebContainer) - readonly mode.",
+      );
+      addLog(
+        "boot",
+        "To edit the example programs, you need a Desktop Chrome / Firefox browser.",
       );
       Effect.runPromise(acquireMonacoTypesFallback)
         .then(() => {
