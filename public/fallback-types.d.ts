@@ -162,6 +162,16 @@ declare module "effect" {
 
   export declare const Fiber: Fiber;
 
+  // --- Schedule (retryWithTrace; retry program uses Schedule.recurs, Schedule.addDelay)
+  export namespace Schedule {
+    export interface Schedule<Out = unknown, In = unknown, R = never> {}
+    export function recurs(n: number): Schedule<number>;
+    export function addDelay<Out, In, R>(
+      self: Schedule<Out, In, R>,
+      f: (out: Out) => Duration.DurationInput,
+    ): Schedule<Out, In, R>;
+  }
+
   // --- Ref
   export interface Ref<A> {}
 

@@ -31,24 +31,30 @@ export function isSafariUserAgent(): boolean {
 
 /**
  * Check if the webcontainer override is enabled.
- * This is used to force the webcontainer mode on mobile and safari.
+ *
+ * `?webcontainer=1` returns true
+ * `?webcontainer=0` returns false
+ * If not set, returns null.
  */
-export function isWebContainerOverrideEnabled(): boolean {
-  if (typeof window === "undefined") return false;
-  return (
-    new URLSearchParams(window.location.search).get("webcontainer") === "1"
+export function isWebContainerOverrideEnabled(): boolean | null {
+  if (typeof window === "undefined") return null;
+  const webcontainer = new URLSearchParams(window.location.search).get(
+    "webcontainer",
   );
+  if (webcontainer === "1") return true;
+  if (webcontainer === "0") return false;
+  return null;
 }
 
 /**
  * Whether the browser supports WebContainer.
  * Returns false for mobile and Safari (use fallback path).
+ * You can override this with `?webcontainer=1` or `?webcontainer=0`.
  */
 export function canSupportWebContainer(): boolean {
-  return (
-    isWebContainerOverrideEnabled() ||
-    (!isMobileUserAgent() && !isSafariUserAgent())
-  );
+  const override = isWebContainerOverrideEnabled();
+  if (override !== null) return override;
+  return !isMobileUserAgent() && !isSafariUserAgent();
 }
 
 export function useCanSupportWebContainer(): boolean {

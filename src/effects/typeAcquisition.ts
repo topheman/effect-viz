@@ -94,6 +94,7 @@ function configureMonacoPaths(
     paths: {
       ...(opts.paths ?? {}),
       "@/*": ["*"],
+      "@/runtime": ["runtime/index.d.ts"],
       ...pathsOverride,
     },
   });

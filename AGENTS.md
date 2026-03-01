@@ -57,7 +57,7 @@ type TraceEvent =
   | { type: "fiber:fork"; fiberId: string; parentId?: string }
   | { type: "fiber:end"; fiberId: string }
   | { type: "fiber:interrupt"; fiberId: string }
-  | { type: "sleep:start"; fiberId: string; duration: number }
+  | { type: "fiber:suspend"; fiberId: string; duration: number }
   | { type: "sleep:end"; fiberId: string }
 ```
 

@@ -12,53 +12,118 @@ import { useTraceStore } from "@/stores/traceStore";
 import type {
   EffectStartEvent,
   FiberForkEvent,
+  FiberSuspendEvent,
   TraceEvent,
 } from "@/types/trace";
 
 function formatError(err: unknown): string {
   if (err instanceof Error) return err.message;
+  if (
+    err &&
+    typeof err === "object" &&
+    "message" in err &&
+    typeof (err as { message?: unknown }).message === "string"
+  ) {
+    return (err as { message: string }).message;
+  }
+  if (typeof err === "string") return err;
+  if (err && typeof err === "object") return JSON.stringify(err);
   return String(err);
 }
 
+/** Format duration in ms as human-readable string */
+function formatDuration(ms: number): string {
+  const clamped = Math.max(0, ms);
+  if (clamped < 1000) return `${Math.round(clamped)}ms`;
+  return `${(clamped / 1000).toFixed(2)}s`;
+}
+
 /** Format a trace event into a human-readable string */
-function formatEvent(event: TraceEvent, events: TraceEvent[]): string {
+function formatEvent(
+  event: TraceEvent,
+  events: TraceEvent[],
+  currentIndex?: number,
+): string {
   switch (event.type) {
     case "effect:start":
-      return `Effect started: ${event.label}`;
+      return `effect:started ${event.label}`;
     case "effect:end": {
       const startEffect = events.find(
         (e) => e.type === "effect:start" && e.id === event.id,
       ) as EffectStartEvent | undefined;
-      if (!startEffect) {
-        return `Effect ended: ${event.id}`;
-      }
-      return `Effect ended: ${startEffect.label}`;
+      return `effect:ended ${startEffect?.label ?? event.id}`;
     }
     case "fiber:fork":
-      return `Fiber forked: ${event.fiberId}${event.parentId ? ` (parent: ${event.parentId})` : ""} ${event.label ? `${event.label}` : ""}`;
+      return `fiber:forked ${event.fiberId}${event.parentId ? ` (parent ${event.parentId})` : " (root)"}`;
     case "fiber:end": {
-      const forkFiber = events.find(
+      const forkEvent = events.find(
         (e) => e.type === "fiber:fork" && e.fiberId === event.fiberId,
       ) as FiberForkEvent | undefined;
-      if (!forkFiber) {
-        return `Fiber ended: ${event.fiberId}`;
-      }
-      return `Fiber ended: ${event.fiberId}${forkFiber.parentId ? ` (parent: ${forkFiber.parentId})` : ""} ${forkFiber.label ? `${forkFiber.label}` : ""}`;
+      return `fiber:ended ${event.fiberId}${forkEvent?.parentId ? ` (parent ${forkEvent.parentId})` : ""}`;
     }
     case "fiber:interrupt":
-      return `Fiber interrupted: ${event.fiberId}`;
-    case "sleep:start":
-      return `Sleep started: ${event.duration}ms (fiber: ${event.fiberId})`;
-    case "sleep:end":
-      return `Sleep ended (fiber: ${event.fiberId})`;
+      return `fiber:interrupted ${event.fiberId}`;
+    case "fiber:suspend":
+      return `fiber:suspend ${event.fiberId}`;
+    case "fiber:resume": {
+      const priorEvents =
+        currentIndex !== undefined ? events.slice(0, currentIndex) : events;
+      const lastSuspend = [...priorEvents]
+        .reverse()
+        .find(
+          (e): e is FiberSuspendEvent =>
+            e.type === "fiber:suspend" && e.fiberId === event.fiberId,
+        );
+      if (!lastSuspend) return `fiber:resume ${event.fiberId}`;
+      const durationMs = event.timestamp - lastSuspend.timestamp;
+      return `fiber:resume ${event.fiberId} (after ${formatDuration(durationMs)})`;
+    }
     case "retry:attempt":
-      return `Retry attempt: #${event.attempt} ${event.label} (${formatError(event.lastError)})`;
+      return `retry:attempt #${event.attempt} ${event.label} (${formatError(event.lastError)})`;
     case "finalizer":
-      return `Finalizer ran: ${event.label}`;
+      return `finalizer ${event.label}`;
     case "acquire":
       return event.result === "success"
-        ? `Resource acquired: ${event.label}`
-        : `Resource acquire failed: ${event.label} (${formatError(event.error)})`;
+        ? `acquire ${event.label}`
+        : `acquire:failed ${event.label} (${formatError(event.error)})`;
+  }
+}
+
+/** Get emoji and accessible label for an event */
+function getEventEmoji(event: TraceEvent): { emoji: string; label: string } {
+  switch (event.type) {
+    case "fiber:fork":
+      return { emoji: "⚡", label: "Fiber forked" };
+    case "fiber:suspend":
+      return { emoji: "⏸️", label: "Fiber suspend" };
+    case "fiber:resume":
+      return { emoji: "▶️", label: "Fiber resume" };
+    case "fiber:end":
+      return { emoji: "🏁", label: "Fiber ended" };
+    case "fiber:interrupt":
+      return { emoji: "⛔", label: "Fiber interrupted" };
+    case "effect:start":
+      return { emoji: "🚀", label: "Effect started" };
+    case "effect:end":
+      return {
+        emoji: event.result === "success" ? "✅" : "❌",
+        label:
+          event.result === "success"
+            ? "Effect ended (success)"
+            : "Effect ended (failure)",
+      };
+    case "retry:attempt":
+      return { emoji: "🔄", label: "Retry attempt" };
+    case "finalizer":
+      return { emoji: "🧹", label: "Finalizer" };
+    case "acquire":
+      return {
+        emoji: "📦",
+        label:
+          event.result === "success"
+            ? "Resource acquired"
+            : "Resource acquire failed",
+      };
   }
 }
 
@@ -70,14 +135,15 @@ function getEventColor(event: TraceEvent): string {
     case "effect:end":
       return event.result === "success" ? "text-green-400" : "text-red-400";
     case "fiber:fork":
-      return "text-purple-400";
+      return "text-violet-500";
     case "fiber:end":
-      return "text-purple-300";
+      return "text-violet-400";
     case "fiber:interrupt":
       return "text-orange-400";
-    case "sleep:start":
-    case "sleep:end":
-      return "text-yellow-400";
+    case "fiber:suspend":
+      return "text-amber-500";
+    case "fiber:resume":
+      return "text-amber-400";
     case "retry:attempt":
       return "text-orange-400";
     case "finalizer":
@@ -136,20 +202,30 @@ export function ExecutionLog() {
             className="h-full overflow-y-auto font-mono text-sm"
             ref={cardContentRef}
           >
-            {events.map((event, index) => (
-              <div
-                key={`${event.type}-${event.timestamp}-${index}`}
-                className={`
-                  border-b border-border/50 py-1.5
-                  last:border-b-0
-                `}
-              >
-                <span className="text-muted-foreground">[{index + 1}]</span>{" "}
-                <span className={getEventColor(event)}>
-                  {formatEvent(event, events)}
-                </span>
-              </div>
-            ))}
+            {events.map((event, index) => {
+              const emojiInfo = getEventEmoji(event);
+              return (
+                <div
+                  key={`${event.type}-${event.timestamp}-${index}`}
+                  className={`
+                    border-b border-border/50 py-1.5
+                    last:border-b-0
+                  `}
+                >
+                  <span className="text-muted-foreground">[{index + 1}]</span>{" "}
+                  <span
+                    role="img"
+                    aria-label={emojiInfo.label}
+                    className="me-1.5 inline-block"
+                  >
+                    {emojiInfo.emoji}
+                  </span>
+                  <span className={getEventColor(event)}>
+                    {formatEvent(event, events, index)}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         )}
       </CardContent>

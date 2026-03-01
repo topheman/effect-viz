@@ -84,7 +84,9 @@ describe("InfoModal", () => {
     expect(
       within(dialog).getByText(/Effect runtime visualizer/i),
     ).toBeInTheDocument();
-    expect(within(dialog).getByText(/This is v1/i)).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/migrating away from manual instrumentation/i),
+    ).toBeInTheDocument();
   });
 
   it("closes the modal when clicking the close button", async () => {

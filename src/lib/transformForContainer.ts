@@ -7,22 +7,27 @@
 
 /**
  * Transform editor source for container execution.
- * Only fixes import paths: @/runtime/tracedRunner → ./tracedRunner.js (Node ESM requires .js).
- * The runner.js bootstraps execution; user code does not need runProgramWithTrace or makeTraceEmitterLayer.
+ * Fixes import paths: @/runtime/* or ./tracedRunner → ./runtime.js (Node ESM requires .js).
+ * The runner.js bootstraps execution; user code does not need makeTraceEmitterLayer.
  */
 export function transformImportsForContainer(source: string): string {
   let result = source;
 
-  // Replace import path: @/runtime/tracedRunner → ./tracedRunner.js (Node ESM requires .js)
+  // Replace @/runtime paths (tracedRunner, runtime, etc.) → ./runtime.js
+  result = result.replace(
+    /from\s+["']@\/[^"']*runtime["']/g,
+    'from "./runtime.js"',
+  );
   result = result.replace(
     /from\s+["']@\/[^"']*tracedRunner["']/g,
-    'from "./tracedRunner.js"',
+    'from "./runtime.js"',
   );
-  // Also fix ./tracedRunner without .js
+  // Also fix ./tracedRunner or ./runtime without .js
   result = result.replace(
     /from\s+["']\.\/tracedRunner["']/g,
-    'from "./tracedRunner.js"',
+    'from "./runtime.js"',
   );
+  result = result.replace(/from\s+["']\.\/runtime["']/g, 'from "./runtime.js"');
 
   return result;
 }

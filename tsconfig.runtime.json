@@ -4,12 +4,14 @@
     "declaration": true,
     "emitDeclarationOnly": true,
     "noEmit": false,
-    "outDir": "dist/tracedrunner",
+    "outDir": "dist/runtime",
     "rootDir": "src"
   },
   "include": [
+    "src/runtime/index.ts",
     "src/runtime/tracedRunner.ts",
     "src/runtime/traceEmitter.ts",
+    "src/runtime/vizSupervisor.ts",
     "src/lib/crypto.ts",
     "src/types/trace.ts"
   ]

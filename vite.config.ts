@@ -6,9 +6,12 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
+import { runtimeWatchPlugin } from "./vite-plugin-runtime-watch";
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
+    runtimeWatchPlugin(),
     react({
       babel: {
         plugins: ["babel-plugin-react-compiler"],

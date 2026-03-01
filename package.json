@@ -24,9 +24,9 @@
     "formatting"
   ],
   "scripts": {
-    "dev": "npm run build:tracedrunner && vite",
-    "build": "npm run build:tracedrunner && tsc -b && vite build",
-    "build:tracedrunner": "vite build --config vite.tracedrunner.config.ts && tsc -p tsconfig.tracedrunner.json && node scripts/extract-dts-from-tracedrunner.mjs --src=dist/tracedrunner > src/effects/app-lib-dts-urls.json && node scripts/copy-tracedrunner.mjs",
+    "dev": "npm run build:runtime && vite",
+    "build": "npm run build:runtime && tsc -b && vite build",
+    "build:runtime": "vite build --config vite.runtime.config.ts && tsc -p tsconfig.runtime.json && node scripts/extract-dts-from-runtime.mjs --src=dist/runtime > src/effects/app-lib-dts-urls.json && node scripts/copy-runtime.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "preview": "vite preview",
