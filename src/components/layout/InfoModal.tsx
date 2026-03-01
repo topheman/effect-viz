@@ -142,6 +142,17 @@ export function InfoModal({
             )}
           </section>
 
+          <section
+            className="flex flex-col gap-3 text-sm text-muted-foreground"
+            aria-label="Writing programs"
+          >
+            <p>
+              When editing programs: for retry, addFinalizer, and
+              acquireRelease, import from &quot;@/runtime&quot; (not from
+              Effect) so the visualizer can trace them.
+            </p>
+          </section>
+
           <div className="flex flex-col items-center gap-6">
             {/* QR Code: small + clickable on mobile, large on desktop */}
             {isMobile ? (

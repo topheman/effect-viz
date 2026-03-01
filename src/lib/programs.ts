@@ -505,6 +505,7 @@ export const requirements = [];
     rootEffect: retryExample,
     requirements: [] as const,
     source: `import { Effect, Ref, Schedule } from "effect";
+// Use @/runtime (not Effect.retry) so the visualizer can trace retries
 import { retry } from "@/runtime";
 
 export const rootEffect = Effect.gen(function* () {
@@ -534,6 +535,7 @@ export const requirements = [];
     rootEffect: retryExponentialBackoffExample,
     requirements: [] as const,
     source: `import { Effect, Ref, Schedule } from "effect";
+// Use @/runtime (not Effect.retry) so the visualizer can trace retries
 import { retry } from "@/runtime";
 
 export const rootEffect = Effect.gen(function* () {
@@ -567,6 +569,7 @@ export const requirements = [];
     rootEffect: basicFinalizersExample,
     requirements: [] as const,
     source: `import { Effect } from "effect";
+// Use @/runtime (not Effect.addFinalizer) so the visualizer can trace finalizers
 import { addFinalizer } from "@/runtime";
 
 export const rootEffect = Effect.scoped(
@@ -593,6 +596,7 @@ export const requirements = [];
     rootEffect: acquireReleaseExample,
     requirements: [] as const,
     source: `import { Effect } from "effect";
+// Use @/runtime (not Effect.acquireRelease) so the visualizer can trace acquire/release
 import { acquireRelease } from "@/runtime";
 
 export const rootEffect = Effect.scoped(
