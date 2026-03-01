@@ -146,7 +146,7 @@ export function MainLayout() {
           value={selectedProgram}
           onChange={(e) => handleProgramChange(e.target.value as ProgramKey)}
           className={cn(
-            "h-7 w-[85%] text-xs",
+            "h-7 w-full text-xs",
             onboardingStep === "programSelect" &&
               "origin-center animate-onboarding-pulse",
           )}
@@ -164,23 +164,25 @@ export function MainLayout() {
             </option>
           ))}
         </Select>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 shrink-0"
-              onClick={handleResetToTemplate}
-              aria-label="Reset to template"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Reset to template</p>
-          </TooltipContent>
-        </Tooltip>
+        {canSupportWebContainer && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 shrink-0"
+                onClick={handleResetToTemplate}
+                aria-label="Reset to template"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Reset to template</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
       </div>
     </TooltipProvider>
   );
