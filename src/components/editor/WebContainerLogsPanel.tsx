@@ -1,5 +1,5 @@
 import AnsiModule from "ansi-to-react";
-import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
+import { ChevronDownIcon, ChevronUpIcon, Loader2 } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 import type { ComponentType } from "react";
 
@@ -31,6 +31,14 @@ export function WebContainerLogsPanel({
 
   const logEntries = logs.filter((e) => e.label !== "error");
   const errorEntries = logs.filter((e) => e.label === "error");
+
+  const isPnpmInstallRunning =
+    logEntries.some((e) => e.message === "5/6 Running pnpm install...") &&
+    !logEntries.some(
+      (e) =>
+        e.message.startsWith("5/6 pnpm install finished") ||
+        e.message.startsWith("5/6 pnpm install FAILED"),
+    );
   const hasLogs = logEntries.length > 0;
   const hasErrors = errorEntries.length > 0;
 
@@ -185,6 +193,14 @@ export function WebContainerLogsPanel({
                         >
                           {entry.label}
                         </span>
+                        {entry.label === "boot" &&
+                          entry.message === "5/6 Running pnpm install..." &&
+                          isPnpmInstallRunning && (
+                            <Loader2
+                              className="size-3 shrink-0 animate-spin"
+                              aria-hidden
+                            />
+                          )}
                         <span className="text-muted-foreground">
                           {entry.message}
                         </span>
