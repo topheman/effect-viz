@@ -27,10 +27,6 @@ import {
 } from "@/lib/programCache";
 import type { ProgramKey } from "@/lib/programs";
 import { cn } from "@/lib/utils";
-import runtimeSource from "@/runtime/index.ts?raw";
-import tracedRunnerSource from "@/runtime/tracedRunner.ts?raw";
-import traceEmitterSource from "@/runtime/traceEmitter.ts?raw";
-import typesSource from "@/types/trace.ts?raw";
 
 import { Header } from "./Header";
 import { PlaybackControls, type PlaybackState } from "./PlaybackControls";
@@ -139,26 +135,6 @@ export function MainLayout() {
       source: editorContent,
       readOnly: !canSupportWebContainer,
       path: `program-${selectedProgram}.ts`,
-    },
-    {
-      id: "runtime",
-      title: "runtime",
-      source: runtimeSource,
-    },
-    {
-      id: "tracedRunner",
-      title: "tracedRunner.ts",
-      source: tracedRunnerSource,
-    },
-    {
-      id: "traceEmitter",
-      title: "traceEmitter.ts",
-      source: traceEmitterSource,
-    },
-    {
-      id: "traceTypes",
-      title: "trace.ts",
-      source: typesSource,
     },
   ];
 
