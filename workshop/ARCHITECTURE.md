@@ -10,6 +10,10 @@ Instead of callbacks, we use Effect's **Service** pattern:
 - Effects explicitly require `TraceEmitter` in their R channel
 - **Benefit**: Teaches Effect's dependency injection early
 
+### Public vs Private Runtime Exports
+
+Public APIs match Effect's naming (`retry`, `addFinalizer`, `acquireRelease`) so programs feel native. Private EffectViz APIs (trace emitter, viz layers, tracer, runProgramFork) are prefixed with `_` to avoid clashing with user imports.
+
 ### Why Real FiberIds?
 
 We use `Effect.fiberId` and `FiberId.threadName()` instead of custom UUIDs:

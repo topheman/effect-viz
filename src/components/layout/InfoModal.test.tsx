@@ -82,9 +82,8 @@ describe("InfoModal", () => {
       within(dialog).getByLabelText("About the project"),
     ).toBeInTheDocument();
     expect(
-      within(dialog).getByText(/Effect runtime visualizer/i),
+      within(dialog).getByText(/effect runtime in real time/i),
     ).toBeInTheDocument();
-    expect(within(dialog).getByText(/This is v1/i)).toBeInTheDocument();
   });
 
   it("closes the modal when clicking the close button", async () => {

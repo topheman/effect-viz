@@ -8,22 +8,13 @@ const COUNTDOWN_SECONDS = 5;
 
 export function PwaUpdatePrompt() {
   const {
-    offlineReady: [offlineReady, setOfflineReady],
+    offlineReady: [offlineReady],
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
   } = useRegisterSW();
 
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const close = () => {
-    setOfflineReady(false);
-    setNeedRefresh(false);
-    if (timerRef.current !== null) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-  };
 
   const handleCancel = () => {
     setNeedRefresh(false);
@@ -87,14 +78,7 @@ export function PwaUpdatePrompt() {
   );
 
   if (offlineReady) {
-    return (
-      <div className={snackbarClasses} role="status" aria-live="polite">
-        <p className="text-sm">App ready to work offline.</p>
-        <Button variant="default" size="default" onClick={() => close()}>
-          OK
-        </Button>
-      </div>
-    );
+    return null;
   }
 
   return (

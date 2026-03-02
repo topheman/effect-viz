@@ -74,7 +74,7 @@ export function FiberStoreProvider({ children }: FiberStoreProviderProps) {
         case "fiber:end": {
           const fiberInfo = next.get(event.fiberId);
           if (fiberInfo) {
-            fiberInfo.state = "completed";
+            next.set(event.fiberId, { ...fiberInfo, state: "completed" });
           }
           break;
         }
@@ -82,23 +82,30 @@ export function FiberStoreProvider({ children }: FiberStoreProviderProps) {
         case "fiber:interrupt": {
           const fiberInfo = next.get(event.fiberId);
           if (fiberInfo) {
-            fiberInfo.state = "interrupted";
+            next.set(event.fiberId, { ...fiberInfo, state: "interrupted" });
           }
           break;
         }
 
-        case "sleep:start": {
+        case "fiber:suspend": {
           const fiberInfo = next.get(event.fiberId);
-          if (fiberInfo) {
-            fiberInfo.state = "suspended";
+          // Effect's Supervisor calls onSuspend both when a fiber yields (e.g. sleep)
+          // and when it completes (in a finally block). The latter would overwrite
+          // completed/interrupted with suspended. Only apply if not yet terminated.
+          if (
+            fiberInfo &&
+            fiberInfo.state !== "completed" &&
+            fiberInfo.state !== "interrupted"
+          ) {
+            next.set(event.fiberId, { ...fiberInfo, state: "suspended" });
           }
           break;
         }
 
-        case "sleep:end": {
+        case "fiber:resume": {
           const fiberInfo = next.get(event.fiberId);
           if (fiberInfo) {
-            fiberInfo.state = "running";
+            next.set(event.fiberId, { ...fiberInfo, state: "running" });
           }
           break;
         }
@@ -162,7 +169,6 @@ export interface FiberTreeNode {
   children: FiberTreeNode[];
 }
 
-/**
 /**
  * Builds a tree of FiberTreeNode from a flat Map of FiberInfo, starting at the given rootId.
  * Used for recursive rendering of the FiberTreeView.

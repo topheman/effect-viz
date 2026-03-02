@@ -25,7 +25,12 @@ const STEP_IS_IMPLEMENTED = false;
 const STEP_OVER_IS_IMPLEMENTED = false;
 const PAUSE_IS_IMPLEMENTED = false;
 
-export type PlaybackState = "idle" | "running" | "paused" | "finished";
+export type PlaybackState =
+  | "idle"
+  | "starting"
+  | "running"
+  | "paused"
+  | "finished";
 
 interface PlaybackControlsProps {
   state?: PlaybackState;
@@ -39,6 +44,10 @@ interface PlaybackControlsProps {
   onboardingStep?: OnboardingStepId | null;
   onOnboardingComplete?: (stepId: OnboardingStepId) => void;
   onRestartOnboarding?: () => void;
+  /** When true, Play is disabled (e.g. WebContainer still booting) */
+  isPlayDisabled?: boolean;
+  /** When true, show "Syncing..." in status (e.g. flushing editor to container) */
+  isSyncing?: boolean;
 }
 
 export function PlaybackControls({
@@ -53,9 +62,11 @@ export function PlaybackControls({
   onboardingStep = null,
   onOnboardingComplete,
   onRestartOnboarding,
+  isPlayDisabled = false,
+  isSyncing = false,
 }: PlaybackControlsProps) {
   const isRunning = state === "running";
-  const canPlay = state === "idle" || state === "paused";
+  const canPlay = (state === "idle" || state === "paused") && !isPlayDisabled;
   const canStep = state === "idle" || state === "paused";
   const [playMountAnimationEnded, setPlayMountAnimationEnded] = useState(false);
 
@@ -105,7 +116,7 @@ export function PlaybackControls({
                   {
                     "--onboarding-pulse-x": "20%",
                     "--onboarding-pulse-y": "-30%",
-                    "z-index":
+                    zIndex:
                       onboardingStep === "showVisualizer" ? "100" : "auto",
                   } as React.CSSProperties
                 }
@@ -169,7 +180,7 @@ export function PlaybackControls({
                   {
                     "--onboarding-pulse-x": "0",
                     "--onboarding-pulse-y": "-30%",
-                    "z-index": onboardingStep === "play" ? "100" : "auto",
+                    zIndex: onboardingStep === "play" ? "100" : "auto",
                   } as React.CSSProperties
                 }
               >
@@ -220,24 +231,35 @@ export function PlaybackControls({
           {/* Status indicator */}
           <div
             className={`
-              ml-4 flex w-20 items-center gap-2 text-sm text-muted-foreground
+              ml-4 flex w-24 min-w-24 items-center gap-2 text-sm
+              text-muted-foreground
             `}
           >
             <div
               className={`
                 h-2 w-2 shrink-0 rounded-full
                 ${
-                  state === "running"
-                    ? "animate-pulse bg-green-500"
-                    : state === "paused"
-                      ? "bg-yellow-500"
-                      : state === "finished"
-                        ? "bg-blue-500"
-                        : "bg-muted-foreground"
+                  isSyncing
+                    ? "animate-pulse bg-orange-500"
+                    : state === "running"
+                      ? "animate-pulse bg-green-500"
+                      : state === "starting"
+                        ? "animate-pulse bg-orange-500"
+                        : state === "paused"
+                          ? "bg-yellow-500"
+                          : state === "finished"
+                            ? "bg-blue-500"
+                            : "bg-muted-foreground"
                 }
               `}
             />
-            <span className="capitalize">{state}</span>
+            <span className="capitalize">
+              {isSyncing
+                ? "Syncing..."
+                : state === "starting"
+                  ? "starting..."
+                  : state}
+            </span>
           </div>
         </div>
 

@@ -7,6 +7,12 @@ export interface EditorTab {
   id: string;
   title: string;
   source: string;
+  readOnly?: boolean;
+  /**
+   * Override model path for Monaco. When set, uses this instead of `${id}.ts`.
+   * Use different paths per program to preserve scroll/selection/undo per model.
+   */
+  path?: string;
 }
 
 interface MultiModelEditorProps {
@@ -14,12 +20,18 @@ interface MultiModelEditorProps {
   defaultTabId?: string;
   headerExtra?: React.ReactNode;
   className?: string;
+  /** When true, type acquisition completed. CodeEditor triggers re-validation. */
+  typesReady?: boolean;
   /**
    * Controlled mode: when provided with onValueChange, the active tab is
    * driven by the parent. Omit to use internal state.
    */
   value?: string;
   onValueChange?: (tabId: string) => void;
+  /**
+   * Called when the Program tab content changes (only when that tab is editable).
+   */
+  onProgramContentChange?: (content: string) => void;
 }
 
 /**
@@ -34,6 +46,8 @@ export function MultiModelEditor({
   className,
   value: controlledValue,
   onValueChange,
+  onProgramContentChange,
+  typesReady,
 }: MultiModelEditorProps) {
   const firstTabId = tabs[0]?.id ?? "";
   const [internalTabId, setInternalTabId] = useState(
@@ -49,7 +63,7 @@ export function MultiModelEditor({
   };
 
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? tabs[0];
-  const editorPath = activeTab ? `${activeTab.id}.ts` : "";
+  const editorPath = activeTab ? (activeTab.path ?? `${activeTab.id}.ts`) : "";
   const editorValue = activeTab?.source ?? "";
 
   const tabScrollRef = useRef<HTMLDivElement>(null);
@@ -90,7 +104,13 @@ export function MultiModelEditor({
         <CodeEditor
           path={editorPath}
           value={editorValue}
-          readOnly
+          readOnly={activeTab?.readOnly ?? true}
+          typesReady={typesReady}
+          onChange={
+            activeTabId === "program" && onProgramContentChange
+              ? (value) => value !== undefined && onProgramContentChange(value)
+              : undefined
+          }
           className="h-full"
         />
       </div>
