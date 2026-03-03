@@ -78,16 +78,8 @@ export function InfoModal({
               variant="ghost"
               size="icon"
               className={cn(
-                onboardingStep === "info" &&
-                  "origin-center animate-onboarding-pulse",
+                onboardingStep === "info" && "animate-onboarding-glow",
               )}
-              style={
-                {
-                  "--onboarding-pulse-x": "-20%",
-                  "--onboarding-pulse-y": "-30%",
-                  zIndex: onboardingStep === "info" ? "100" : "auto",
-                } as React.CSSProperties
-              }
             >
               <Info className="h-4 w-4" />
             </Button>
