@@ -147,16 +147,8 @@ export function MainLayout() {
           onChange={(e) => handleProgramChange(e.target.value as ProgramKey)}
           className={cn(
             "h-7 w-full text-xs",
-            onboardingStep === "programSelect" &&
-              "origin-center animate-onboarding-pulse",
+            onboardingStep === "programSelect" && "animate-onboarding-glow",
           )}
-          style={
-            {
-              "--onboarding-pulse-x": "-15%",
-              "--onboarding-pulse-y": "10%",
-              "--onboarding-pulse-scale": "1.5",
-            } as React.CSSProperties
-          }
         >
           {Object.entries(programs).map(([key, { name }]) => (
             <option key={key} value={key}>
