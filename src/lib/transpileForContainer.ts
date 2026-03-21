@@ -12,7 +12,9 @@ let initPromise: Promise<void> | null = null;
 export async function initEsbuildWasm(): Promise<void> {
   if (initPromise) return initPromise;
   initPromise = esbuild.initialize({
-    wasmURL: "https://unpkg.com/esbuild-wasm/esbuild.wasm",
+    // This file is copied to public/esbuild.wasm by the build script
+    // to ensure we work with the exact same version
+    wasmURL: "/esbuild.wasm",
   });
   return initPromise;
 }
