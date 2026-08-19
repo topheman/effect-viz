@@ -61,3 +61,21 @@ export function useCanSupportWebContainer(): boolean {
   const [can] = useState(() => canSupportWebContainer());
   return can;
 }
+
+/**
+ * Whether the fallback (no-WebContainer) path should be used: mobile/Safari
+ * (subject to `?webcontainer=` override), or offline - WebContainer boots via
+ * a cross-origin iframe we can't cache into, and StackBlitz doesn't reliably
+ * support reload-while-offline itself (stackblitz/webcontainer-core#992).
+ *
+ * Check once at mount, not on a timer/listener: an already-booted container
+ * keeps running offline fine, so this should only gate the initial boot
+ * attempt, not tear down a working session.
+ */
+export function shouldUseFallback(): boolean {
+  if (!canSupportWebContainer()) return true;
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    return true;
+  }
+  return false;
+}

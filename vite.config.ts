@@ -48,8 +48,8 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         runtimeCaching: [
           {
-            urlPattern:
-              /^https:\/\/cdn\.jsdelivr\.net\/npm\/monaco-editor\/.*/i,
+            // Note: jsdelivr serves versioned paths like monaco-editor@0.55.1/...
+            urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/npm\/monaco-editor@.*/i,
             handler: "CacheFirst",
             options: {
               cacheName: "monaco-editor-cdn",
@@ -62,6 +62,9 @@ export default defineConfig({
               },
             },
           },
+          // No rules for c/t/nr.staticblitz.com: WebContainer boots via a cross-origin
+          // iframe, so those requests never reach this app's service worker to cache.
+          // See workshop/WebContainer/MOBILE_FALLBACK.md.
         ],
       },
     }),
