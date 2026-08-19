@@ -1,12 +1,14 @@
-# Mobile and Safari Fallback
+# Mobile, Safari, and Offline Fallback
 
 ## Why a Fallback Path?
 
 WebContainer does not run reliably on mobile devices (boot often fails at `pnpm install`) or Safari (desktop and iOS). Play can fail on Safari without devtools open due to WebAssembly instantiation issues. To provide a usable experience, the app uses a fallback path when the user agent indicates a mobile device or Safari.
 
+The same fallback is also used when offline. WebContainer boots via a cross-origin iframe to `stackblitz.com/headless` (needed for its `SharedArrayBuffer` sandbox); every request after that is issued by that iframe's own document, not this app's, so our service worker can never see or cache any of it — there's no `vite.config.ts` rule that could help. StackBlitz's own reload-while-offline story isn't reliable either ([webcontainer-core#992](https://github.com/stackblitz/webcontainer-core/issues/992)), so offline reuses the same readonly/in-browser path as mobile and Safari rather than getting stuck on a broken boot.
+
 ## What the Fallback Provides
 
-| Feature          | Supported (WebContainer)             | Fallback (Mobile / Safari)                 |
+| Feature          | Supported (WebContainer)             | Fallback (Mobile / Safari / Offline)       |
 | ---------------- | ------------------------------------ | ------------------------------------------ |
 | Editor           | Editable                             | Readonly                                   |
 | Execution        | WebContainer (`pnpm run`, etc.)      | In-browser Effect (`runFallbackPlay`)      |
@@ -24,13 +26,13 @@ This split ensures tracedRunner-related types remain up to date via the build pi
 
 ## WebContainer Support Detection
 
-WebContainer support is determined via **user agent** (not media queries):
+WebContainer support is determined via **user agent** (not media queries), plus a network check:
 
 - **`canSupportWebContainer()`** returns `true` when the browser can run WebContainer (Chrome, Firefox, non-Safari Chromium).
 - **`useCanSupportWebContainer()`** is the React hook version.
-- Fallback is used when `!canSupportWebContainer()` — i.e. mobile (Android, iPhone, iPad, iPod, webOS, BlackBerry, IEMobile, Opera Mini) or Safari (desktop and iOS).
+- **`shouldUseFallback()`** is what `useWebContainerBoot` actually checks: `true` when `!canSupportWebContainer()` (mobile: Android, iPhone, iPad, iPod, webOS, BlackBerry, IEMobile, Opera Mini; or Safari, desktop and iOS) **or** `navigator.onLine === false`.
 
-See `src/lib/mobileDetection.ts` for `canSupportWebContainer()`, `useCanSupportWebContainer()`, `isMobileUserAgent()`, and `isSafariUserAgent()`.
+See `src/lib/mobileDetection.ts` for `canSupportWebContainer()`, `useCanSupportWebContainer()`, `shouldUseFallback()`, `isMobileUserAgent()`, and `isSafariUserAgent()`.
 
 ## Future: Conditional Imports
 

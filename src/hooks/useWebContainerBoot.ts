@@ -13,7 +13,10 @@ import {
   acquireMonacoTypes,
   acquireMonacoTypesFallback,
 } from "@/effects/typeAcquisition";
-import { canSupportWebContainer } from "@/lib/mobileDetection";
+import {
+  canSupportWebContainer,
+  shouldUseFallback,
+} from "@/lib/mobileDetection";
 import { transformImportsForContainer } from "@/lib/transformForContainer";
 import { transpileForContainer } from "@/lib/transpileForContainer";
 import type { WebContainerHandle } from "@/services/webcontainer";
@@ -36,18 +39,31 @@ export function useWebContainerBoot() {
   const lastSyncedContentRef = useRef<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
 
+  // Checked once at mount, not reactively - an already-booted container keeps running
+  // offline fine, so this only needs to catch starting cold while offline.
   useEffect(() => {
-    if (!canSupportWebContainer()) {
+    if (shouldUseFallback()) {
       setStatus("booting");
       setError(null);
-      addLog(
-        "boot",
-        "Mobile or Safari detected, using fallback (no WebContainer) - readonly mode.",
-      );
-      addLog(
-        "boot",
-        "To edit the example programs, you need a Desktop Chrome / Firefox browser.",
-      );
+      if (!canSupportWebContainer()) {
+        addLog(
+          "boot",
+          "Mobile or Safari detected, using fallback (no WebContainer) - readonly mode.",
+        );
+        addLog(
+          "boot",
+          "To edit the example programs, you need a Desktop Chrome / Firefox browser.",
+        );
+      } else {
+        addLog(
+          "boot",
+          "Offline detected, using fallback (no WebContainer) - readonly mode.",
+        );
+        addLog(
+          "boot",
+          "WebContainer needs a live connection to StackBlitz's servers to boot; reconnect to edit and run arbitrary code.",
+        );
+      }
       Effect.runPromise(acquireMonacoTypesFallback)
         .then(() => {
           setTypesReady(true);
