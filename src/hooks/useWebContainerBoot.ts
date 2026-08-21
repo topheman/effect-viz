@@ -137,9 +137,11 @@ export function useWebContainerBoot() {
     ({
       callbacks,
       onFirstChunk,
+      rate,
     }: {
       callbacks: SpawnAndParseCallbacks;
       onFirstChunk: () => void;
+      rate: number;
     }): Promise<{ success: boolean; exitCode?: number }> => {
       const handle = handleRef.current;
       if (!handle || status !== "ready") {
@@ -153,6 +155,7 @@ export function useWebContainerBoot() {
           callbacks,
           onFirstChunk,
           onStdout: (line) => addLog("output", line),
+          rate,
         }).pipe(Effect.provide(layer)),
       );
       // Use runFork (not scoped fork): scoped(fork(program)) closes the scope

@@ -19,6 +19,7 @@ import {
 import { VisualizerPanel } from "@/components/visualizer/VisualizerPanel";
 import { useEventHandlers } from "@/hooks/useEventHandlers";
 import { useOnboarding } from "@/hooks/useOnboarding";
+import { useSpeed } from "@/hooks/useSpeed";
 import { useWebContainerBoot } from "@/hooks/useWebContainerBoot";
 import { useCanSupportWebContainer } from "@/lib/mobileDetection";
 import {
@@ -64,6 +65,7 @@ export function MainLayout() {
   } = useOnboarding();
 
   const [playbackState, setPlaybackState] = useState<PlaybackState>("idle");
+  const [speed, setSpeed] = useSpeed();
   const [showVisualizer, setShowVisualizer] = useState(false);
   const [showLogsPanel, setShowLogsPanel] = useState(true);
   const [editorTabId, setEditorTabId] = useState("program");
@@ -185,8 +187,8 @@ export function MainLayout() {
       await webContainer.flushSync(editorContent);
     }
     setPlaybackState("starting");
-    handlePlay({ onFirstChunk: () => setPlaybackState("running") })
-      .then(() => setPlaybackState("idle"))
+    handlePlay({ onFirstChunk: () => setPlaybackState("running"), rate: speed })
+      .then(() => setPlaybackState("finished"))
       .catch(() => setPlaybackState("idle")); // e.g. interrupt on program switch
   };
 
@@ -412,6 +414,8 @@ export function MainLayout() {
           (webContainer.status === "booting" || webContainer.isSyncing)
         }
         isSyncing={canSupportWebContainer && webContainer.isSyncing}
+        speed={speed}
+        onSpeedChange={setSpeed}
       />
     </div>
   );

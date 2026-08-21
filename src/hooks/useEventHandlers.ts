@@ -18,9 +18,11 @@ export interface WebContainerBridge {
   runPlay: ({
     callbacks,
     onFirstChunk,
+    rate,
   }: {
     callbacks: SpawnAndParseCallbacks;
     onFirstChunk: () => void;
+    rate: number;
   }) => Promise<{
     success: boolean;
     exitCode?: number;
@@ -39,7 +41,14 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
     null,
   );
 
-  const handlePlay = ({ onFirstChunk }: { onFirstChunk: () => void }) => {
+  const handlePlay = ({
+    onFirstChunk,
+    rate,
+  }: {
+    onFirstChunk: () => void;
+    /** Virtual ms per wall ms. Fixed for the run: see PlaybackControls. */
+    rate: number;
+  }) => {
     clearEvents();
     clearFibers();
 
@@ -51,6 +60,7 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
             processEvent,
           },
           onFirstChunk,
+          rate,
         })
         .then((result) => {
           if (!result.success) {
@@ -60,10 +70,16 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
         });
     }
 
-    return runFallbackPlay({ onFirstChunk });
+    return runFallbackPlay({ onFirstChunk, rate });
   };
 
-  function runFallbackPlay({ onFirstChunk }: { onFirstChunk: () => void }) {
+  function runFallbackPlay({
+    onFirstChunk,
+    rate,
+  }: {
+    onFirstChunk: () => void;
+    rate: number;
+  }) {
     const { rootEffect, requirements } = programs[selectedProgram];
     const scoped = Effect.scoped(
       rootEffect as Effect.Effect<unknown, unknown, unknown>,
@@ -73,8 +89,8 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
       processEvent(event); // For FiberTreeView
     };
     // Same virtual clock as the WebContainer path, so both record virtual
-    // timestamps. Rate is fixed at 1 until the speed control is wired.
-    const virtualClock = new VirtualClock();
+    // timestamps and slow down identically.
+    const virtualClock = new VirtualClock({ rate });
     const now = () => virtualClock.now();
     const traceLayer = makeTraceEmitterLayer(onEmit);
     const supervisorLayer = makeVizLayers(onEmit, now);

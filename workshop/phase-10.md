@@ -1,6 +1,6 @@
 # Phase 10: Slow Mode and Stepper (issue #13)
 
-**Status**: 🚧 IN PROGRESS — step 3 of 6 complete
+**Status**: 🚧 IN PROGRESS — speed control shipped; stepper (steps 4 and 5b) remaining
 
 Issue [#13](https://github.com/topheman/effect-viz/issues/13) asks for a slow mode:
 _"It goes too fast so a slow stepper would be cool like Browser Debugger is."_
@@ -117,7 +117,8 @@ only be inferred by elimination.
 | 3 | `Date` shim in the WebContainer runner | ✅ |
 | 3b | Virtual timestamps at every emit site | ✅ |
 | 4 | Gated `Scheduler` + the step ladder | ⬜ |
-| 5 | UI: speed combo + ⏯️ ⏭️ in `PlaybackControls` | ⬜ |
+| 5a | UI: speed combo + playback state matrix | ✅ |
+| 5b | UI: ⏯️ ⏭️ stepper controls | ⬜ |
 | 6 | Example programs + explainers | ⬜ |
 
 ## Step 1: VirtualClock ✅
@@ -317,6 +318,67 @@ whatever speed it was captured at — verified by running a program with a forke
 child, a span and a sleep at three rates: wall time scaled while the recorded
 span stayed constant. The fallback path also gains the clock layer, fixed at
 rate 1 until the speed control is wired.
+
+## Step 5a: Speed control ✅
+
+Issue #13's actual request, clickable. Selecting a speed and pressing Play runs
+the program with its clock scaled by that factor.
+
+### Created/Modified Files
+
+| File | Changes |
+|------|---------|
+| `src/hooks/useSpeed.ts` | `SPEED_OPTIONS`, `useSpeed` (localStorage-backed), `formatSpeed` |
+| `src/components/layout/PlaybackControls.tsx` | Speed `Select`, `PauseReason`, corrected enable/disable rules |
+| `src/components/layout/MainLayout.tsx` | Speed state; `finished` on completion |
+| `src/hooks/useEventHandlers.ts` | `rate` through to both paths |
+| `src/hooks/useWebContainerBoot.ts`, `src/effects/spawnAndParse.ts` | `VIZ_RATE` spawn environment variable |
+
+### The playback state model
+
+Playback has two independent dimensions, which the original single enum mixed
+together. **Lifecycle** is `idle → starting → running → paused → finished`;
+**readiness** (`isPlayDisabled` while the container boots, `isSyncing` while the
+editor flushes) is orthogonal and can coincide with any of them.
+
+| | ⏯️ | ⏭️ | ↺ | Speed |
+|---|---|---|---|---|
+| `idle` + booting | – | – | – | ✓ |
+| `idle` ready | ✓ | – | – | ✓ |
+| `starting` | – | – | ✓ | – |
+| `running` | ✓ (pause) | – | ✓ | – |
+| `paused` | ✓ (resume) | ✓ | ✓ | ✓ |
+| `finished` | ✓ (re-run) | – | ✓ | ✓ |
+
+Speed is locked while running because the WebContainer receives the rate as a
+spawn environment variable and cannot be retuned without restarting. That is a
+temporary limitation: pausing the container will require a host→container control
+channel anyway, and once it exists the rate can travel the same way.
+
+`paused` carries a reason — `user`, `deadlock` or `waiting-external` — because
+only a user pause can be stepped. The other two mean the runtime has nothing left
+to release, which is the stepper ladder's rungs 3 and 4 surfacing in the UI.
+
+### Key Learnings
+
+#### Two bugs the matrix exposed
+
+Step was enabled in `idle`, a leftover from when stepping walked a recorded event
+log; in the runtime model there is nothing to step until a program is live. And
+a completed run returned to `idle` rather than `finished`, so the `finished`
+state was unreachable and Reset was offered when there was nothing to reset.
+
+### Verification
+
+Driven in a real browser on the fallback path. At each speed the program's
+virtual duration stayed constant while wall time scaled by exactly the expected
+factor — 1×, 2× and 4× — confirming that the clock reaches the program and that
+the recorded trace is speed-invariant. Speed locks while running, unlocks after,
+and survives a reload.
+
+The WebContainer path could not be exercised in the automation browser, which is
+not cross-origin isolated and therefore cannot boot a container; its runner logic
+was verified separately against the built runtime bundle under Node.
 
 ## Step 3: Date shim in the WebContainer ✅
 

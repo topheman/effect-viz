@@ -67,10 +67,13 @@ export function spawnAndParseTraceEvents({
   callbacks,
   onFirstChunk,
   onStdout,
+  rate,
 }: {
   callbacks: SpawnAndParseCallbacks;
   onFirstChunk: () => void;
   onStdout?: (line: string) => void;
+  /** Virtual ms per wall ms, read by runner.js. Fixed for the life of the process. */
+  rate: number;
 }) {
   return Effect.gen(function* () {
     const wc = yield* WebContainer;
@@ -81,7 +84,10 @@ export function spawnAndParseTraceEvents({
 
     const spawnOptions = {
       output: true as const,
-      ...(isPerfPlayEnabled() && { env: { PERF_PLAY: "1" } }),
+      env: {
+        VIZ_RATE: String(rate),
+        ...(isPerfPlayEnabled() && { PERF_PLAY: "1" }),
+      },
     };
     const proc = yield* Effect.acquireRelease(
       wc.spawn("node", ["--enable-source-maps", "runner.js"], spawnOptions),

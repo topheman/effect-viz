@@ -10,6 +10,7 @@ import {
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import {
   Tooltip,
   TooltipContent,
@@ -17,6 +18,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { OnboardingStepId } from "@/hooks/useOnboarding";
+import { SPEED_OPTIONS, type Speed, formatSpeed } from "@/hooks/useSpeed";
 import { cn } from "@/lib/utils";
 
 import { InfoModal } from "./InfoModal";
@@ -31,6 +33,12 @@ export type PlaybackState =
   | "running"
   | "paused"
   | "finished";
+
+/**
+ * Why execution is paused. Only a user pause can be stepped: the other two mean
+ * the runtime has nothing left to release, so Step would do nothing.
+ */
+export type PauseReason = "user" | "deadlock" | "waiting-external";
 
 interface PlaybackControlsProps {
   state?: PlaybackState;
@@ -48,6 +56,11 @@ interface PlaybackControlsProps {
   isPlayDisabled?: boolean;
   /** When true, show "Syncing..." in status (e.g. flushing editor to container) */
   isSyncing?: boolean;
+  /** Playback speed applied on the next run */
+  speed?: Speed;
+  onSpeedChange?: (speed: Speed) => void;
+  /** Only meaningful while paused; decides whether Step can do anything */
+  pauseReason?: PauseReason;
 }
 
 export function PlaybackControls({
@@ -64,10 +77,23 @@ export function PlaybackControls({
   onRestartOnboarding,
   isPlayDisabled = false,
   isSyncing = false,
+  speed = 1,
+  onSpeedChange,
+  pauseReason = "user",
 }: PlaybackControlsProps) {
   const isRunning = state === "running";
-  const canPlay = (state === "idle" || state === "paused") && !isPlayDisabled;
-  const canStep = state === "idle" || state === "paused";
+  // Play doubles as resume (from paused) and re-run (from finished).
+  const canPlay =
+    (state === "idle" || state === "paused" || state === "finished") &&
+    !isPlayDisabled;
+  // Stepping needs something live and frozen to advance. A deadlocked or
+  // externally-blocked pause has nothing the runtime could release.
+  const canStep = state === "paused" && pauseReason === "user";
+  // Nothing to reset before the first run.
+  const canReset = state !== "idle";
+  // The rate is fixed when the program starts: the WebContainer receives it as a
+  // spawn environment variable and cannot be retuned until it is restarted.
+  const canChangeSpeed = state !== "running" && state !== "starting";
   const [playMountAnimationEnded, setPlayMountAnimationEnded] = useState(false);
 
   // Skip showVisualizer step on desktop (toggle is hidden)
@@ -139,7 +165,12 @@ export function PlaybackControls({
           {/* Reset */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={onReset}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onReset}
+                disabled={!canReset}
+              >
                 <RotateCcw className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -261,6 +292,32 @@ export function PlaybackControls({
                   : state}
             </span>
           </div>
+
+          {/* Speed */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Select
+                aria-label="Playback speed"
+                className="h-8 w-[4.5rem] px-2"
+                value={speed}
+                disabled={!canChangeSpeed}
+                onChange={(e) =>
+                  onSpeedChange?.(Number(e.target.value) as Speed)
+                }
+              >
+                {SPEED_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {formatSpeed(option)}
+                  </option>
+                ))}
+              </Select>
+            </TooltipTrigger>
+            <TooltipContent>
+              {canChangeSpeed
+                ? "Speed — slows the program's own clock"
+                : "Speed applies on the next run"}
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         {/* Right: Info button */}
