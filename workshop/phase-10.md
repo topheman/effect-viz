@@ -88,7 +88,7 @@ only be inferred by elimination.
 | File | Contents |
 |------|----------|
 | `src/runtime/virtualClock.ts` | `VirtualClock` — the single virtual time source |
-| `src/runtime/virtualClock.test.ts` | 23 tests, including the pause and re-arm regression tests |
+| `src/runtime/virtualClock.test.ts` | 28 tests: pause and re-arm regressions, chained sleeps, at-most-once |
 
 Virtual time is a piecewise-linear function of wall time, advancing at `rate`
 virtual ms per wall ms. Every rate change **re-anchors** the mapping, so virtual
@@ -138,6 +138,21 @@ against the previous anchor, so they would go off late by exactly the amount of
 virtual time the jump skipped. Everything still pending is therefore re-armed
 after the jump. While paused this is a no-op, because parked timers hold no real
 timeout at all.
+
+#### A callback can only run once
+
+Three properties together guarantee it, and they matter because step 4 will drive
+this clock from the scheduler:
+
+- **`#fire` is the only place a callback is invoked**, and it removes the timer
+  from the map *before* running it. Map membership is the claim to run.
+- **Every path that fires or cancels clears the real timeout first**, so at most
+  one is outstanding per timer.
+- **Ids are monotonic**, so a stale callback can never alias a newer timer.
+
+The first property is what actually makes it safe: even if a real timeout escaped
+cancellation, it would reach `#fire`, find no entry, and no-op. The other two stop
+strays from accumulating rather than from doing damage.
 
 #### Chained sleeps re-base themselves
 

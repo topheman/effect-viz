@@ -321,6 +321,74 @@ describe("VirtualClock", () => {
     });
   });
 
+  describe("at-most-once execution", () => {
+    it("runs the callback once across repeated rate changes", () => {
+      const clock = makeClock(1);
+      const run = vi.fn();
+      clock.sleep(1000, run);
+
+      for (const rate of [0.5, 0, 0.25, 1, 0, 0.75, 1]) {
+        clock.setRate(rate);
+      }
+      vi.advanceTimersByTime(10_000);
+
+      expect(run).toHaveBeenCalledOnce();
+    });
+
+    it("does not fire again from the real timer after a virtual jump", () => {
+      const clock = makeClock(1);
+      const run = vi.fn();
+      clock.sleep(500, run);
+
+      // Fires via the jump while a real timeout for the same timer is armed.
+      clock.advanceToNextDeadline();
+      expect(run).toHaveBeenCalledOnce();
+
+      vi.advanceTimersByTime(10_000);
+      expect(run).toHaveBeenCalledOnce();
+      expect(clock.pendingCount).toBe(0);
+    });
+
+    it("does not re-arm a timer that changes the rate from its own callback", () => {
+      const clock = makeClock(1);
+      const run = vi.fn(() => {
+        clock.setRate(0.5);
+      });
+      clock.sleep(500, run);
+
+      vi.advanceTimersByTime(10_000);
+      expect(run).toHaveBeenCalledOnce();
+    });
+
+    it("ignores a cancel issued after the callback ran", () => {
+      const clock = makeClock(1);
+      const run = vi.fn();
+      const cancel = clock.sleep(500, run);
+
+      vi.advanceTimersByTime(500);
+      expect(run).toHaveBeenCalledOnce();
+
+      cancel();
+      vi.advanceTimersByTime(10_000);
+      expect(run).toHaveBeenCalledOnce();
+    });
+
+    it("keeps sibling timers intact when one cancels another from its callback", () => {
+      const clock = makeClock(1);
+      const survivor = vi.fn();
+      let cancelVictim: () => void = () => {};
+      const victim = vi.fn();
+
+      clock.sleep(500, () => cancelVictim());
+      cancelVictim = clock.sleep(800, victim);
+      clock.sleep(1000, survivor);
+
+      vi.advanceTimersByTime(2000);
+      expect(victim).not.toHaveBeenCalled();
+      expect(survivor).toHaveBeenCalledOnce();
+    });
+  });
+
   describe("clearAll()", () => {
     it("drops every pending timer", () => {
       const clock = makeClock(1);

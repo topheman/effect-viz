@@ -165,6 +165,10 @@ export class VirtualClock {
   }
 
   #arm(timer: Timer): void {
+    // Defensive: never leave two real timeouts outstanding for one timer. A
+    // stray one could not run the callback twice (see #fire) but would sit in
+    // the event loop until it fired and found nothing.
+    if (timer.handle !== null) this.#host.clearTimeout(timer.handle);
     if (this.#rate === 0) {
       timer.handle = null;
       return;
@@ -183,6 +187,13 @@ export class VirtualClock {
     }
   }
 
+  /**
+   * The only place a callback is ever invoked. Membership in `#timers` is the
+   * claim to run: the entry is removed *before* `run()`, so any later path
+   * reaching the same id — a stray real timeout, a cancel, a second jump —
+   * finds nothing and no-ops. Ids are monotonic, so a stale callback can never
+   * alias a newer timer.
+   */
   #fire(id: number): void {
     const timer = this.#timers.get(id);
     if (timer === undefined) return;
