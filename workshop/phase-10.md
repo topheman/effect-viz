@@ -1,6 +1,6 @@
 # Phase 10: Slow Mode and Stepper (issue #13)
 
-**Status**: 🚧 IN PROGRESS — step 2 of 6 complete
+**Status**: 🚧 IN PROGRESS — step 3 of 6 complete
 
 Issue [#13](https://github.com/topheman/effect-viz/issues/13) asks for a slow mode:
 _"It goes too fast so a slow stepper would be cool like Browser Debugger is."_
@@ -114,7 +114,7 @@ only be inferred by elimination.
 |---|------|--------|
 | 1 | `VirtualClock` — shared virtual time source | ✅ |
 | 2 | Effect `Clock` layer built on `VirtualClock` | ✅ |
-| 3 | `Date` shim in the WebContainer runner | ⬜ |
+| 3 | `Date` shim in the WebContainer runner | ✅ |
 | 4 | Gated `Scheduler` + the step ladder | ⬜ |
 | 5 | UI: speed combo + ⏯️ ⏭️ in `PlaybackControls` | ⬜ |
 | 6 | Example programs + explainers | ⬜ |
@@ -248,3 +248,71 @@ stepper reads `pendingCount` to decide whether the world can still make progress
 Slow motion is real from here: providing this layer makes every `Effect.sleep`,
 `Schedule` delay, `timeout` and `race` in a program run at the chosen rate, and
 rate 0 genuinely freezes them.
+
+## Step 3: Date shim in the WebContainer ✅
+
+### Created/Modified Files
+
+| File | Changes |
+|------|---------|
+| `src/runtime/dateShim.ts` | `installDateShim(virtualClock)` → uninstall function |
+| `src/runtime/dateShim.test.ts` | 13 tests |
+| `src/runtime/index.ts` | Export `_installDateShim`, `_VirtualClock`, `_makeVizClockLayer` |
+| `src/services/webcontainer.ts` | `RUNNER_JS` creates the clock, installs the shim, provides the clock layer |
+
+Effect's own notion of time already comes from the `Clock`, but code calling
+`Date.now()` directly bypasses it and would keep reading wall time while
+everything around it ran slowly. The shim closes that gap — in the container
+only, since the in-browser fallback shares a realm with React and patching `Date`
+there would distort the UI's own animations.
+
+### Key Learnings
+
+#### A Proxy, not a subclass
+
+The obvious implementation is `class ShimmedDate extends Date`, but a class
+cannot be called without `new`, and `Date()` without `new` is legal JavaScript
+that returns a string. Proxying the real `Date` keeps that working, and gets
+`instanceof`, `Date.parse`, `Date.UTC` and the whole prototype for free because
+the target is the genuine constructor.
+
+Only two behaviours change: `Date.now()` and the zero-argument `new Date()`.
+Every explicit form is passed straight through — which matters because Effect
+itself builds log timestamps with `new Date(clock.unsafeCurrentTimeMillis())`.
+
+#### The import order was already correct
+
+The shim must be installed *after* `VirtualClock` has captured the real
+`Date.now`, or the two would read each other. `runner.js` imports `runtime.js`
+statically and loads the user's program with a *dynamic* `await import()`, so the
+sequence falls out for free: the runtime evaluates first and captures the real
+function, then `main()` installs the shim, then the program module evaluates and
+sees virtual time from its first statement. Had the program been a static import
+it would have initialised before the shim landed.
+
+#### Trace timestamps became virtual for free
+
+Every emit site hardcodes `timestamp: Date.now()` — in `traceEmitter`,
+`vizTracer`, `vizSupervisor` and `runProgram`. All of that code runs inside the
+container, so the shim converts them without a single edit: a program's recorded
+trace now spans the same virtual duration whatever the speed, and the timeline
+will not redraw itself when the user changes the combo. Verified by running the
+built bundle at three rates: wall time scaled as expected, while the trace span,
+and any `Date.now()` the program read, stayed constant.
+
+The fallback path has no shim by design, so its timestamps remain wall time.
+That asymmetry is a decision for step 5.
+
+#### `RUNNER_JS` is a string, so the logic lives in the bundle
+
+The runner cannot be typechecked or unit-tested — it is a template literal
+mounted into the container. Keeping it to a few calls into `runtime.js` means
+everything of substance is testable in `src/runtime`, and the string stays thin
+enough to read.
+
+### What this unlocks
+
+A container whose entire notion of time — Effect's and raw JavaScript's — is under
+our control, with speed-invariant trace timestamps. The rate is read from a
+`VIZ_RATE` environment variable at spawn (defaulting to 1); step 5 supplies the
+value from the UI.

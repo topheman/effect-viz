@@ -4,6 +4,10 @@
     "path": "file:///types/trace.d.ts"
   },
   {
+    "url": "/app/runtime/dateShim.d.ts",
+    "path": "file:///runtime/dateShim.d.ts"
+  },
+  {
     "url": "/app/runtime/index.d.ts",
     "path": "file:///runtime/index.d.ts"
   },
@@ -18,6 +22,14 @@
   {
     "url": "/app/runtime/tracedRunner.d.ts",
     "path": "file:///runtime/tracedRunner.d.ts"
+  },
+  {
+    "url": "/app/runtime/virtualClock.d.ts",
+    "path": "file:///runtime/virtualClock.d.ts"
+  },
+  {
+    "url": "/app/runtime/vizClock.d.ts",
+    "path": "file:///runtime/vizClock.d.ts"
   },
   {
     "url": "/app/runtime/vizSupervisor.d.ts",

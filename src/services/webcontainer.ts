@@ -64,11 +64,25 @@ Example:
 
 /** Runner: imports program.js, injects trace layer, runs. Fixed bootstrap — no user code transformation for tracing. */
 const RUNNER_JS = `import { Effect, Layer } from "effect";
-import { _makeTraceEmitterLayer, _makeVizLayers, _makeVizTracer, _runProgramFork } from "./runtime.js";
+import { _makeTraceEmitterLayer, _makeVizLayers, _makeVizTracer, _runProgramFork, _VirtualClock, _makeVizClockLayer, _installDateShim } from "./runtime.js";
 
 const ROOT_EFFECT_MISSING_MSG = ${JSON.stringify(ROOT_EFFECT_MISSING_MSG)};
 
+/** Virtual ms per wall ms. 1 is real time, 0.5 half speed, 0 frozen. */
+function readRate() {
+  const parsed = Number.parseFloat(process.env.VIZ_RATE ?? "1");
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 1;
+}
+
 async function main() {
+  const virtualClock = new _VirtualClock({ rate: readRate() });
+
+  // Install before importing program.js, so the user's module sees virtual time
+  // from its first statement. runtime.js is a *static* import and has therefore
+  // already been evaluated, meaning VirtualClock captured the real Date.now
+  // before this line replaces it.
+  _installDateShim(virtualClock);
+
   const mod = await import("./program.js");
   const rootEffect = mod.rootEffect;
   const requirements = mod.requirements ?? [];
@@ -83,7 +97,8 @@ async function main() {
   const traceLayer = _makeTraceEmitterLayer(onEmit);
   const supervisorLayer = _makeVizLayers(onEmit);
   const tracerLayer = Layer.setTracer(_makeVizTracer(onEmit));
-  const allLayers = Layer.mergeAll(traceLayer, supervisorLayer, tracerLayer, ...requirements);
+  const clockLayer = _makeVizClockLayer(virtualClock);
+  const allLayers = Layer.mergeAll(traceLayer, supervisorLayer, tracerLayer, clockLayer, ...requirements);
   const program = Effect.scoped(rootEffect).pipe(Effect.provide(allLayers));
   const { promise } = _runProgramFork(program, onEmit);
   promise.then(

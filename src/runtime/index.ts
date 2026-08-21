@@ -26,3 +26,6 @@ export {
   makeVizClockLayer as _makeVizClockLayer,
 } from "./vizClock";
 export { VirtualClock as _VirtualClock } from "./virtualClock";
+
+// From dateShim (Phase 10) — WebContainer only; see the module doc
+export { installDateShim as _installDateShim } from "./dateShim";
