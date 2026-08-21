@@ -19,3 +19,10 @@ export {
 } from "./runProgram";
 
 export { makeVizTracer as _makeVizTracer } from "./vizTracer";
+
+// From vizClock (Phase 10) — Effect Clock backed by the VirtualClock
+export {
+  makeVizClock as _makeVizClock,
+  makeVizClockLayer as _makeVizClockLayer,
+} from "./vizClock";
+export { VirtualClock as _VirtualClock } from "./virtualClock";

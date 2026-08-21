@@ -3,9 +3,9 @@
 **Quick Context**: See [`workshop/README.md`](workshop/README.md) for full documentation.
 
 ## Current Phase
-**Phase 10**: IN PROGRESS 🚧 — slow mode & stepper (issue #13), step 1 of 6 done
+**Phase 10**: IN PROGRESS 🚧 — slow mode & stepper (issue #13), step 2 of 6 done
 
-**Recent**: `VirtualClock` — shared virtual time source for the Effect Clock layer and the Date shim. See [`workshop/phase-10.md`](workshop/phase-10.md).
+**Recent**: `VirtualClock` + `vizClock` — an Effect `Clock` over a rate-scaled virtual time source. Slow motion works and preserves race/timeout semantics. See [`workshop/phase-10.md`](workshop/phase-10.md).
 
 ## Completed Phases
 
@@ -137,6 +137,7 @@
 - `src/components/visualizer/TimelineView.tsx` - Real-time timeline visualization
 - `src/lib/programs.ts` - Example programs with source code
 - `src/runtime/virtualClock.ts` - VirtualClock: rate-scaled virtual time, park-on-pause, step-to-deadline (Phase 10)
+- `src/runtime/vizClock.ts` - makeVizClockLayer: Effect Clock over VirtualClock via Layer.setClock (Phase 10)
 
 ## Learning Phases
 1. ~~**Phase 1**: Lazy evaluation, success/failure~~ ✅ See [`workshop/phase-1.md`](workshop/phase-1.md)

@@ -1,6 +1,6 @@
 # Phase 10: Slow Mode and Stepper (issue #13)
 
-**Status**: 🚧 IN PROGRESS — step 1 of 6 complete
+**Status**: 🚧 IN PROGRESS — step 2 of 6 complete
 
 Issue [#13](https://github.com/topheman/effect-viz/issues/13) asks for a slow mode:
 _"It goes too fast so a slow stepper would be cool like Browser Debugger is."_
@@ -75,7 +75,7 @@ only be inferred by elimination.
 | # | Step | Status |
 |---|------|--------|
 | 1 | `VirtualClock` — shared virtual time source | ✅ |
-| 2 | Effect `Clock` layer built on `VirtualClock` | ⬜ |
+| 2 | Effect `Clock` layer built on `VirtualClock` | ✅ |
 | 3 | `Date` shim in the WebContainer runner | ⬜ |
 | 4 | Gated `Scheduler` + the step ladder | ⬜ |
 | 5 | UI: speed combo + ⏯️ ⏭️ in `PlaybackControls` | ⬜ |
@@ -167,3 +167,46 @@ any other.
 A single source of truth for time that can run at any rate, freeze without
 distortion, and be stepped forward deadline by deadline — with no dependency on
 Effect yet, so it is testable in isolation.
+
+## Step 2: Effect Clock layer ✅
+
+### Created Files
+
+| File | Contents |
+|------|----------|
+| `src/runtime/vizClock.ts` | `makeVizClock`, `makeVizClockLayer` — Effect `Clock` over the `VirtualClock` |
+| `src/runtime/vizClock.test.ts` | 10 tests driving real Effect programs |
+
+`Layer.setClock` provides it, mirroring the `Layer.setTracer` idiom from phase 7.
+The `Clock` interface is five members: `unsafeCurrentTimeMillis`,
+`unsafeCurrentTimeNanos`, `currentTimeMillis`, `currentTimeNanos` and `sleep`.
+
+### Key Learnings
+
+#### Scaling the clock preserves semantics
+
+Because relative timing still decides outcomes, a program behaves identically at
+any speed — only its wall-clock duration changes. The tests assert this directly:
+a race between a 1s and a 2s sleep picks the same winner at rate 1, 0.5 and 0.25,
+and a `timeout` still fires. This is the property a UI-level replay could never
+offer, and it is the whole argument for instrumenting the runtime.
+
+#### Elapsed virtual time is speed-invariant
+
+`Clock.currentTimeMillis` reads virtual time, so a program measuring its own
+`Effect.sleep("1 second")` sees 1000ms whether that took 1s or 4s of wall time.
+Trace timestamps taken from the clock will therefore be stable across speeds, and
+the timeline will not redraw itself when the user moves the speed combo.
+
+#### `sleep` must return its canceler
+
+`Effect.async` takes an optional canceler effect, which the runtime runs on
+interruption. Returning the `VirtualClock`'s cancel function there is what stops
+an interrupted fiber from leaving a timer pending — which matters because the
+stepper reads `pendingCount` to decide whether the world can still make progress.
+
+### What this unlocks
+
+Slow motion is real from here: providing this layer makes every `Effect.sleep`,
+`Schedule` delay, `timeout` and `race` in a program run at the chosen rate, and
+rate 0 genuinely freezes them.
