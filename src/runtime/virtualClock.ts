@@ -144,6 +144,10 @@ export class VirtualClock {
     if (deadline === null) return false;
     this.#reanchor(Math.max(deadline, this.now()));
     this.#fireDue();
+    // Survivors were armed against the previous anchor. At rate 0 they are
+    // parked and this is a no-op; above 0 they would otherwise fire late by
+    // exactly the amount of virtual time the jump skipped.
+    this.#rearmAll();
     return true;
   }
 
@@ -186,11 +190,13 @@ export class VirtualClock {
     timer.run();
   }
 
-  /** Fire every timer whose deadline has been reached, newest schedules included. */
+  /** Fire every timer already due, in deadline order. */
   #fireDue(): void {
-    // Snapshot: a firing timer may schedule another one.
+    // Snapshot against a single reading of now(), so a timer firing (and
+    // scheduling more work) cannot change which timers this pass considers.
+    const now = this.now();
     const due = [...this.#timers.values()]
-      .filter((timer) => timer.deadline <= this.now())
+      .filter((timer) => timer.deadline <= now)
       .sort((a, b) => a.deadline - b.deadline);
     for (const timer of due) {
       if (timer.handle !== null) this.#host.clearTimeout(timer.handle);

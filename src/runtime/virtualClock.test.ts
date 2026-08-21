@@ -204,6 +204,27 @@ describe("VirtualClock", () => {
       expect(clock.now()).toBe(1000);
     });
 
+    it("re-arms the remaining timers when the rate is not zero", () => {
+      const clock = makeClock(1);
+      const first = vi.fn();
+      const second = vi.fn();
+      clock.sleep(500, first);
+      clock.sleep(1500, second);
+
+      // Jump straight to the first deadline without wall time passing.
+      clock.advanceToNextDeadline();
+      expect(first).toHaveBeenCalledOnce();
+      expect(clock.now()).toBe(500);
+
+      // 1000 virtual ms later the second is due; its real timer was armed
+      // against the pre-jump anchor and must have been re-armed.
+      vi.advanceTimersByTime(999);
+      expect(second).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(1);
+      expect(second).toHaveBeenCalledOnce();
+    });
+
     it("steps a chain of sleeps without any wall time passing", () => {
       const clock = makeClock(0);
       const wallBefore = Date.now();
@@ -219,6 +240,84 @@ describe("VirtualClock", () => {
       expect(order).toEqual(["first", "second"]);
       expect(clock.now()).toBe(3000);
       expect(Date.now() - wallBefore).toBe(0); // no wall time consumed
+    });
+  });
+
+  describe("chained sleeps", () => {
+    it("re-bases each nested sleep on the moment it was scheduled", () => {
+      const clock = makeClock(0.5);
+      const order: string[] = [];
+      clock.sleep(1000, () => {
+        order.push("a");
+        clock.sleep(1000, () => {
+          order.push("b");
+          clock.sleep(1000, () => order.push("c"));
+        });
+      });
+
+      vi.advanceTimersByTime(2000);
+      expect(order).toEqual(["a"]);
+      vi.advanceTimersByTime(2000);
+      expect(order).toEqual(["a", "b"]);
+      vi.advanceTimersByTime(2000);
+      expect(order).toEqual(["a", "b", "c"]);
+      expect(clock.now()).toBe(3000);
+    });
+
+    it("applies a rate change to a sleep scheduled by an earlier sleep", () => {
+      const clock = makeClock(1);
+      const order: string[] = [];
+      clock.sleep(1000, () => {
+        order.push("a");
+        clock.sleep(1000, () => order.push("b"));
+      });
+
+      vi.advanceTimersByTime(1000);
+      expect(order).toEqual(["a"]);
+
+      clock.setRate(0.5);
+      vi.advanceTimersByTime(1999);
+      expect(order).toEqual(["a"]);
+
+      vi.advanceTimersByTime(1);
+      expect(order).toEqual(["a", "b"]);
+    });
+
+    it("parks an inner sleep when paused mid-chain", () => {
+      const clock = makeClock(1);
+      const inner = vi.fn();
+      clock.sleep(500, () => clock.sleep(1000, inner));
+
+      vi.advanceTimersByTime(500); // outer fired, inner scheduled
+      clock.setRate(0);
+      vi.advanceTimersByTime(60_000);
+      expect(inner).not.toHaveBeenCalled();
+
+      clock.setRate(1);
+      vi.advanceTimersByTime(999);
+      expect(inner).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(1);
+      expect(inner).toHaveBeenCalledOnce();
+    });
+
+    it("keeps a sleep started before a pause independent of one started after", () => {
+      const clock = makeClock(1);
+      const first = vi.fn();
+      const second = vi.fn();
+      clock.sleep(1000, first);
+
+      vi.advanceTimersByTime(400); // 600 left on first
+      clock.setRate(0);
+      clock.sleep(1000, second); // scheduled while frozen
+      clock.setRate(1);
+
+      vi.advanceTimersByTime(600);
+      expect(first).toHaveBeenCalledOnce();
+      expect(second).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(400);
+      expect(second).toHaveBeenCalledOnce();
     });
   });
 

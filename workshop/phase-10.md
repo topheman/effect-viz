@@ -88,7 +88,7 @@ only be inferred by elimination.
 | File | Contents |
 |------|----------|
 | `src/runtime/virtualClock.ts` | `VirtualClock` — the single virtual time source |
-| `src/runtime/virtualClock.test.ts` | 18 tests, including the pause regression test |
+| `src/runtime/virtualClock.test.ts` | 23 tests, including the pause and re-arm regression tests |
 
 Virtual time is a piecewise-linear function of wall time, advancing at `rate`
 virtual ms per wall ms. Every rate change **re-anchors** the mapping, so virtual
@@ -132,6 +132,20 @@ Stepping a time-blocked fiber means jumping virtual time to the earliest pending
 deadline and firing what is due — with no wall time passing at all. A chain of
 sleeps can be stepped through instantly, which is exactly what `TestClock` does
 in tests.
+
+Jumping time forward invalidates the timers that did *not* fire: they were armed
+against the previous anchor, so they would go off late by exactly the amount of
+virtual time the jump skipped. Everything still pending is therefore re-armed
+after the jump. While paused this is a no-op, because parked timers hold no real
+timeout at all.
+
+#### Chained sleeps re-base themselves
+
+A sleep scheduled from inside another sleep's callback takes its deadline from
+virtual time *at the moment it is scheduled*, so error never accumulates across a
+chain and a rate change between two links applies cleanly to the second one. The
+same holds when the chain is interrupted by a pause: the inner sleep parks like
+any other.
 
 ### What this unlocks
 
