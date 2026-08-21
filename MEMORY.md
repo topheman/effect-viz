@@ -3,9 +3,9 @@
 **Quick Context**: See [`workshop/README.md`](workshop/README.md) for full documentation.
 
 ## Current Phase
-**Phase 9**: COMPLETE ✅
+**Phase 10**: IN PROGRESS 🚧 — slow mode & stepper (issue #13), step 1 of 6 done
 
-**Recent**: retry with Schedule API; public APIs (retry, addFinalizer, acquireRelease); internal APIs prefixed with _
+**Recent**: `VirtualClock` — shared virtual time source for the Effect Clock layer and the Date shim. See [`workshop/phase-10.md`](workshop/phase-10.md).
 
 ## Completed Phases
 
@@ -136,6 +136,7 @@
 - `src/components/visualizer/FiberTreeView.tsx` - Fiber tree with suspended indicator
 - `src/components/visualizer/TimelineView.tsx` - Real-time timeline visualization
 - `src/lib/programs.ts` - Example programs with source code
+- `src/runtime/virtualClock.ts` - VirtualClock: rate-scaled virtual time, park-on-pause, step-to-deadline (Phase 10)
 
 ## Learning Phases
 1. ~~**Phase 1**: Lazy evaluation, success/failure~~ ✅ See [`workshop/phase-1.md`](workshop/phase-1.md)
@@ -147,6 +148,7 @@
 7. ~~**Phase 7**: Custom Tracer for Effect.withSpan~~ ✅ See [`workshop/phase-7.md`](workshop/phase-7.md)
 8. ~~**Phase 8**: Sleep visibility via onSuspend/onResume~~ ✅ See [`workshop/phase-8.md`](workshop/phase-8.md)
 9. ~~**Phase 9**: retry with Schedule API~~ ✅ See [`workshop/phase-9.md`](workshop/phase-9.md)
+10. **Phase 10**: Slow mode & stepper (issue #13) 🚧 See [`workshop/phase-10.md`](workshop/phase-10.md)
 
 ## Documentation
 - [`workshop/README.md`](workshop/README.md) - Documentation overview
