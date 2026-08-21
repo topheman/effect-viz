@@ -158,11 +158,20 @@ that was actually remaining.
 
 #### The clock must not read its own shim
 
-`Date.now` is captured at module load, before any shim is installed. The `Date`
-shim will read the `VirtualClock`, so if the clock read `Date.now()` dynamically
-the two would recurse. The wall-clock primitives are injectable
-(`VirtualClockHost`), which is also what makes the tests deterministic under
-vitest fake timers.
+The `Date` shim reads the `VirtualClock`, so the clock must never read `Date`
+back. Capturing `Date.now` at module load would achieve that, but only for as
+long as this module is always evaluated before the shim is installed — a
+guarantee living in import order, enforced by nothing, and failing as unbounded
+recursion if broken.
+
+Reading wall time from `performance.timeOrigin + performance.now()` instead makes
+the clock immune by construction: `performance` is never shimmed, so no ordering
+can bring the two into contact. It also makes wall time **monotonic**, so virtual
+time cannot jump backwards when the system clock is corrected by NTP or changed
+by hand.
+
+The wall-clock primitives stay injectable (`VirtualClockHost`), which is what
+makes the tests deterministic under vitest fake timers.
 
 #### `advanceToNextDeadline()` is rung 2 of the ladder
 
@@ -280,15 +289,17 @@ Only two behaviours change: `Date.now()` and the zero-argument `new Date()`.
 Every explicit form is passed straight through — which matters because Effect
 itself builds log timestamps with `new Date(clock.unsafeCurrentTimeMillis())`.
 
-#### The import order was already correct
+#### Only one ordering constraint remains
 
-The shim must be installed *after* `VirtualClock` has captured the real
-`Date.now`, or the two would read each other. `runner.js` imports `runtime.js`
-statically and loads the user's program with a *dynamic* `await import()`, so the
-sequence falls out for free: the runtime evaluates first and captures the real
-function, then `main()` installs the shim, then the program module evaluates and
-sees virtual time from its first statement. Had the program been a static import
-it would have initialised before the shim landed.
+`runner.js` imports `runtime.js` statically and loads the user's program with a
+*dynamic* `await import()`, so `main()` can install the shim in between: the
+program module then evaluates and sees virtual time from its first statement. Had
+the program been a static import it would have initialised before the shim landed
+and captured the real `Date`.
+
+That constraint is inherent — a shim only affects code evaluated after it. The
+*second* constraint this originally had, that the clock must capture `Date.now`
+before being shimmed, was removed by having the clock read `performance` instead.
 
 #### Trace timestamps became virtual for free
 

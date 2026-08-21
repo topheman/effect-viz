@@ -3,7 +3,7 @@
  *
  * Two notions of time are kept distinct throughout this file:
  *
- * - **wall time** — real elapsed time, read from `Date.now()`. Always moves
+ * - **wall time** — real elapsed time, read from `performance`. Always moves
  *   forward at its own pace; we cannot influence it.
  * - **virtual time** — the time the running program believes it is in. It is
  *   what the Effect `Clock` reports and what `Effect.sleep` counts down in.
@@ -23,10 +23,20 @@
  */
 
 /**
- * Captured at module load, before any `Date` shim is installed. The shim reads
- * this clock, so the clock must never read the shim back.
+ * Wall time as an epoch timestamp, read from `performance` rather than `Date`.
+ *
+ * The `Date` shim reads this clock, so the clock must never read the shim back.
+ * Capturing `Date.now` at module load would achieve that only as long as this
+ * module is always evaluated before the shim is installed — a guarantee that
+ * would live in import order and be enforced by nothing, failing as unbounded
+ * recursion if it were ever broken. `performance` is never shimmed, so reading
+ * it makes the clock immune by construction instead.
+ *
+ * `performance.now()` is also monotonic, so virtual time cannot jump backwards
+ * when the system clock is corrected by NTP or changed by the user.
  */
-const realNow = Date.now.bind(Date);
+const wallNow = () => performance.timeOrigin + performance.now();
+
 const realSetTimeout = globalThis.setTimeout.bind(globalThis);
 const realClearTimeout = globalThis.clearTimeout.bind(globalThis);
 
@@ -38,7 +48,7 @@ export interface VirtualClockHost {
 }
 
 const defaultHost: VirtualClockHost = {
-  now: realNow,
+  now: wallNow,
   setTimeout: realSetTimeout,
   clearTimeout: (handle) =>
     realClearTimeout(handle as ReturnType<typeof realSetTimeout>),

@@ -78,9 +78,9 @@ async function main() {
   const virtualClock = new _VirtualClock({ rate: readRate() });
 
   // Install before importing program.js, so the user's module sees virtual time
-  // from its first statement. runtime.js is a *static* import and has therefore
-  // already been evaluated, meaning VirtualClock captured the real Date.now
-  // before this line replaces it.
+  // from its first statement — a module evaluated earlier would capture the real
+  // Date. The clock itself is unaffected either way: it reads wall time from
+  // performance, which is never shimmed.
   _installDateShim(virtualClock);
 
   const mod = await import("./program.js");

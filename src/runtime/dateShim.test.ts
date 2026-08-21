@@ -123,13 +123,16 @@ describe("installDateShim", () => {
   });
 
   describe("the clock does not read its own shim", () => {
-    it("keeps working when a clock is created after the shim is installed", () => {
+    it("keeps reading wall time from a clock created after the shim", () => {
       installFrozen();
-      // Default host: captured the real Date.now at module load, so this must
-      // not recurse into the shim.
+
+      // The default host reads `performance`, never `Date`, so this cannot
+      // recurse into the shim regardless of module evaluation order.
       const later = new VirtualClock({ rate: 0 });
-      expect(Number.isFinite(later.now())).toBe(true);
+      const wall = performance.timeOrigin + performance.now();
+
       expect(later.now()).not.toBe(ORIGIN);
+      expect(Math.abs(later.now() - wall)).toBeLessThan(1000);
     });
   });
 });

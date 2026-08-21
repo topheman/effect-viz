@@ -23,11 +23,12 @@ import type { VirtualClock } from "@/runtime/virtualClock";
  * Replace the global `Date` with one reading `virtual`. Returns a function that
  * restores the original.
  *
- * Must be called *after* the module holding `VirtualClock` has been evaluated,
- * so that the clock captured the real `Date.now` before it was replaced —
- * otherwise the shim and the clock would read each other. In `runner.js` this is
- * guaranteed: `runtime.js` is a static import and therefore evaluates before any
- * statement in `main()`.
+ * Safe to call at any point: `VirtualClock` reads wall time from `performance`,
+ * which is never shimmed, so the two cannot read each other however the modules
+ * are ordered.
+ *
+ * It must still be installed *before* the code it is meant to affect is
+ * evaluated — a module that runs first sees the real `Date`.
  */
 export function installDateShim(virtual: VirtualClock): () => void {
   const RealDate = globalThis.Date;
