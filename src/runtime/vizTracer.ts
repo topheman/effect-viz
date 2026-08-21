@@ -10,12 +10,17 @@ const NANOS_PER_MILLI = 1_000_000n;
 /**
  * The runtime hands span times in as nanoseconds taken from the Clock service
  * (`internal/core-effect.ts` builds them with `clock.unsafeCurrentTimeNanos()`),
- * so they are already virtual and we should use them rather than reading a clock
- * ourselves. They are `0n` when tracer timing is disabled, which is when `now`
- * is needed as a fallback.
+ * so they are already virtual and we use them rather than reading a clock again.
  *
- * Dividing as BigInt before converting keeps the value inside the safe integer
- * range; nanosecond epochs do not fit in a double.
+ * `0n` is not a timestamp, it is Effect's "no timing recorded" sentinel: when the
+ * `currentTracerTimingEnabled` FiberRef is off — it defaults to on, and
+ * `Effect.withTracerTiming(false)` turns it off — the runtime skips the clock
+ * read entirely and passes a constant zero instead. Treating that as a value
+ * would date every span to 1 January 1970 and flatten the timeline, so we fall
+ * back to `now` in that case.
+ *
+ * Dividing as BigInt before converting keeps the value exact: a nanosecond epoch
+ * is around 1.8e18, well past `Number.MAX_SAFE_INTEGER`.
  */
 function toMillis(nanos: bigint, now: Now): number {
   return nanos === 0n ? now() : Number(nanos / NANOS_PER_MILLI);

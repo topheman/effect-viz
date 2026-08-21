@@ -3,10 +3,13 @@ import { Clock, Context, Effect } from "effect";
 import type { TraceEvent } from "@/types/trace";
 
 /**
- * Timestamps come from `Clock.currentTimeMillis`, not `Date.now()`, so they are
- * expressed in virtual time: a recorded trace spans the same duration whatever
- * speed it was captured at. `Clock` is a default service, so this adds nothing
- * to the R channel.
+ * Timestamps do not rely on `Date.now` but on `Clock.currentTimeMillis`, so they
+ * are expressed in virtual time and a trace spans the same duration whatever
+ * speed it was recorded at.
+ *
+ * These emitters run inside an Effect, so the clock is reachable directly. Where
+ * it is not — the `Supervisor` callbacks and `runProgramFork` — virtual now is
+ * injected instead, as a `Now`.
  */
 export class TraceEmitter extends Context.Tag("TraceEmitter")<
   TraceEmitter,
