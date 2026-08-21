@@ -14,6 +14,44 @@ Two controls, driven by one mechanism:
 - **Stepper** (`⏯️ ⏭️`) — freezes the world and releases one scheduling decision
   at a time.
 
+### Two clocks: wall and virtual
+
+Everything in this phase depends on separating two notions of time, so the terms
+are used precisely throughout.
+
+**Wall time** is real elapsed time — what a stopwatch sitting next to the computer
+would measure. It comes from `Date.now()` and `performance.now()`, it always moves
+forward, and nothing we do can slow it down.
+
+**Virtual time** is the time the *program* believes it is living in. It is what
+the Effect `Clock` service reports and what `Effect.sleep` counts down in. We
+control it completely.
+
+The two are connected by a single number, the **rate**: virtual time advances by
+`rate` milliseconds for every millisecond of wall time.
+
+- At **rate 1** the two are indistinguishable — this is normal execution.
+- At **rate 0.5** an `Effect.sleep("1 second")` still measures 1 second of virtual
+  time, but 2 seconds pass on the wall while it waits.
+- At **rate 0** virtual time stops entirely while wall time keeps going. The
+  program is frozen; the browser is not.
+
+The reason this preserves the program's behaviour is that **the program only ever
+observes virtual time**. It cannot tell it is running in slow motion, because
+every duration it can measure — sleeps, timeouts, schedule delays, race outcomes,
+even `Effect.log` timestamps — is expressed in the same stretched units. Nothing
+is skewed relative to anything else.
+
+Two deliberate exceptions exist on the wall side. `performance.now()` is left
+untouched, so there is always a way to measure how much real time something took
+(useful for debugging this feature itself). And raw `setTimeout` in user code is
+not intercepted: it is already invisible to Effect's runtime, and code reaching
+for it has stepped outside the model the visualizer is showing.
+
+In the code, `VirtualClock` holds a `wallAnchor` and a `virtualAnchor` — the pair
+of readings taken the last time the rate changed. Every conversion between the
+two clocks is measured from that pair.
+
 ### Why the Clock is the lever
 
 Everything in Effect's model routes through the `Clock` service:

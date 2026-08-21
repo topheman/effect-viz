@@ -1,9 +1,17 @@
 /**
  * Virtual time source shared by the Effect `Clock` layer and the `Date` shim.
  *
+ * Two notions of time are kept distinct throughout this file:
+ *
+ * - **wall time** — real elapsed time, read from `Date.now()`. Always moves
+ *   forward at its own pace; we cannot influence it.
+ * - **virtual time** — the time the running program believes it is in. It is
+ *   what the Effect `Clock` reports and what `Effect.sleep` counts down in.
+ *
  * Virtual time is a piecewise-linear function of wall time: it advances at
- * `rate` milliseconds per wall millisecond. `rate = 1` is real time, `rate = 0.5`
- * is half speed, `rate = 0` freezes time (pause).
+ * `rate` virtual milliseconds per wall millisecond. `rate = 1` is real time,
+ * `rate = 0.5` is half speed, `rate = 0` freezes virtual time while wall time
+ * keeps going (pause). See `workshop/phase-10.md` for the full rationale.
  *
  * Every rate change re-anchors the mapping, so virtual time is continuous: it
  * never jumps when the user changes speed, it only changes slope.
