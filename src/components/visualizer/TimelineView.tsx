@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { computeTickInterval } from "@/lib/timelineTime";
 import { cn } from "@/lib/utils";
 import { useTraceStore } from "@/stores/traceStore";
 import type { FiberState, TraceEvent } from "@/types/trace";
@@ -198,8 +199,7 @@ function getSegmentColor(state: FiberState): string {
 // =============================================================================
 
 function TimeAxis({ duration }: { duration: number }) {
-  // Generate tick marks at reasonable intervals
-  const tickInterval = duration <= 1000 ? 200 : duration <= 3000 ? 500 : 1000;
+  const tickInterval = computeTickInterval(duration);
   const ticks: number[] = [];
   for (let t = 0; t <= duration; t += tickInterval) {
     ticks.push(t);
@@ -208,6 +208,7 @@ function TimeAxis({ duration }: { duration: number }) {
   // Format time label
   const formatTime = (ms: number) => {
     if (ms === 0) return "0s";
+    if (ms >= 10_000) return `${Math.round(ms / 1000)}s`;
     if (ms >= 1000) return `${(ms / 1000).toFixed(1)}s`;
     return `${ms}ms`;
   };
@@ -313,8 +314,10 @@ function FiberLaneRow({
 // =============================================================================
 
 export function TimelineView() {
-  const { events } = useTraceStore();
-  const [now, setNow] = useState(() => Date.now());
+  const { events, getVirtualNow } = useTraceStore();
+  // Virtual, not wall: event timestamps are virtual, so the live cursor has to
+  // be measured in the same units or the two disagree by a factor of the speed.
+  const [now, setNow] = useState(() => getVirtualNow());
 
   // Build timeline data
   const lanes = useMemo(() => buildTimelineSegments(events), [events]);
@@ -330,12 +333,15 @@ export function TimelineView() {
   useEffect(() => {
     if (!hasOngoingSegments) return;
 
+    // A `now` left over from a previous run yields a negative elapsed against
+    // the new first event, which the DEFAULT_DURATION_MS floor absorbs, so the
+    // first tick 50ms from now is soon enough.
     const interval = setInterval(() => {
-      setNow(Date.now());
+      setNow(getVirtualNow());
     }, 50);
 
     return () => clearInterval(interval);
-  }, [hasOngoingSegments]);
+  }, [hasOngoingSegments, getVirtualNow]);
 
   // Calculate time range
   const timeRange = useMemo(() => {

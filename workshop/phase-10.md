@@ -368,6 +368,25 @@ log; in the runtime model there is nothing to step until a program is live. And
 a completed run returned to `idle` rather than `finished`, so the `finished`
 state was unreachable and Reset was offered when there was nothing to reset.
 
+### Two bugs found by using it
+
+**The timeline mixed clocks.** Its live cursor read wall time while every event
+timestamp is virtual, so during a run at 0.25x the elapsed grew four times too
+fast, and the moment the run ended it switched to the last event's timestamp and
+snapped back to the true span. The host cannot see the container's clock, so it
+keeps a mirror: the rate it chose, anchored on the first event's timestamp and
+the wall time at which that event arrived.
+
+**The axis tick interval was capped at one second**, so any long span rendered a
+label per second until they overlapped into an unreadable smear. It now rounds up
+to the nearest 1, 2 or 5 times a power of ten, keeping the label count bounded at
+any magnitude. Independent of the clock bug — exponential backoff at 0.25x would
+have hit it — but the clock bug is what made it visible.
+
+Both are pure functions in `src/lib/timelineTime.ts`, unit tested. The Execution
+Log needed no change: it derives durations from event timestamps alone, so it was
+already reporting program time.
+
 ### Verification
 
 Driven in a real browser on the fallback path. At each speed the program's

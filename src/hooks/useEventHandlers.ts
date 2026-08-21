@@ -32,7 +32,7 @@ export interface WebContainerBridge {
 }
 
 export function useEventHandlers(webContainer?: WebContainerBridge | null) {
-  const { addEvent, clear: clearEvents } = useTraceStore();
+  const { addEvent, clear: clearEvents, setRate } = useTraceStore();
   const { processEvent, clear: clearFibers } = useFiberStore();
   const { addLog } = useWebContainerLogsStore();
 
@@ -51,6 +51,8 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
   }) => {
     clearEvents();
     clearFibers();
+    // The timeline's live cursor advances at this rate; see computeVirtualNow.
+    setRate(rate);
 
     if (webContainer?.isReady) {
       return webContainer
