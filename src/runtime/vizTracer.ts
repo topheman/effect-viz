@@ -2,9 +2,26 @@ import { Tracer, Exit, Cause, Option, Context } from "effect";
 import type { RuntimeFiber } from "effect/Fiber";
 
 import { randomUUID } from "@/lib/crypto";
+import type { Now } from "@/runtime/virtualClock";
 import type { TraceEvent } from "@/types/trace";
 
-export function makeVizTracer(onEmit: (event: TraceEvent) => void) {
+const NANOS_PER_MILLI = 1_000_000n;
+
+/**
+ * The runtime hands span times in as nanoseconds taken from the Clock service
+ * (`internal/core-effect.ts` builds them with `clock.unsafeCurrentTimeNanos()`),
+ * so they are already virtual and we should use them rather than reading a clock
+ * ourselves. They are `0n` when tracer timing is disabled, which is when `now`
+ * is needed as a fallback.
+ *
+ * Dividing as BigInt before converting keeps the value inside the safe integer
+ * range; nanosecond epochs do not fit in a double.
+ */
+function toMillis(nanos: bigint, now: Now): number {
+  return nanos === 0n ? now() : Number(nanos / NANOS_PER_MILLI);
+}
+
+export function makeVizTracer(onEmit: (event: TraceEvent) => void, now: Now) {
   return Tracer.make({
     span: function (
       label: string,
@@ -20,7 +37,7 @@ export function makeVizTracer(onEmit: (event: TraceEvent) => void) {
         type: "effect:start",
         label,
         id,
-        timestamp: Date.now(),
+        timestamp: toMillis(startTime, now),
       });
       return {
         _tag: "Span",
@@ -38,7 +55,7 @@ export function makeVizTracer(onEmit: (event: TraceEvent) => void) {
         sampled: false,
         kind,
         end: function (
-          _endTime: bigint,
+          endTime: bigint,
           exit: Exit.Exit<unknown, unknown>,
         ): void {
           const { result, value, error } = Exit.isSuccess(exit)
@@ -50,7 +67,7 @@ export function makeVizTracer(onEmit: (event: TraceEvent) => void) {
             result,
             value,
             error,
-            timestamp: Date.now(),
+            timestamp: toMillis(endTime, now),
           });
         },
         attribute: function (): void {},

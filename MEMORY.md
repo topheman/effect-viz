@@ -3,7 +3,7 @@
 **Quick Context**: See [`workshop/README.md`](workshop/README.md) for full documentation.
 
 ## Current Phase
-**Phase 10**: IN PROGRESS 🚧 — slow mode & stepper (issue #13), step 3 of 6 done
+**Phase 10**: IN PROGRESS 🚧 — slow mode & stepper (issue #13), steps 1-3 done + virtual timestamps everywhere
 
 **Recent**: `VirtualClock` + `vizClock` — an Effect `Clock` over a rate-scaled virtual time source. Slow motion works and preserves race/timeout semantics. See [`workshop/phase-10.md`](workshop/phase-10.md).
 

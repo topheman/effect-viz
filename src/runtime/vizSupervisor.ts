@@ -8,6 +8,7 @@ import {
   Exit,
 } from "effect";
 
+import type { Now } from "@/runtime/virtualClock";
 import type { TraceEvent } from "@/types/trace";
 
 type OnEmit = (event: TraceEvent) => void;
@@ -32,10 +33,14 @@ function shouldIgnoreFiber(
 class VizSupervisor extends Supervisor.AbstractSupervisor<void> {
   value: Effect.Effect<void, never, never>;
   onEmit: OnEmit;
-  constructor(onEmit: OnEmit) {
+  /** Supervisor callbacks are synchronous and outside any Effect, so virtual
+   * time has to be handed in rather than read from the Clock service. */
+  now: Now;
+  constructor(onEmit: OnEmit, now: Now) {
     super();
     this.value = Effect.void;
     this.onEmit = onEmit;
+    this.now = now;
   }
   onStart<A, E, R>(
     _context: Context.Context<R>,
@@ -56,7 +61,7 @@ class VizSupervisor extends Supervisor.AbstractSupervisor<void> {
       fiberId,
       parentId,
       label: fiberId,
-      timestamp: Date.now(),
+      timestamp: this.now(),
     });
   }
   onEnd<A, E>(exit: Exit.Exit<A, E>, fiber: Fiber.RuntimeFiber<A, E>): void {
@@ -67,7 +72,7 @@ class VizSupervisor extends Supervisor.AbstractSupervisor<void> {
     this.onEmit({
       type: Exit.isSuccess(exit) ? "fiber:end" : "fiber:interrupt",
       fiberId,
-      timestamp: Date.now(),
+      timestamp: this.now(),
     });
   }
   onSuspend<A, E>(fiber: Fiber.RuntimeFiber<A, E>): void {
@@ -78,7 +83,7 @@ class VizSupervisor extends Supervisor.AbstractSupervisor<void> {
     this.onEmit({
       type: "fiber:suspend",
       fiberId,
-      timestamp: Date.now(),
+      timestamp: this.now(),
     });
   }
   onResume<A, E>(fiber: Fiber.RuntimeFiber<A, E>): void {
@@ -89,11 +94,11 @@ class VizSupervisor extends Supervisor.AbstractSupervisor<void> {
     this.onEmit({
       type: "fiber:resume",
       fiberId,
-      timestamp: Date.now(),
+      timestamp: this.now(),
     });
   }
 }
 
-export function makeVizLayers(onEmit: OnEmit) {
-  return Supervisor.addSupervisor(new VizSupervisor(onEmit));
+export function makeVizLayers(onEmit: OnEmit, now: Now) {
+  return Supervisor.addSupervisor(new VizSupervisor(onEmit, now));
 }

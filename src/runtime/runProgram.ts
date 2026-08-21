@@ -6,6 +6,7 @@
  */
 import { Effect, Fiber, FiberId } from "effect";
 
+import type { Now } from "@/runtime/virtualClock";
 import type { TraceEvent } from "@/types/trace";
 
 export interface RunProgramForkResult<A> {
@@ -22,6 +23,7 @@ export interface RunProgramForkResult<A> {
 export function runProgramFork<A>(
   program: Effect.Effect<A, unknown, never>,
   onEmit: (event: TraceEvent) => void,
+  now: Now,
 ): RunProgramForkResult<A> {
   const fiber = Effect.runFork(program, {
     updateRefs(refs, fiberId) {
@@ -31,7 +33,7 @@ export function runProgramFork<A>(
         fiberId: fiberIdString,
         parentId: undefined,
         label: fiberIdString,
-        timestamp: Date.now(),
+        timestamp: now(),
       });
       return refs;
     },
@@ -42,7 +44,7 @@ export function runProgramFork<A>(
       onEmit({
         type: "fiber:end",
         fiberId: FiberId.threadName(fiber.id()),
-        timestamp: Date.now(),
+        timestamp: now(),
       });
       return result;
     },
@@ -50,7 +52,7 @@ export function runProgramFork<A>(
       onEmit({
         type: "fiber:interrupt",
         fiberId: FiberId.threadName(fiber.id()),
-        timestamp: Date.now(),
+        timestamp: now(),
       });
       throw error;
     },

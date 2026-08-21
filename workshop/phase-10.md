@@ -115,6 +115,7 @@ only be inferred by elimination.
 | 1 | `VirtualClock` — shared virtual time source | ✅ |
 | 2 | Effect `Clock` layer built on `VirtualClock` | ✅ |
 | 3 | `Date` shim in the WebContainer runner | ✅ |
+| 3b | Virtual timestamps at every emit site | ✅ |
 | 4 | Gated `Scheduler` + the step ladder | ⬜ |
 | 5 | UI: speed combo + ⏯️ ⏭️ in `PlaybackControls` | ⬜ |
 | 6 | Example programs + explainers | ⬜ |
@@ -257,6 +258,65 @@ stepper reads `pendingCount` to decide whether the world can still make progress
 Slow motion is real from here: providing this layer makes every `Effect.sleep`,
 `Schedule` delay, `timeout` and `race` in a program run at the chosen rate, and
 rate 0 genuinely freezes them.
+
+## Step 3b: Virtual timestamps at every emit site ✅
+
+The shim made container trace timestamps virtual as a *side effect* of a global
+patch, and left the fallback path on wall time. Both paths now read virtual time
+explicitly, so neither depends on the shim for correctness — the shim is back to
+doing only its real job, serving user code that reaches for `Date` directly.
+
+### Created/Modified Files
+
+| File | Changes |
+|------|---------|
+| `src/runtime/virtualClock.ts` | Export the `Now` type |
+| `src/runtime/traceEmitter.ts` | 5 sites → `Clock.currentTimeMillis` |
+| `src/runtime/vizTracer.ts` | 2 sites → the runtime-supplied span times |
+| `src/runtime/vizSupervisor.ts` | 4 sites → injected `Now` |
+| `src/runtime/runProgram.ts` | 3 sites → injected `Now` |
+| `src/hooks/useEventHandlers.ts` | Fallback builds its own clock and provides the clock layer |
+| `src/services/webcontainer.ts` | `RUNNER_JS` passes `now`; prewarm import fixed |
+
+### Key Learnings
+
+#### Only half the sites needed injecting
+
+Of the fourteen `Date.now()` calls, seven could read virtual time from something
+they already had:
+
+- **`traceEmitter.ts`** runs inside `Effect.gen`, so `Clock.currentTimeMillis` is
+  available directly. `Clock` is a default service, so this adds nothing to the R
+  channel and no signature changed.
+- **`vizTracer.ts`** was ignoring parameters the runtime already passes.
+  `internal/core-effect.ts` builds span times with `clock.unsafeCurrentTimeNanos()`
+  and hands them to `tracer.span(...)` and `span.end(...)` — already virtual. We
+  were discarding them and calling `Date.now()` instead.
+
+Only the `Supervisor` callbacks and `runProgramFork` are genuinely outside any
+Effect context, and those take the injected `Now`.
+
+#### Nanosecond epochs do not fit in a double
+
+Span times arrive as BigInt nanoseconds. An epoch in nanoseconds is around
+1.8 × 10¹⁸, well past `Number.MAX_SAFE_INTEGER`, so converting before dividing
+loses precision. Dividing as BigInt first and converting after keeps the result
+exact.
+
+#### The prewarm program had been silently broken
+
+`PREWARM_PROGRAM` imported `runProgramFork`, but the runtime bundle has exported
+it as `_runProgramFork` since the phase 9 rename. That is a link-time error, so
+the pre-warm spawn had been failing since then — invisibly, because it is forked
+and spawned with `output: false`. Found while updating the call sites.
+
+### What this unlocks
+
+Both execution paths record virtual time, so a trace spans the same duration
+whatever speed it was captured at — verified by running a program with a forked
+child, a span and a sleep at three rates: wall time scaled while the recorded
+span stayed constant. The fallback path also gains the clock layer, fixed at
+rate 1 until the speed control is wired.
 
 ## Step 3: Date shim in the WebContainer ✅
 

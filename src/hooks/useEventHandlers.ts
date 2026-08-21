@@ -5,6 +5,8 @@ import type { SpawnAndParseCallbacks } from "@/effects/spawnAndParse";
 import { type ProgramKey, makeLoggerLayer, programs } from "@/lib/programs";
 import { runProgramFork } from "@/runtime/runProgram";
 import { makeTraceEmitterLayer } from "@/runtime/tracedRunner";
+import { VirtualClock } from "@/runtime/virtualClock";
+import { makeVizClockLayer } from "@/runtime/vizClock";
 import { makeVizLayers } from "@/runtime/vizSupervisor";
 import { makeVizTracer } from "@/runtime/vizTracer";
 import { useFiberStore } from "@/stores/fiberStore";
@@ -70,17 +72,23 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
       addEvent(event); // For ExecutionLog
       processEvent(event); // For FiberTreeView
     };
+    // Same virtual clock as the WebContainer path, so both record virtual
+    // timestamps. Rate is fixed at 1 until the speed control is wired.
+    const virtualClock = new VirtualClock();
+    const now = () => virtualClock.now();
     const traceLayer = makeTraceEmitterLayer(onEmit);
-    const supervisorLayer = makeVizLayers(onEmit);
+    const supervisorLayer = makeVizLayers(onEmit, now);
     // Fallback Logger layer: logs to panel (addLog) instead of console, so mobile users see output
     const fallbackLoggerLayer = makeLoggerLayer((msg) =>
       addLog("output", `[logger] ${msg}`),
     );
-    const tracerLayer = Layer.setTracer(makeVizTracer(onEmit));
+    const tracerLayer = Layer.setTracer(makeVizTracer(onEmit, now));
+    const clockLayer = makeVizClockLayer(virtualClock);
     const allLayers = Layer.mergeAll(
       traceLayer,
       supervisorLayer,
       tracerLayer,
+      clockLayer,
       ...requirements,
       fallbackLoggerLayer,
     );
@@ -91,7 +99,7 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
       unknown,
       never
     >;
-    const { fiber, promise } = runProgramFork(program, onEmit);
+    const { fiber, promise } = runProgramFork(program, onEmit, now);
     runningFiberRef.current = fiber;
 
     return promise.then(

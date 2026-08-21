@@ -1,7 +1,13 @@
-import { Context, Effect } from "effect";
+import { Clock, Context, Effect } from "effect";
 
 import type { TraceEvent } from "@/types/trace";
 
+/**
+ * Timestamps come from `Clock.currentTimeMillis`, not `Date.now()`, so they are
+ * expressed in virtual time: a recorded trace spans the same duration whatever
+ * speed it was captured at. `Clock` is a default service, so this adds nothing
+ * to the R channel.
+ */
 export class TraceEmitter extends Context.Tag("TraceEmitter")<
   TraceEmitter,
   {
@@ -19,7 +25,7 @@ export const emitStart = (
       type: "effect:start",
       id,
       label,
-      timestamp: Date.now(),
+      timestamp: yield* Clock.currentTimeMillis,
     });
   });
 };
@@ -38,7 +44,7 @@ export const emitEnd = (
       result,
       value,
       error,
-      timestamp: Date.now(),
+      timestamp: yield* Clock.currentTimeMillis,
     });
   });
 };
@@ -57,7 +63,7 @@ export const emitRetry = (
       label,
       attempt,
       lastError,
-      timestamp: Date.now(),
+      timestamp: yield* Clock.currentTimeMillis,
     });
   });
 };
@@ -72,7 +78,7 @@ export const emitFinalizer = (
       type: "finalizer",
       id,
       label,
-      timestamp: Date.now(),
+      timestamp: yield* Clock.currentTimeMillis,
     });
   });
 };
@@ -91,7 +97,7 @@ export const emitAcquire = (
       label,
       result,
       error,
-      timestamp: Date.now(),
+      timestamp: yield* Clock.currentTimeMillis,
     });
   });
 };

@@ -40,6 +40,16 @@ const wallNow = () => performance.timeOrigin + performance.now();
 const realSetTimeout = globalThis.setTimeout.bind(globalThis);
 const realClearTimeout = globalThis.clearTimeout.bind(globalThis);
 
+/**
+ * Reads the current timestamp in epoch milliseconds on the virtual clock.
+ *
+ * Passed to the trace emitters that run outside an Effect context — `Supervisor`
+ * callbacks and `runProgramFork` — so their timestamps are virtual like every
+ * other event's. Code that *is* inside an Effect uses `Clock.currentTimeMillis`
+ * instead.
+ */
+export type Now = () => number;
+
 /** The wall-clock primitives the virtual clock is built on. Injectable for tests. */
 export interface VirtualClockHost {
   now: () => number;

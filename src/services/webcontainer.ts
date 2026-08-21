@@ -94,13 +94,15 @@ async function main() {
 
   const onEmit = event => process.stdout.write("TRACE_EVENT:" + JSON.stringify(event) + "\\n");
 
+  const now = () => virtualClock.now();
+
   const traceLayer = _makeTraceEmitterLayer(onEmit);
-  const supervisorLayer = _makeVizLayers(onEmit);
-  const tracerLayer = Layer.setTracer(_makeVizTracer(onEmit));
+  const supervisorLayer = _makeVizLayers(onEmit, now);
+  const tracerLayer = Layer.setTracer(_makeVizTracer(onEmit, now));
   const clockLayer = _makeVizClockLayer(virtualClock);
   const allLayers = Layer.mergeAll(traceLayer, supervisorLayer, tracerLayer, clockLayer, ...requirements);
   const program = Effect.scoped(rootEffect).pipe(Effect.provide(allLayers));
-  const { promise } = _runProgramFork(program, onEmit);
+  const { promise } = _runProgramFork(program, onEmit, now);
   promise.then(
     (result) => console.log("Program completed:", result),
     (error) => console.error("Program failed:", error),
@@ -111,9 +113,10 @@ main();
 
 /** Minimal traced Effect program for pre-warm — loads effect, runtime, emits one trace event */
 const PREWARM_PROGRAM = `import { Effect } from "effect";
-import { runProgramFork } from "./runtime.js";
+import { _runProgramFork } from "./runtime.js";
 const program = Effect.succeed("prewarm");
-const { promise } = runProgramFork(program, () => {});
+// Events are discarded here, so wall time is fine — no clock is installed.
+const { promise } = _runProgramFork(program, () => {}, Date.now);
 promise.then(() => {}, (error) => console.error("Warmup program failed:", error));
 `;
 
