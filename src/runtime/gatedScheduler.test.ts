@@ -73,8 +73,10 @@ describe("GatedScheduler", () => {
 
   describe("paused", () => {
     /**
-     * Even the program's first step is a scheduled task, so pausing before Play
-     * means the program does not begin at all until the user steps.
+     * Pause does not stop the program instantly. The task already handed to
+     * Effect's scheduler is out of our hands, so it runs, and it carries the
+     * fiber to its first natural yield point — hence "a". The continuation
+     * comes back to us and waits there.
      */
     it("stops the program and queues its next task", async () => {
       const { scheduler, run } = setup();
@@ -89,19 +91,24 @@ describe("GatedScheduler", () => {
 
       scheduler.pause();
       await settle();
-      const atPause = [...steps];
 
+      expect(steps).toEqual(["a"]);
       expect(scheduler.queuedCount).toBeGreaterThan(0);
 
       // Wall time passing changes nothing: only a step can.
       await vi.advanceTimersByTimeAsync(10_000);
-      expect(steps).toEqual(atPause);
+      expect(steps).toEqual(["a"]);
     });
 
     /**
-     * A released task is often runtime bookkeeping — here, building the Clock
-     * layer — rather than user code. So a step is "release until something
-     * visible happens", not "release exactly one task".
+     * A step is "release until something visible happens", not "release exactly
+     * one task". The queue holds runtime bookkeeping alongside user
+     * continuations — one such task is still queued here after the program's
+     * last visible step — so a step tied to a single release could land on one
+     * and appear to do nothing.
+     *
+     * In this program each step happens to need exactly one release. The
+     * predicate is what makes that a guarantee rather than a coincidence.
      */
     it("advances one visible step at a time", async () => {
       const { scheduler, run } = setup();
