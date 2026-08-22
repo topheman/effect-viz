@@ -167,19 +167,27 @@ describe("GatedScheduler", () => {
     it("bounds the work when the condition never becomes true", async () => {
       const { scheduler, run } = setup();
       const steps: string[] = [];
+      // More steps than the bound, so the bound is what stops the release and
+      // not an empty queue.
+      const totalSteps = 6;
+      const maxTasks = 3;
       run(
         Effect.gen(function* () {
-          steps.push("a");
-          yield* Effect.yieldNow();
-          steps.push("b");
+          for (let i = 0; i < totalSteps; i++) {
+            steps.push(String(i));
+            yield* Effect.yieldNow();
+          }
         }),
       );
 
       scheduler.pause();
       await settle();
 
-      const released = scheduler.releaseUntil(() => false, 2);
-      expect(released).toBe(2);
+      const released = scheduler.releaseUntil(() => false, maxTasks);
+
+      expect(released).toBe(maxTasks);
+      expect(steps.length).toBeLessThan(totalSteps);
+      expect(scheduler.queuedCount).toBeGreaterThan(0);
     });
 
     it("reports when there is nothing to release", async () => {
@@ -242,6 +250,67 @@ describe("GatedScheduler", () => {
       await vi.advanceTimersByTimeAsync(10);
       await Effect.runPromise(Fiber.join(fiber));
       expect(steps).toEqual(["worker-1", "worker-2", "root"]);
+    });
+  });
+
+  describe("work arriving from outside", () => {
+    /**
+     * We do not control the outside world: a promise settles when it settles.
+     * But settling does not resume the fiber, it only hands the continuation to
+     * the Scheduler as a task — our queue. So a pause holds across I/O, and the
+     * reply becomes the user's next step rather than something that already
+     * happened.
+     */
+    it("holds an external resume until the next step", async () => {
+      const { scheduler, run } = setup();
+      const steps: string[] = [];
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+
+      run(
+        Effect.gen(function* () {
+          steps.push("before");
+          yield* Effect.promise(() => gate);
+          steps.push("after");
+        }),
+      );
+      await settle();
+      scheduler.pause();
+
+      release();
+      await vi.advanceTimersByTimeAsync(100);
+
+      expect(steps).toEqual(["before"]);
+      expect(scheduler.queuedCount).toBeGreaterThan(0);
+
+      scheduler.releaseUntil(() => steps.length > 1);
+      expect(steps).toEqual(["before", "after"]);
+    });
+
+    /**
+     * Interruption is delivered as a task too, so a paused program cannot be
+     * interrupted. Anything that tears a run down — the Reset button — has to
+     * resume the scheduler first.
+     */
+    it("cannot interrupt a paused program until it resumes", async () => {
+      const { scheduler, run } = setup();
+      const fiber = run(Effect.never);
+      await settle();
+      scheduler.pause();
+
+      let interrupted = false;
+      void Effect.runPromise(Fiber.interrupt(fiber)).then(() => {
+        interrupted = true;
+      });
+
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(interrupted).toBe(false);
+
+      scheduler.play();
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(interrupted).toBe(true);
     });
   });
 

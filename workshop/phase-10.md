@@ -365,6 +365,15 @@ Tasks already handed to Effect's scheduler still run — they are out of our han
 Anything *they* schedule is queued. So the program stops a moment after Pause is
 pressed, not instantly.
 
+#### A paused program cannot be interrupted
+
+Interruption reaches a fiber as a task, like everything else. So while the
+scheduler is gated, `Fiber.interrupt` never completes — it simply queues. The
+Reset button must therefore call `play()` before it interrupts, or it will hang.
+
+The same mechanism is a feature elsewhere: a promise that settles during a pause
+also queues, so external work cannot slip past the user between two steps.
+
 #### Detecting a stuck program needs no internals
 
 `fiber.status` carries `blockingOn`, which would separate a deadlock from a wait

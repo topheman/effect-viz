@@ -14,6 +14,10 @@
  * While playing, every task goes straight to Effect's own scheduler, so normal
  * execution is unchanged. While paused, tasks are queued and only a step
  * releases them.
+ *
+ * Note that interruption is delivered as a task as well. A paused program
+ * therefore cannot be interrupted, so anything that tears a run down — Reset —
+ * must call `play()` first.
  */
 import { Scheduler } from "effect";
 import type { RuntimeFiber } from "effect/Fiber";
