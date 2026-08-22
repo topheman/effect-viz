@@ -116,7 +116,8 @@ only be inferred by elimination.
 | 2 | Effect `Clock` layer built on `VirtualClock` | ✅ |
 | 3 | `Date` shim in the WebContainer runner | ✅ |
 | 3b | Virtual timestamps at every emit site | ✅ |
-| 4 | Gated `Scheduler` + the step ladder | ⬜ |
+| 4a | Gated `Scheduler` (fallback path) | 🚧 |
+| 4b | Control channel for the WebContainer | ⬜ |
 | 5a | UI: speed combo + playback state matrix | ✅ |
 | 5b | UI: ⏯️ ⏭️ stepper controls | ⬜ |
 | 6 | Example programs + explainers | ⬜ |
@@ -318,6 +319,64 @@ whatever speed it was captured at — verified by running a program with a forke
 child, a span and a sleep at three rates: wall time scaled while the recorded
 span stayed constant. The fallback path also gains the clock layer, fixed at
 rate 1 until the speed control is wired.
+
+## Step 4a: Gated Scheduler 🚧
+
+The `VirtualClock` stretches the gaps a program spends sleeping. It cannot touch
+the bursts of work between sleeps, because there is no gap there to stretch — and
+those bursts are where forks, races and interruptions happen. Controlling them
+means controlling the `Scheduler`.
+
+A fiber that must continue later does not continue itself: the runtime turns the
+continuation into a **task** and hands it to the `Scheduler`, which decides when
+to run it. `GatedScheduler` takes that decision. While playing it forwards every
+task to Effect's own scheduler unchanged. While paused it queues them, and only a
+step releases one.
+
+### Key Learnings
+
+#### Forcing a yield while paused deadlocks the stepper
+
+It looked worthwhile to answer `shouldYield` with "yes" while paused, so a fiber
+would stop at its next operation rather than after Effect's default of 2048. It
+makes no progress possible at all: the released fiber asks `shouldYield` before
+doing any work, is told to yield, re-queues itself, and every step releases that
+same task forever. The queue count sits at 1 and nothing happens.
+
+`shouldYield` now defers to Effect in both modes. Pausing therefore takes effect
+at the runtime's own yield points — which is also where the program is in a
+consistent state.
+
+#### One task is not one visible step
+
+The first released task is often runtime bookkeeping — building a `Layer`,
+closing a scope — and not user code. A step button wired straight to "release one
+task" would appear to do nothing at random moments.
+
+So "release one task" stays the internal primitive, and the button uses
+`releaseUntil(predicate)`: release until something visible has happened. The
+caller supplies what counts, normally "one more trace event has been emitted". A
+`maxTasks` bound stops a predicate that never comes true from running the whole
+program on one click.
+
+#### A pause takes hold within one scheduler turn
+
+Tasks already handed to Effect's scheduler still run — they are out of our hands.
+Anything *they* schedule is queued. So the program stops a moment after Pause is
+pressed, not instantly.
+
+#### Detecting a stuck program needs no internals
+
+`fiber.status` carries `blockingOn`, which would separate a deadlock from a wait
+on the network. But it is an `Effect`, and reading it sends the fiber a message
+that the fiber must process — which needs the scheduler that we are gating. So it
+cannot be read while paused.
+
+Three counts we own are enough to detect that a program cannot move at all: tasks
+in the gated queue, tasks in flight with the inner scheduler, and pending timers
+on the `VirtualClock`. With all three at zero and the root fiber still running,
+nothing can happen without help. That is reported as "no progress" rather than
+guessing between a deadlock and a slow network reply.
 
 ## Step 5a: Speed control ✅
 

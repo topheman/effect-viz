@@ -140,6 +140,7 @@
 - `src/runtime/vizClock.ts` - makeVizClockLayer: Effect Clock over VirtualClock via Layer.setClock (Phase 10)
 - `src/runtime/dateShim.ts` - installDateShim: Date.now/new Date read virtual time; WebContainer only (Phase 10)
 - `src/hooks/useSpeed.ts` - Speed options, localStorage persistence (Phase 10)
+- `src/runtime/gatedScheduler.ts` - GatedScheduler: pause/step the runtime by gating tasks (Phase 10)
 
 ## Learning Phases
 1. ~~**Phase 1**: Lazy evaluation, success/failure~~ ✅ See [`workshop/phase-1.md`](workshop/phase-1.md)
