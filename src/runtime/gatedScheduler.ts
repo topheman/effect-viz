@@ -82,15 +82,13 @@ export class GatedScheduler implements Scheduler.Scheduler {
   }
 
   /**
-   * A fiber asks this before continuing its next operation. We always defer to
-   * Effect's own answer, in both modes.
+   * A fiber asks this before continuing its next operation. Effect's own answer
+   * is used in both modes: gating decides *when* a task runs, never whether a
+   * running fiber should hand control back. Overriding it would stop a released
+   * fiber from reaching its next operation at all.
    *
-   * Forcing a yield while paused looks tempting — a fiber would then stop at its
-   * next operation rather than after Effect's default of 2048. It deadlocks
-   * instead: the released fiber asks this before doing any work, is told to
-   * yield, re-queues itself, and no step ever makes progress. Pausing therefore
-   * takes effect at the runtime's own yield points, which is also where the
-   * program is in a consistent state.
+   * Pausing therefore lands on the runtime's own yield points, where the program
+   * is in a consistent state.
    */
   shouldYield(fiber: RuntimeFiber<unknown, unknown>): number | false {
     return this.#inner.shouldYield(fiber);

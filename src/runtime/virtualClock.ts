@@ -16,10 +16,10 @@
  * Every rate change re-anchors the mapping, so virtual time is continuous: it
  * never jumps when the user changes speed, it only changes slope.
  *
- * Pause is expressed by *parking* pending timers, not by dividing the delay by
- * the rate. `setTimeout(fn, d / 0)` is `setTimeout(fn, Infinity)`, which
- * overflows a 32-bit signed integer and fires after ~1ms — pause would wake
- * every sleeping fiber instead of freezing it.
+ * Pause *parks* pending timers: the real timeout is cleared, the virtual
+ * deadline is kept, and it is re-armed on resume with the time that was left.
+ * Scaling the delay by the rate cannot express a pause, because `setTimeout` has
+ * no delay meaning "never".
  */
 
 /**
