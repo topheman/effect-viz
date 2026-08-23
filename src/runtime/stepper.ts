@@ -99,8 +99,13 @@ export class Stepper {
   step(): StepOutcome {
     if (this.#isFinished()) return { _tag: "finished" };
 
+    const before = this.#eventCount;
+    let tasks = 0;
+
     if (this.#scheduler.queuedCount > 0) {
-      return { _tag: "released", tasks: this.#releaseUntilVisible() };
+      tasks = this.#releaseUntilVisible();
+      if (this.#eventCount > before) return { _tag: "released", tasks };
+      // Only bookkeeping ran, so a deadline may still be waiting.
     }
 
     // Nothing can run, but a fiber is due to wake. Move virtual time to that
@@ -110,11 +115,12 @@ export class Stepper {
       return {
         _tag: "advancedClock",
         toVirtual: this.#clock.now(),
-        tasks: this.#releaseUntilVisible(),
+        tasks: tasks + this.#releaseUntilVisible(),
       };
     }
 
-    return { _tag: "noProgress" };
+    // Work ran but produced nothing visible; that is still progress.
+    return tasks > 0 ? { _tag: "released", tasks } : { _tag: "noProgress" };
   }
 
   /** Drop everything held. The caller resumes and interrupts separately. */

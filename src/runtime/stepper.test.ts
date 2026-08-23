@@ -158,6 +158,46 @@ describe("Stepper", () => {
     });
   });
 
+  describe("rungs in order", () => {
+    it("falls through to the clock when the queue holds no visible work", () => {
+      const scheduler = new GatedScheduler();
+      const clock = new VirtualClock({ rate: 0, origin: 0, host: fakeHost });
+      scheduler.pause();
+      scheduler.scheduleTask(() => {}, 0);
+      clock.sleep(1000, () => {});
+
+      const stepper = new Stepper({
+        scheduler,
+        clock,
+        isFinished: () => false,
+      });
+
+      const outcome = stepper.step();
+
+      expect(outcome._tag).toBe("advancedClock");
+      expect(clock.now()).toBe(1000);
+    });
+
+    it("prefers runnable work over moving time", () => {
+      const scheduler = new GatedScheduler();
+      const clock = new VirtualClock({ rate: 0, origin: 0, host: fakeHost });
+      scheduler.pause();
+      clock.sleep(1000, () => {});
+
+      const stepper = new Stepper({
+        scheduler,
+        clock,
+        isFinished: () => false,
+      });
+      scheduler.scheduleTask(() => stepper.noteEvent(), 0);
+
+      const outcome = stepper.step();
+
+      expect(outcome._tag).toBe("released");
+      expect(clock.now()).toBe(0);
+    });
+  });
+
   describe("rung 3: nothing can happen", () => {
     it("reports no progress for a program that can never continue", async () => {
       const { stepper, run } = setup();
