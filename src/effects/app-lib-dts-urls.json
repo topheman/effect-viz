@@ -8,12 +8,20 @@
     "path": "file:///runtime/dateShim.d.ts"
   },
   {
+    "url": "/app/runtime/gatedScheduler.d.ts",
+    "path": "file:///runtime/gatedScheduler.d.ts"
+  },
+  {
     "url": "/app/runtime/index.d.ts",
     "path": "file:///runtime/index.d.ts"
   },
   {
     "url": "/app/runtime/runProgram.d.ts",
     "path": "file:///runtime/runProgram.d.ts"
+  },
+  {
+    "url": "/app/runtime/stepper.d.ts",
+    "path": "file:///runtime/stepper.d.ts"
   },
   {
     "url": "/app/runtime/traceEmitter.d.ts",

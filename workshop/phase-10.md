@@ -1,6 +1,6 @@
 # Phase 10: Slow Mode and Stepper (issue #13)
 
-**Status**: 🚧 IN PROGRESS — speed control shipped; stepper (steps 4 and 5b) remaining
+**Status**: 🚧 IN PROGRESS — speed control shipped; stepper runs but is not wired to the UI
 
 Issue [#13](https://github.com/topheman/effect-viz/issues/13) asks for a slow mode:
 _"It goes too fast so a slow stepper would be cool like Browser Debugger is."_
@@ -116,7 +116,7 @@ only be inferred by elimination.
 | 2 | Effect `Clock` layer built on `VirtualClock` | ✅ |
 | 3 | `Date` shim in the WebContainer runner | ✅ |
 | 3b | Virtual timestamps at every emit site | ✅ |
-| 4a | Gated `Scheduler` (fallback path) | 🚧 |
+| 4a | Gated `Scheduler` + step ladder | ✅ |
 | 4b | Control channel for the WebContainer | ⬜ |
 | 5a | UI: speed combo + playback state matrix | ✅ |
 | 5b | UI: ⏯️ ⏭️ stepper controls | ⬜ |
@@ -364,6 +364,34 @@ program on one click.
 Tasks already handed to Effect's scheduler still run — they are out of our hands.
 Anything *they* schedule is queued. So the program stops a moment after Pause is
 pressed, not instantly.
+
+#### The ladder needs both sources, in order
+
+`Stepper` owns the `GatedScheduler` and the `VirtualClock` and answers one
+question: what happens when the user clicks step.
+
+1. Queued work exists → release until one more trace event is emitted.
+2. Nothing runnable, a deadline pending → move virtual time to it, then release.
+3. Neither, and the program has not finished → no progress.
+4. The program has finished → done.
+
+A fiber that can run now must run before time is allowed to move, otherwise a
+step would skip past work that was already due.
+
+#### A step needs a turn of the event loop to settle
+
+Part of a fiber's completion lands outside our scheduler, and a microtask is not
+enough — it needs a full turn. Two steps in a row without yielding report
+`noProgress` for a program that has in fact just finished. Every click in the UI
+is its own turn, so this only bites loops, including test helpers.
+
+#### Stepping reproduces the real interleaving
+
+The design choice was to never pick which fiber advances, only when to stop
+releasing. That is only worth anything if releasing in queue order gives the same
+execution as running at full speed. A test now runs a program with three forked
+workers twice — once played, once stepped to the end — and compares the event
+order. They match.
 
 #### A paused program cannot be interrupted
 

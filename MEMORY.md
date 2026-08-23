@@ -3,7 +3,7 @@
 **Quick Context**: See [`workshop/README.md`](workshop/README.md) for full documentation.
 
 ## Current Phase
-**Phase 10**: IN PROGRESS 🚧 — slow mode & stepper (issue #13). Speed control works end-to-end; stepper (gated Scheduler + ⏯️⏭️) remains
+**Phase 10**: IN PROGRESS 🚧 — slow mode & stepper (issue #13). Speed control works end-to-end; stepper runs (4a done) but is not wired to the UI (5b) and has no container channel (4b)
 
 **Recent**: `VirtualClock` + `vizClock` — an Effect `Clock` over a rate-scaled virtual time source. Slow motion works and preserves race/timeout semantics. See [`workshop/phase-10.md`](workshop/phase-10.md).
 
@@ -141,6 +141,7 @@
 - `src/runtime/dateShim.ts` - installDateShim: Date.now/new Date read virtual time; WebContainer only (Phase 10)
 - `src/hooks/useSpeed.ts` - Speed options, localStorage persistence (Phase 10)
 - `src/runtime/gatedScheduler.ts` - GatedScheduler: pause/step the runtime by gating tasks (Phase 10)
+- `src/runtime/stepper.ts` - Stepper: the step ladder over scheduler + clock (Phase 10)
 
 ## Learning Phases
 1. ~~**Phase 1**: Lazy evaluation, success/failure~~ ✅ See [`workshop/phase-1.md`](workshop/phase-1.md)

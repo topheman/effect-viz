@@ -27,5 +27,15 @@ export {
 } from "./vizClock";
 export { VirtualClock as _VirtualClock } from "./virtualClock";
 
+// From gatedScheduler / stepper (Phase 10) — pause and step the runtime
+export {
+  GatedScheduler as _GatedScheduler,
+  type SchedulerMode as _SchedulerMode,
+} from "./gatedScheduler";
+export {
+  Stepper as _Stepper,
+  type StepOutcome as _StepOutcome,
+} from "./stepper";
+
 // From dateShim (Phase 10) — WebContainer only; see the module doc
 export { installDateShim as _installDateShim } from "./dateShim";
