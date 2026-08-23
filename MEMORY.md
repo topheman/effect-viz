@@ -3,7 +3,7 @@
 **Quick Context**: See [`workshop/README.md`](workshop/README.md) for full documentation.
 
 ## Current Phase
-**Phase 10**: IN PROGRESS 🚧 — slow mode & stepper (issue #13). Speed control works end-to-end; stepper runs (4a done) but is not wired to the UI (5b) and has no container channel (4b)
+**Phase 10**: IN PROGRESS 🚧 — slow mode & stepper (issue #13). Speed + pause/step work in the browser (fallback path); the WebContainer needs a control channel (4b), then examples/explainers (6)
 
 **Recent**: `VirtualClock` + `vizClock` — an Effect `Clock` over a rate-scaled virtual time source. Slow motion works and preserves race/timeout semantics. See [`workshop/phase-10.md`](workshop/phase-10.md).
 

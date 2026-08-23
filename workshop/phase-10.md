@@ -1,6 +1,6 @@
 # Phase 10: Slow Mode and Stepper (issue #13)
 
-**Status**: 🚧 IN PROGRESS — speed control shipped; stepper runs but is not wired to the UI
+**Status**: 🚧 IN PROGRESS — speed and stepper both work in the browser; the WebContainer still needs a control channel (4b)
 
 Issue [#13](https://github.com/topheman/effect-viz/issues/13) asks for a slow mode:
 _"It goes too fast so a slow stepper would be cool like Browser Debugger is."_
@@ -119,7 +119,7 @@ only be inferred by elimination.
 | 4a | Gated `Scheduler` + step ladder | ✅ |
 | 4b | Control channel for the WebContainer | ⬜ |
 | 5a | UI: speed combo + playback state matrix | ✅ |
-| 5b | UI: ⏯️ ⏭️ stepper controls | ⬜ |
+| 5b | UI: ⏯️ ⏭️ stepper controls (fallback path) | ✅ |
 | 6 | Example programs + explainers | ⬜ |
 
 ## Step 1: VirtualClock ✅
@@ -414,6 +414,45 @@ in the gated queue, tasks in flight with the inner scheduler, and pending timers
 on the `VirtualClock`. With all three at zero and the root fiber still running,
 nothing can happen without help. That is reported as "no progress" rather than
 guessing between a deadlock and a slow network reply.
+
+## Step 5b: Stepper controls ✅
+
+Pause, resume and step are wired to the buttons on the in-browser path. The
+WebContainer path leaves them disabled: its program runs in another process, and
+commands cannot reach it until step 4b.
+
+### Key Learnings
+
+#### A step is at least one event, not exactly one
+
+One scheduling decision resumes a fiber, which runs to its next yield point and
+may emit several trace events on the way. In the Basic Example each click
+advances the log by about four entries. That is the intended meaning of a step —
+one decision by the runtime — rather than one line of output.
+
+#### `PauseReason` lost a value it could not produce
+
+It began as `user | deadlock | waiting-external`, but the ladder can only tell
+that nothing is runnable, not why. It is now `user | stuck`, and the tooltip says
+"deadlocked, or waiting on something outside" rather than choosing.
+
+#### An interrupted run settles like a completed one
+
+`runFallbackPlay` catches the rejection and returns a value, so a run that is
+interrupted resolves exactly as a run that finished. While both branches set the
+same state this was invisible; once completion started reporting `finished`,
+Reset began reporting `finished` too.
+
+Both this and the next entry are fixed by a run identifier: the run records its
+id when it starts, Reset increments the id, and anything settling for an id that
+is no longer current is ignored.
+
+#### Reset left the interrupt's own events in the log
+
+`clearEvents()` runs immediately, but interrupting a fiber emits trace events of
+its own, and those arrive afterwards. Reset therefore emptied the log and then
+refilled it with the interruption. The emit path now drops events belonging to a
+superseded run.
 
 ## Step 5a: Speed control ✅
 

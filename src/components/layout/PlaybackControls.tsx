@@ -23,9 +23,7 @@ import { cn } from "@/lib/utils";
 
 import { InfoModal } from "./InfoModal";
 
-const STEP_IS_IMPLEMENTED = false;
 const STEP_OVER_IS_IMPLEMENTED = false;
-const PAUSE_IS_IMPLEMENTED = false;
 
 export type PlaybackState =
   | "idle"
@@ -35,10 +33,14 @@ export type PlaybackState =
   | "finished";
 
 /**
- * Why execution is paused. Only a user pause can be stepped: the other two mean
- * the runtime has nothing left to release, so Step would do nothing.
+ * Why execution is paused. Only a user pause can be stepped: `stuck` means
+ * nothing is runnable and no deadline is pending, so a step would do nothing.
+ *
+ * A stuck program is either deadlocked or waiting on something outside. Telling
+ * those apart needs a fiber's status, which is itself an Effect and so needs the
+ * scheduler that a pause is holding.
  */
-export type PauseReason = "user" | "deadlock" | "waiting-external";
+export type PauseReason = "user" | "stuck";
 
 interface PlaybackControlsProps {
   state?: PlaybackState;
@@ -61,6 +63,8 @@ interface PlaybackControlsProps {
   onSpeedChange?: (speed: Speed) => void;
   /** Only meaningful while paused; decides whether Step can do anything */
   pauseReason?: PauseReason;
+  /** False for the WebContainer path, which has no control channel yet */
+  isSteppingSupported?: boolean;
 }
 
 export function PlaybackControls({
@@ -80,15 +84,18 @@ export function PlaybackControls({
   speed = 1,
   onSpeedChange,
   pauseReason = "user",
+  isSteppingSupported = false,
 }: PlaybackControlsProps) {
   const isRunning = state === "running";
   // Play doubles as resume (from paused) and re-run (from finished).
   const canPlay =
     (state === "idle" || state === "paused" || state === "finished") &&
     !isPlayDisabled;
-  // Stepping needs something live and frozen to advance. A deadlocked or
-  // externally-blocked pause has nothing the runtime could release.
-  const canStep = state === "paused" && pauseReason === "user";
+  // Stepping needs something live and frozen to advance; a stuck pause has
+  // nothing the runtime could release.
+  const canStep =
+    isSteppingSupported && state === "paused" && pauseReason === "user";
+  const canPause = isSteppingSupported && isRunning;
   // Nothing to reset before the first run.
   const canReset = state !== "idle";
   // The rate is fixed when the program starts: the WebContainer receives it as a
@@ -192,10 +199,7 @@ export function PlaybackControls({
                     onOnboardingComplete?.("play");
                   }
                 }}
-                disabled={
-                  (!canPlay && !isRunning) ||
-                  (isRunning && !PAUSE_IS_IMPLEMENTED)
-                }
+                disabled={(!canPlay && !isRunning) || (isRunning && !canPause)}
                 onAnimationEnd={(e) => {
                   if (e.animationName === "play-button-mount") {
                     setPlayMountAnimationEnded(true);
@@ -222,25 +226,33 @@ export function PlaybackControls({
                 )}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{isRunning ? "Pause" : "Run"}</TooltipContent>
+            <TooltipContent>
+              {isRunning
+                ? isSteppingSupported
+                  ? "Pause"
+                  : "Pause is only available in the in-browser runtime"
+                : "Run"}
+            </TooltipContent>
           </Tooltip>
 
           {/* Step */}
-          {STEP_IS_IMPLEMENTED && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onStep}
-                  disabled={!canStep}
-                >
-                  <StepForward className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Step</TooltipContent>
-            </Tooltip>
-          )}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onStep}
+                disabled={!canStep}
+              >
+                <StepForward className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {state === "paused" && pauseReason === "stuck"
+                ? "Nothing can run: deadlocked, or waiting on something outside"
+                : "Step"}
+            </TooltipContent>
+          </Tooltip>
 
           {/* Step Over */}
           {STEP_OVER_IS_IMPLEMENTED && (

@@ -30,7 +30,11 @@ import type { ProgramKey } from "@/lib/programs";
 import { cn } from "@/lib/utils";
 
 import { Header } from "./Header";
-import { PlaybackControls, type PlaybackState } from "./PlaybackControls";
+import {
+  PlaybackControls,
+  type PauseReason,
+  type PlaybackState,
+} from "./PlaybackControls";
 
 export function MainLayout() {
   const canSupportWebContainer = useCanSupportWebContainer();
@@ -45,6 +49,10 @@ export function MainLayout() {
 
   const {
     handlePlay,
+    handlePause,
+    handleResume,
+    handleStep,
+    supportsStepping,
     handleReset,
     selectedProgram,
     setSelectedProgram,
@@ -65,6 +73,13 @@ export function MainLayout() {
   } = useOnboarding();
 
   const [playbackState, setPlaybackState] = useState<PlaybackState>("idle");
+  const [pauseReason, setPauseReason] = useState<PauseReason>("user");
+  /**
+   * Identifies the current run. A run that was reset must not set the playback
+   * state when its promise finally settles, because an interrupted run settles
+   * the same way a completed one does.
+   */
+  const runIdRef = useRef(0);
   const [speed, setSpeed] = useSpeed();
   const [showVisualizer, setShowVisualizer] = useState(false);
   const [showLogsPanel, setShowLogsPanel] = useState(true);
@@ -183,30 +198,55 @@ export function MainLayout() {
 
   const onPlay = async () => {
     setShowVisualizer(true);
+
+    // Play doubles as resume: the program is already running, just gated.
+    if (playbackState === "paused") {
+      handleResume();
+      setPlaybackState("running");
+      return;
+    }
+
     if (webContainer.isReady) {
       await webContainer.flushSync(editorContent);
     }
+    const runId = ++runIdRef.current;
+    const isCurrentRun = () => runIdRef.current === runId;
+
     setPlaybackState("starting");
+    setPauseReason("user");
     handlePlay({ onFirstChunk: () => setPlaybackState("running"), rate: speed })
-      .then(() => setPlaybackState("finished"))
-      .catch(() => setPlaybackState("idle")); // e.g. interrupt on program switch
+      .then(() => {
+        if (isCurrentRun()) setPlaybackState("finished");
+      })
+      .catch(() => {
+        if (isCurrentRun()) setPlaybackState("idle");
+      });
   };
 
-  const handlePause = () => {
+  const onPause = () => {
+    handlePause();
+    setPauseReason("user");
     setPlaybackState("paused");
-    // TODO: Pause Effect execution
   };
 
-  const handleStep = () => {
-    // TODO: Step through Effect execution
+  const onStep = () => {
+    const outcome = handleStep();
+    if (outcome === null) return;
+    if (outcome._tag === "finished") {
+      setPlaybackState("finished");
+      return;
+    }
+    setPauseReason(outcome._tag === "noProgress" ? "stuck" : "user");
   };
 
-  const handleStepOver = () => {
+  const onStepOver = () => {
     // TODO: Step over in Effect execution
   };
 
   const onReset = () => {
+    runIdRef.current++;
     setPlaybackState("idle");
+    setPauseReason("user");
     handleReset();
   };
 
@@ -400,9 +440,9 @@ export function MainLayout() {
       <PlaybackControls
         state={playbackState}
         onPlay={onPlay}
-        onPause={handlePause}
-        onStep={handleStep}
-        onStepOver={handleStepOver}
+        onPause={onPause}
+        onStep={onStep}
+        onStepOver={onStepOver}
         onReset={onReset}
         showVisualizer={showVisualizer}
         onToggleVisualizer={() => setShowVisualizer(!showVisualizer)}
@@ -416,6 +456,8 @@ export function MainLayout() {
         isSyncing={canSupportWebContainer && webContainer.isSyncing}
         speed={speed}
         onSpeedChange={setSpeed}
+        pauseReason={pauseReason}
+        isSteppingSupported={supportsStepping}
       />
     </div>
   );
