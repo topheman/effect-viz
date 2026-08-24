@@ -158,6 +158,65 @@ describe("Stepper", () => {
     });
   });
 
+  describe("pause freezes time", () => {
+    /**
+     * Gating the scheduler stops fibers from running, but not the clock. If
+     * virtual time kept advancing, the program's own sense of elapsed time would
+     * include however long the user sat looking at the screen.
+     */
+    it("does not advance virtual time while paused", async () => {
+      const { stepper, clock, run } = setup();
+      run(Effect.sleep("1 second"));
+      await settle();
+
+      stepper.pause();
+      const atPause = clock.now();
+      await vi.advanceTimersByTimeAsync(5000);
+
+      expect(clock.now()).toBe(atPause);
+    });
+
+    it("restores the previous rate on resume", async () => {
+      const scheduler = new GatedScheduler();
+      const clock = new VirtualClock({ rate: 0.25, origin: 0, host: fakeHost });
+      const stepper = new Stepper({
+        scheduler,
+        clock,
+        isFinished: () => false,
+      });
+
+      stepper.pause();
+      expect(clock.rate).toBe(0);
+
+      stepper.play();
+      expect(clock.rate).toBe(0.25);
+    });
+
+    it("leaves a sleep its remaining time across a long pause", async () => {
+      const { stepper, clock, run } = setup();
+      const done: string[] = [];
+      run(
+        Effect.gen(function* () {
+          yield* Effect.sleep("1 second");
+          done.push("woke");
+        }),
+      );
+      await settle();
+      await vi.advanceTimersByTimeAsync(400);
+
+      stepper.pause();
+      await vi.advanceTimersByTimeAsync(60_000); // a long look at the screen
+      stepper.play();
+
+      await vi.advanceTimersByTimeAsync(599);
+      expect(done).toEqual([]);
+
+      await vi.advanceTimersByTimeAsync(1);
+      expect(done).toEqual(["woke"]);
+      expect(clock.now()).toBeCloseTo(1000, 0);
+    });
+  });
+
   describe("rungs in order", () => {
     it("falls through to the clock when the queue holds no visible work", () => {
       const scheduler = new GatedScheduler();

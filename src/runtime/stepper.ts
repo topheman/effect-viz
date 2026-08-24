@@ -61,6 +61,8 @@ export class Stepper {
    * visible reads as broken.
    */
   #eventCount = 0;
+  /** Rate to restore on resume; null while running. */
+  #rateBeforePause: number | null = null;
 
   constructor(options: StepperOptions) {
     this.#scheduler = options.scheduler;
@@ -78,7 +80,18 @@ export class Stepper {
     return this.#eventCount;
   }
 
+  /**
+   * Freeze the program: gate the scheduler *and* stop virtual time.
+   *
+   * Gating alone would leave the clock running, so a program's own sense of time
+   * would keep advancing while the user reads the screen, and the next event
+   * would be timestamped however long they spent paused.
+   */
   pause(): void {
+    if (this.#rateBeforePause === null) {
+      this.#rateBeforePause = this.#clock.rate;
+      this.#clock.setRate(0);
+    }
     this.#scheduler.pause();
   }
 
@@ -88,6 +101,11 @@ export class Stepper {
    */
   play(): void {
     this.#scheduler.play();
+    if (this.#rateBeforePause !== null) {
+      // Parked timers are re-armed with the virtual time they had left.
+      this.#clock.setRate(this.#rateBeforePause);
+      this.#rateBeforePause = null;
+    }
   }
 
   /** True when a step would do something. Drives the step button. */
@@ -128,6 +146,7 @@ export class Stepper {
     this.#scheduler.clear();
     this.#clock.clearAll();
     this.#eventCount = 0;
+    this.#rateBeforePause = null;
   }
 
   #releaseUntilVisible(): number {

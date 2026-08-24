@@ -378,6 +378,19 @@ question: what happens when the user clicks step.
 A fiber that can run now must run before time is allowed to move, otherwise a
 step would skip past work that was already due.
 
+#### Pause has to stop the clock as well as the scheduler
+
+Gating the scheduler stops fibers from running, but virtual time keeps advancing
+on its own. A program paused for seven seconds then reported `fiber:resume #104
+(after 7.83s)` for a one-second sleep, and the timeline scaled to eight seconds:
+the user's reading time had been recorded as part of the program's own elapsed
+time.
+
+So a pause sets the rate to 0 and resume restores the previous rate, which also
+re-arms parked timers with the virtual time they had left. Unit tests missed this
+because they never let wall time pass between pausing and stepping — only using
+the app surfaced it.
+
 #### A step needs a turn of the event loop to settle
 
 Part of a fiber's completion lands outside our scheduler, and a microtask is not
