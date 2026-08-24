@@ -3,9 +3,9 @@
 **Quick Context**: See [`workshop/README.md`](workshop/README.md) for full documentation.
 
 ## Current Phase
-**Phase 10**: IN PROGRESS 🚧 — slow mode & stepper (issue #13). Speed + pause/step work in the browser (fallback path); the WebContainer needs a control channel (4b), then examples/explainers (6)
+**Phase 10**: IN PROGRESS 🚧 — slow mode & stepper (issue #13). Speed + pause/step now work on both paths; next are examples/explainers (6) and tagging instrumentation events (7)
 
-**Recent**: `VirtualClock` + `vizClock` — an Effect `Clock` over a rate-scaled virtual time source. Slow motion works and preserves race/timeout semantics. See [`workshop/phase-10.md`](workshop/phase-10.md).
+**Recent**: a control channel over the WebContainer's stdio — commands in on stdin, replies out behind a `TRACE_CONTROL:` prefix — so pause, resume and step reach a program running in another process. The page models that process's clock, corrected by every virtual reading that comes back. See [`workshop/phase-10.md`](workshop/phase-10.md).
 
 ## Completed Phases
 

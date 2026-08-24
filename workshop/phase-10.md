@@ -1,6 +1,6 @@
 # Phase 10: Slow Mode and Stepper (issue #13)
 
-**Status**: 🚧 IN PROGRESS — speed and stepper both work in the browser; the WebContainer still needs a control channel (4b)
+**Status**: 🚧 IN PROGRESS — speed, pause and step work on both paths; what remains is the examples and explainers (6) and tagging instrumentation events (7)
 
 Issue [#13](https://github.com/topheman/effect-viz/issues/13) asks for a slow mode:
 _"It goes too fast so a slow stepper would be cool like Browser Debugger is."_
@@ -117,7 +117,7 @@ only be inferred by elimination.
 | 3 | `Date` shim in the WebContainer runner | ✅ |
 | 3b | Virtual timestamps at every emit site | ✅ |
 | 4a | Gated `Scheduler` + step ladder | ✅ |
-| 4b | Control channel for the WebContainer | ⬜ |
+| 4b | Control channel for the WebContainer | ✅ |
 | 5a | UI: speed combo + playback state matrix | ✅ |
 | 5b | UI: ⏯️ ⏭️ stepper controls (fallback path) | ✅ |
 | 6 | Example programs + explainers | ⬜ |
@@ -152,8 +152,8 @@ events will carry an origin — the program's own, or the tool's — and the
 Execution Log will offer a toggle. The Timeline and Fiber Tree keep consuming
 everything, since a suspend that genuinely happened still belongs on a timeline.
 
-This is deferred until after 4b and 6, and is expected to cover more than the
-injected yield: the control channel will likely have a handshake of its own.
+This is deferred until after 6, and covers more than the injected yield: the
+control channel opens with a `ready` handshake of its own.
 
 ## Step 1: VirtualClock ✅
 
@@ -353,7 +353,7 @@ child, a span and a sleep at three rates: wall time scaled while the recorded
 span stayed constant. The fallback path also gains the clock layer, fixed at
 rate 1 until the speed control is wired.
 
-## Step 4a: Gated Scheduler 🚧
+## Step 4a: Gated Scheduler ✅
 
 The `VirtualClock` stretches the gaps a program spends sleeping. It cannot touch
 the bursts of work between sleeps, because there is no gap there to stretch — and
@@ -475,9 +475,9 @@ guessing between a deadlock and a slow network reply.
 
 ## Step 5b: Stepper controls ✅
 
-Pause, resume and step are wired to the buttons on the in-browser path. The
-WebContainer path leaves them disabled: its program runs in another process, and
-commands cannot reach it until step 4b.
+Pause, resume and step are wired to the buttons on the in-browser path, which
+holds the `Stepper` directly. The WebContainer path leaves them disabled here;
+step 4b gives it a channel to reach the same three verbs in another process.
 
 ### Key Learnings
 
@@ -672,3 +672,178 @@ A container whose entire notion of time — Effect's and raw JavaScript's — is
 our control, with speed-invariant trace timestamps. The rate is read from a
 `VIZ_RATE` environment variable at spawn (defaulting to 1); step 5 supplies the
 value from the UI.
+
+---
+
+## Step 4b: Control channel for the WebContainer ✅
+
+Pause, resume and step reached the runtime by a method call on the in-browser
+path, and by nothing at all on the WebContainer path — the program runs in
+another process, so the controls were simply disabled there. That was the wrong
+way round: the container is the path most people use.
+
+The three verbs now travel as messages. Commands go in on the process's stdin as
+one JSON object per line; replies come back on stdout behind a `TRACE_CONTROL:`
+prefix, alongside the `TRACE_EVENT:` lines that were already there.
+
+### What the wire looks like
+
+Both directions share the process's stdio, so it helps to read a run as a
+conversation. Below, ⬇️ is the page writing a command to the process's **stdin**,
+and ⬆️ is the process writing back on its **stdout**. This is a real transcript of
+a program that logs a line and then sleeps for two seconds, started paused and
+stepped through (span ids shortened).
+
+```text
+⬆️ TRACE_CONTROL:{"reply":"ready","virtualNow":1787609740816.87}
+⬆️ TRACE_EVENT:{"type":"fiber:fork","fiberId":"#0","timestamp":1787609740816.87}
+⬆️ TRACE_EVENT:{"type":"fiber:suspend","fiberId":"#0","timestamp":1787609740816.87}
+
+⬇️ {"cmd":"step"}
+⬆️ TRACE_EVENT:{"type":"fiber:resume","fiberId":"#0","timestamp":1787609740816.87}
+⬆️ TRACE_EVENT:{"type":"effect:start","label":"greet","id":"9273ed06","timestamp":1787609740816}
+⬆️ hello from the program
+⬆️ TRACE_EVENT:{"type":"effect:end","id":"9273ed06","result":"success","timestamp":1787609740816}
+⬆️ TRACE_EVENT:{"type":"fiber:suspend","fiberId":"#0","timestamp":1787609740816.87}
+⬆️ TRACE_CONTROL:{"reply":"step","virtualNow":1787609740816.87,"outcome":{"_tag":"released","tasks":1}}
+
+⬇️ {"cmd":"step"}
+⬆️ TRACE_EVENT:{"type":"fiber:resume","fiberId":"#0","timestamp":1787609742816.87}
+⬆️ TRACE_CONTROL:{"reply":"step","virtualNow":1787609742816.87,"outcome":{"_tag":"advancedClock","toVirtual":1787609742816.87,"tasks":1}}
+⬆️ TRACE_EVENT:{"type":"fiber:end","fiberId":"#0","timestamp":1787609742816.87}
+⬆️ Program completed: done
+
+⬇️ {"cmd":"step"}
+```
+
+Four things are worth reading out of it.
+
+**The upward channel is shared, the downward one is not.** Three kinds of line
+come back — trace events, control replies, and `hello from the program`, which is
+the program's own `console.log`. WebContainer merges a process's stdout and stderr
+into a single output stream, so a reader has to sort them, and only the
+machine-readable kinds are prefixed. Nothing but the page writes to stdin, so a
+command travels as bare JSON.
+
+**A step is answered after its consequences.** Every event a step produces is
+written before the reply that accounts for it, because the runner emits them
+synchronously inside the step. By the time the page snaps its clock model to a
+reply's reading, it has already received every event that reading covers — the
+correction can never arrive ahead of what it is correcting.
+
+**The clock jump is visible.** Across the second step the timestamps move from
+`…740816` to `…742816`, the full two seconds of the sleep, while the user spent a
+moment between clicks. That is the `advancedClock` rung of the ladder, and the
+reason a reply carries `virtualNow` at all: no extrapolation from the run's rate
+could have produced that jump.
+
+**The last command goes nowhere.** The program finished during the second step, so
+the process released its stdin listener and exited; the third command was written
+into a closed pipe. That is the ordinary end of every run rather than an error
+case, which is why the writer discards write failures and the scope's release
+settles any step still waiting with a null outcome.
+
+### Created/Modified Files
+
+| File | Changes |
+|------|---------|
+| `src/runtime/controlChannel.ts` | Command and reply codecs, `applyCommand`, `makeLineReader` |
+| `src/runtime/controlChannel.test.ts` | 35 tests |
+| `src/lib/mirroredClock.ts` | The page's model of the container's clock |
+| `src/lib/mirroredClock.test.ts` | 7 tests |
+| `src/lib/containerController.ts` | Turns clicks into commands, resolves a step on its reply |
+| `src/lib/containerController.test.ts` | 7 tests |
+| `src/services/webcontainer.ts` | `RUNNER_JS` builds the scheduler and stepper, reads stdin, writes replies |
+| `src/effects/spawnAndParse.ts` | `TRACE_CONTROL:` branch, writes to `proc.input`, `VIZ_START_PAUSED` |
+| `src/hooks/useEventHandlers.ts` | One pair of handlers for both paths; a step is a promise on each |
+| `src/components/layout/PlaybackControls.tsx` | `isSteppingSupported` removed — every path supports it now |
+
+### Key Learnings
+
+#### The reply is what makes a step legible, not a nicety
+
+A `StepOutcome` is what tells the user a program is stuck rather than merely
+slow, so the channel needs a return path for that alone. But every reply also
+carries the container's virtual clock reading, and that turns out to be
+load-bearing for the timeline.
+
+The page draws a cursor in the gaps between events, and on this path it can only
+model the container's clock rather than read it. Extrapolating from the run's
+rate is fine while a program runs freely. It is hopeless across a step, as the
+transcript above shows: a step over a sleep moves the container's clock by the
+whole sleep in one go, while barely any wall time passes. Without the reading in
+the reply the cursor would sit still and the next event would arrive stamped
+seconds ahead of it.
+
+#### The model is a predictor, not a second clock
+
+The container's clock stays the only clock — it is what `Effect.sleep` counts
+down in and what stamps every event. `MirroredClock` extrapolates between
+authoritative readings and snaps on each one, and it gets two kinds: the
+timestamp on every trace event, and the `virtualNow` on every control reply. Both
+sides read the same monotonic hardware source, so the two never tick at different
+speeds; the error is an offset of roughly one message latency, and snapping keeps
+it from accumulating.
+
+Two rules make the snapping safe. Corrections only ever move the cursor forward,
+because a reading is always slightly stale by the time it arrives — one that
+lands behind the prediction means the page ran ahead, not that time went
+backwards, and a playhead that rewinds reads as a bug. And the model re-anchors
+before its rate changes, or the elapsed interval gets re-read at a rate that was
+never in effect for it.
+
+That asymmetry also decides when the model follows a command. It freezes on the
+click, so the cursor stops when the user expects; it resumes on the *reply*,
+because a model resumed early would run ahead of the container for the rest of
+the run, and forward-only corrections would never pull it back.
+
+#### stdin is the keep-alive, which is why it has to be released
+
+A listener on `process.stdin` refs Node's event loop. That is a problem and a
+solution at once. Without the release the process would never exit, because
+nothing else keeps it open once a program finishes; the listener is removed when
+the root promise settles. But it also cannot simply be unref'd, because a *paused*
+program has no task running and no timer armed — while the gate is closed, that
+listener is the only thing holding the process open at all.
+
+#### Speed stayed off the wire
+
+The protocol could carry a rate, but the fallback path fixes speed for the life
+of a run, and the container reads it once from `VIZ_RATE` at spawn. Putting a live
+rate command on the channel would give one path a capability the other does not
+have, for a control the UI presents as identical on both. It stays a spawn-time
+decision.
+
+#### Step from idle had to learn to flush
+
+Step doubles as "start this program paused", and on the container path a run must
+be preceded by flushing the editor's contents. Play already did that; Step never
+had to, because it had only ever run in the browser, where there is nothing to
+sync. Without it, a stepped run would walk through whatever the container was
+last given rather than what is on screen.
+
+### Verification
+
+The runner is a template literal, so it cannot be typechecked or unit tested. It
+was exercised by extracting the real string, running it under Node against the
+built runtime bundle, and driving its stdin the way the page does.
+
+Stepping a program with a five second sleep produced the ladder in order: queued
+work released one visible chunk at a time, then the rung that moves the clock,
+reported as `advancedClock` with the jump in the reply. Pausing a free-running
+program for a second and a half left no trace in the program's own timeline —
+the run's virtual span came out the same as an unpaused one, because the clock
+stopped with the scheduler. Both runs exited cleanly, which is the check that
+the stdin listener is being released.
+
+WebContainer itself could not be booted in the automation browser, which lacks
+cross-origin isolation and so has no `SharedArrayBuffer`. What that leaves
+unverified is one link: whether writes to `proc.input` arrive at the container
+process's `process.stdin`. Everything on either side of that link is covered.
+
+### What this unlocks
+
+Slow motion, pause and step on the path the app actually runs, which is what
+step 6's examples need to be worth writing. The `TRACE_CONTROL:` channel is also
+the handshake that step 7 anticipated: `ready` is the first message on it, and
+the first instrumentation event that will want tagging.

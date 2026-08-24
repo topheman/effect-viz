@@ -37,5 +37,15 @@ export {
   type StepOutcome as _StepOutcome,
 } from "./stepper";
 
+// From controlChannel (Phase 10) — pause/resume/step over the container's stdio
+export {
+  applyCommand as _applyCommand,
+  decodeCommand as _decodeCommand,
+  encodeReply as _encodeReply,
+  makeLineReader as _makeLineReader,
+  type ControlCommand as _ControlCommand,
+  type ControlReply as _ControlReply,
+} from "./controlChannel";
+
 // From dateShim (Phase 10) — WebContainer only; see the module doc
 export { installDateShim as _installDateShim } from "./dateShim";

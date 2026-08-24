@@ -52,7 +52,6 @@ export function MainLayout() {
     handlePause,
     handleResume,
     handleStep,
-    supportsStepping,
     handleReset,
     selectedProgram,
     setSelectedProgram,
@@ -241,18 +240,25 @@ export function MainLayout() {
     setPlaybackState("paused");
   };
 
-  const onStep = () => {
+  const onStep = async () => {
     // From idle, Step starts the program already gated so that its first events
     // can be stepped through; there is no other way into a paused run.
     if (playbackState === "idle") {
       setShowVisualizer(true);
+      // Same flush as Play: the container would otherwise step through whatever
+      // it was last given rather than what is on screen.
+      if (webContainer.isReady) {
+        await webContainer.flushSync(editorContent);
+      }
       startRun({ startPaused: true });
       setPlaybackState("paused");
       setPauseReason("user");
       return;
     }
 
-    const outcome = handleStep();
+    // A step is a round trip on the container path, so the outcome that decides
+    // whether the program is stuck arrives asynchronously on both.
+    const outcome = await handleStep();
     if (outcome === null) return;
     if (outcome._tag === "finished") {
       setPlaybackState("finished");
@@ -479,7 +485,6 @@ export function MainLayout() {
         speed={speed}
         onSpeedChange={setSpeed}
         pauseReason={pauseReason}
-        isSteppingSupported={supportsStepping}
       />
     </div>
   );

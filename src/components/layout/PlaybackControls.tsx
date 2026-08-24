@@ -63,8 +63,6 @@ interface PlaybackControlsProps {
   onSpeedChange?: (speed: Speed) => void;
   /** Only meaningful while paused; decides whether Step can do anything */
   pauseReason?: PauseReason;
-  /** False for the WebContainer path, which has no control channel yet */
-  isSteppingSupported?: boolean;
 }
 
 export function PlaybackControls({
@@ -84,7 +82,6 @@ export function PlaybackControls({
   speed = 1,
   onSpeedChange,
   pauseReason = "user",
-  isSteppingSupported = false,
 }: PlaybackControlsProps) {
   const isRunning = state === "running";
   // Play doubles as resume (from paused) and re-run (from finished).
@@ -95,10 +92,9 @@ export function PlaybackControls({
   // can be stepped through. Otherwise stepping needs a live, frozen program; a
   // stuck pause has nothing the runtime could release.
   const canStep =
-    isSteppingSupported &&
-    ((state === "idle" && !isPlayDisabled) ||
-      (state === "paused" && pauseReason === "user"));
-  const canPause = isSteppingSupported && isRunning;
+    (state === "idle" && !isPlayDisabled) ||
+    (state === "paused" && pauseReason === "user");
+  const canPause = isRunning;
   // Nothing to reset before the first run.
   const canReset = state !== "idle";
   // The rate is fixed when the program starts: the WebContainer receives it as a
@@ -229,13 +225,7 @@ export function PlaybackControls({
                 )}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>
-              {isRunning
-                ? isSteppingSupported
-                  ? "Pause"
-                  : "Pause is only available in the in-browser runtime"
-                : "Run"}
-            </TooltipContent>
+            <TooltipContent>{isRunning ? "Pause" : "Run"}</TooltipContent>
           </Tooltip>
 
           {/* Step */}

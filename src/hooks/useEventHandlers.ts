@@ -1,7 +1,12 @@
 import { Effect, Fiber, Layer } from "effect";
 import { useRef, useState } from "react";
 
-import type { SpawnAndParseCallbacks } from "@/effects/spawnAndParse";
+import type {
+  ControlSink,
+  SpawnAndParseCallbacks,
+} from "@/effects/spawnAndParse";
+import { ContainerController } from "@/lib/containerController";
+import { MirroredClock } from "@/lib/mirroredClock";
 import { type ProgramKey, makeLoggerLayer, programs } from "@/lib/programs";
 import { GatedScheduler } from "@/runtime/gatedScheduler";
 import { runProgramFork } from "@/runtime/runProgram";
@@ -21,10 +26,14 @@ export interface WebContainerBridge {
     callbacks,
     onFirstChunk,
     rate,
+    startPaused,
+    control,
   }: {
     callbacks: SpawnAndParseCallbacks;
     onFirstChunk: () => void;
     rate: number;
+    startPaused?: boolean;
+    control?: ControlSink;
   }) => Promise<{
     success: boolean;
     exitCode?: number;
@@ -49,20 +58,19 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
   );
   const stepperRef = useRef<Stepper | null>(null);
   /**
+   * The container's half of the same three verbs. Outlives a single run — it is
+   * attached when a process starts and detached when it exits.
+   */
+  const containerRef = useRef<ContainerController>(null);
+  containerRef.current ??= new ContainerController();
+  /** The page's model of the container's clock; null on the in-browser path, which reads the real one. */
+  const mirrorRef = useRef<MirroredClock | null>(null);
+  /**
    * Identifies the current run. Interrupting a program emits trace events of its
    * own, and they arrive after Reset has already cleared the stores, so events
    * from a run that is no longer current are dropped.
    */
   const runIdRef = useRef(0);
-  /**
-   * Only the in-browser path can be stepped: the WebContainer runs the program
-   * in another process, which needs a control channel we do not have yet.
-   *
-   * Derived rather than set when a run starts, because Step can *begin* a run —
-   * the button has to know before there is anything to step.
-   */
-  const supportsStepping = !webContainer?.isReady;
-
   const handlePlay = ({
     onFirstChunk,
     rate,
@@ -83,14 +91,41 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
     setRate(rate);
 
     if (webContainer?.isReady) {
-      // No clock to read on this path: the program runs in another process.
-      setNowSource(null);
       stepperRef.current = null;
+      const controller = containerRef.current;
+      // The real clock is in the other process, so the timeline follows a model
+      // of it, corrected by every virtual reading that comes back.
+      const mirror = new MirroredClock(rate);
+      mirrorRef.current = mirror;
+      setNowSource(() => mirror.now());
+      if (startPaused) mirror.pause();
+
+      const control: ControlSink = {
+        attach: (send) => controller?.attach(send),
+        handleReply: (reply) => {
+          mirror.sync(reply.virtualNow);
+          // Resuming is driven by the reply rather than by the click: the
+          // container keeps running for the length of a round trip either way,
+          // and a model resumed early would run ahead of it for good, since
+          // corrections only move the cursor forward.
+          if (reply.reply === "resume") mirror.resume();
+          controller?.handleReply(reply);
+        },
+        detach: () => controller?.detach(),
+      };
+
       return webContainer
         .runPlay({
           callbacks: {
             addEvent: (event) => {
-              if (isCurrentRun()) addEvent(event);
+              if (!isCurrentRun()) return;
+              // Every event timestamp is a virtual reading taken in the
+              // container, so the model is corrected continuously while a
+              // program runs, not only when a command is sent.
+              if (typeof event.timestamp === "number") {
+                mirror.sync(event.timestamp);
+              }
+              addEvent(event);
             },
             processEvent: (event) => {
               if (isCurrentRun()) processEvent(event);
@@ -98,6 +133,8 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
           },
           onFirstChunk,
           rate,
+          startPaused,
+          control,
         })
         .then((result) => {
           if (!result.success) {
@@ -200,6 +237,7 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
     runIdRef.current++;
     if (webContainer?.isReady) {
       webContainer.interruptPlay();
+      mirrorRef.current = null;
     } else if (runningFiberRef.current) {
       // Interruption reaches a fiber as a task, so a gated program cannot be
       // torn down: the scheduler has to be running first.
@@ -213,16 +251,37 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
     clearFibers();
   };
 
+  /**
+   * Pause, resume and step reach the runtime directly in the browser and as
+   * messages in the container, so a step is a promise on both paths: one that is
+   * already settled, and one that waits for a round trip.
+   */
   const handlePause = () => {
+    if (webContainer?.isReady) {
+      // Frozen on the click rather than on the reply, so the cursor stops when
+      // the user expects. The container runs on for a round trip, and the
+      // reply's reading corrects the cursor forward to meet it.
+      mirrorRef.current?.pause();
+      containerRef.current?.pause();
+      return;
+    }
     stepperRef.current?.pause();
   };
 
   const handleResume = () => {
+    if (webContainer?.isReady) {
+      containerRef.current?.play();
+      return;
+    }
     stepperRef.current?.play();
   };
 
-  const handleStep = (): StepOutcome | null =>
-    stepperRef.current?.step() ?? null;
+  const handleStep = async (): Promise<StepOutcome | null> => {
+    if (webContainer?.isReady) {
+      return (await containerRef.current?.step()) ?? null;
+    }
+    return stepperRef.current?.step() ?? null;
+  };
 
   return {
     handlePlay,
@@ -230,7 +289,6 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
     handlePause,
     handleResume,
     handleStep,
-    supportsStepping,
     selectedProgram,
     setSelectedProgram,
     programs,

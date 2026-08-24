@@ -5,6 +5,13 @@
  */
 import { Duration, Effect, Option, Ref, Stream } from "effect";
 
+import {
+  CONTROL_REPLY_PREFIX,
+  type ControlCommand,
+  type ControlReply,
+  decodeReply,
+  encodeCommand,
+} from "@/runtime/controlChannel";
 import { WebContainer } from "@/services/webcontainer";
 import type { TraceEvent } from "@/types/trace";
 
@@ -54,6 +61,17 @@ export interface SpawnAndParseCallbacks {
 }
 
 /**
+ * Whoever drives pause, resume and step for this process. Held for the life of
+ * the process: `attach` when its stdin is writable, `detach` when it is gone, so
+ * a click landing between runs is dropped rather than sent into a dead pipe.
+ */
+export interface ControlSink {
+  attach: (send: (command: ControlCommand) => void) => void;
+  handleReply: (reply: ControlReply) => void;
+  detach: () => void;
+}
+
+/**
  * Spawn pnpm exec tsx program.ts, parse TRACE_EVENT lines from stdout,
  * and push to the provided callbacks.
  *
@@ -68,12 +86,17 @@ export function spawnAndParseTraceEvents({
   onFirstChunk,
   onStdout,
   rate,
+  startPaused = false,
+  control,
 }: {
   callbacks: SpawnAndParseCallbacks;
   onFirstChunk: () => void;
   onStdout?: (line: string) => void;
   /** Virtual ms per wall ms, read by runner.js. Fixed for the life of the process. */
   rate: number;
+  /** Gate the runtime before the program runs, so its first step is the user's. */
+  startPaused?: boolean;
+  control?: ControlSink;
 }) {
   return Effect.gen(function* () {
     const wc = yield* WebContainer;
@@ -86,6 +109,7 @@ export function spawnAndParseTraceEvents({
       output: true as const,
       env: {
         VIZ_RATE: String(rate),
+        ...(startPaused && { VIZ_START_PAUSED: "1" }),
         ...(isPerfPlayEnabled() && { PERF_PLAY: "1" }),
       },
     };
@@ -93,6 +117,29 @@ export function spawnAndParseTraceEvents({
       wc.spawn("node", ["--enable-source-maps", "runner.js"], spawnOptions),
       (p) => Effect.sync(() => p.kill()),
     );
+
+    if (control !== undefined) {
+      yield* Effect.acquireRelease(
+        Effect.sync(() => {
+          const writer = proc.input.getWriter();
+          control.attach((command) => {
+            // A command racing the end of a run finds a closed pipe. There is
+            // nothing to do about it: the run it was meant for is over.
+            void writer.write(encodeCommand(command)).catch(() => {});
+          });
+          return writer;
+        }),
+        (writer) =>
+          Effect.sync(() => {
+            control.detach();
+            try {
+              writer.releaseLock();
+            } catch {
+              // The stream went with the process; the lock went with it.
+            }
+          }),
+      );
+    }
 
     const t1 = performance.now();
     logPerf("t1 (spawn returned)", t0, t1);
@@ -125,25 +172,30 @@ export function spawnAndParseTraceEvents({
       Stream.mapConcat((chunk) => chunk.split("\n")),
     );
     const traceStream = lineStream.pipe(
-      // Any line not starting with TRACE_EVENT or PERF comes from something writing
-      // to stdout inside the container (e.g. Node errors, stack traces, user's console.log).
       Stream.tap((line) =>
-        line.startsWith(PERF_PREFIX)
-          ? Effect.sync(() => {
-              const rest = line.slice(PERF_PREFIX.length).trim();
-              const spaceIdx = rest.indexOf(" ");
-              const label = spaceIdx >= 0 ? rest.slice(0, spaceIdx) : rest;
-              const ts = spaceIdx >= 0 ? rest.slice(spaceIdx + 1).trim() : "";
-              const t1 = ts ? Number.parseFloat(ts) : undefined;
-              if (t1 !== undefined && !Number.isNaN(t1)) {
-                logPerf(`[container] ${label}`, 0, t1);
-              }
-            })
-          : line.startsWith(TRACE_EVENT_PREFIX) || line.trim() === ""
-            ? Effect.void
-            : Effect.sync(() => {
-                onStdout?.(line);
-              }),
+        Effect.sync(() => {
+          if (line.startsWith(PERF_PREFIX)) {
+            const rest = line.slice(PERF_PREFIX.length).trim();
+            const spaceIdx = rest.indexOf(" ");
+            const label = spaceIdx >= 0 ? rest.slice(0, spaceIdx) : rest;
+            const ts = spaceIdx >= 0 ? rest.slice(spaceIdx + 1).trim() : "";
+            const t1 = ts ? Number.parseFloat(ts) : undefined;
+            if (t1 !== undefined && !Number.isNaN(t1)) {
+              logPerf(`[container] ${label}`, 0, t1);
+            }
+            return;
+          }
+          if (line.startsWith(CONTROL_REPLY_PREFIX)) {
+            const reply = decodeReply(line);
+            if (reply !== null) control?.handleReply(reply);
+            return;
+          }
+          // Anything left that is not a trace event comes from something else
+          // writing to stdout inside the container (Node errors, stack traces,
+          // the program's own console.log).
+          if (line.startsWith(TRACE_EVENT_PREFIX) || line.trim() === "") return;
+          onStdout?.(line);
+        }),
       ),
       Stream.filterMap((line) => Option.fromNullable(parseTraceEvent(line))),
     );

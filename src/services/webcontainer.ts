@@ -64,7 +64,7 @@ Example:
 
 /** Runner: imports program.js, injects trace layer, runs. Fixed bootstrap — no user code transformation for tracing. */
 const RUNNER_JS = `import { Effect, Layer } from "effect";
-import { _makeTraceEmitterLayer, _makeVizLayers, _makeVizTracer, _runProgramFork, _VirtualClock, _makeVizClockLayer, _installDateShim } from "./runtime.js";
+import { _makeTraceEmitterLayer, _makeVizLayers, _makeVizTracer, _runProgramFork, _VirtualClock, _makeVizClockLayer, _installDateShim, _GatedScheduler, _Stepper, _applyCommand, _decodeCommand, _encodeReply, _makeLineReader } from "./runtime.js";
 
 const ROOT_EFFECT_MISSING_MSG = ${JSON.stringify(ROOT_EFFECT_MISSING_MSG)};
 
@@ -72,6 +72,11 @@ const ROOT_EFFECT_MISSING_MSG = ${JSON.stringify(ROOT_EFFECT_MISSING_MSG)};
 function readRate() {
   const parsed = Number.parseFloat(process.env.VIZ_RATE ?? "1");
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 1;
+}
+
+/** Step from idle starts a run already gated, so its first events can be stepped. */
+function readStartPaused() {
+  return process.env.VIZ_START_PAUSED === "1";
 }
 
 async function main() {
@@ -92,7 +97,31 @@ async function main() {
     process.exit(1);
   }
 
-  const onEmit = event => process.stdout.write("TRACE_EVENT:" + JSON.stringify(event) + "\\n");
+  const startPaused = readStartPaused();
+  const scheduler = new _GatedScheduler();
+  let rootFiber = null;
+  const stepper = new _Stepper({
+    scheduler,
+    clock: virtualClock,
+    isFinished: () => rootFiber !== null && rootFiber.unsafePoll() !== null,
+  });
+
+  const onEmit = event => {
+    process.stdout.write("TRACE_EVENT:" + JSON.stringify(event) + "\\n");
+    stepper.noteEvent(); // A step runs until this moves
+  };
+
+  // Commands in on stdin, replies out on stdout. The listener doubles as the
+  // process's keep-alive: a paused program has no task running and no timer
+  // armed, so nothing else would hold the event loop open.
+  const readStdin = _makeLineReader(line => {
+    const command = _decodeCommand(line);
+    if (command === null) return;
+    const reply = _applyCommand(command, { stepper, clock: virtualClock });
+    process.stdout.write(_encodeReply(reply));
+  });
+  process.stdin.setEncoding("utf8");
+  process.stdin.on("data", readStdin);
 
   const now = () => virtualClock.now();
 
@@ -101,12 +130,28 @@ async function main() {
   const tracerLayer = Layer.setTracer(_makeVizTracer(onEmit, now));
   const clockLayer = _makeVizClockLayer(virtualClock);
   const allLayers = Layer.mergeAll(traceLayer, supervisorLayer, tracerLayer, clockLayer, ...requirements);
-  const program = Effect.scoped(rootEffect).pipe(Effect.provide(allLayers));
-  const { promise } = _runProgramFork(program, onEmit, now);
+
+  // Gate before the program is forked, so even its first task is held.
+  if (startPaused) stepper.pause();
+
+  // runFork runs a fiber synchronously until its first yield, and the scheduler
+  // only governs resumption. Yielding first therefore hands the very first
+  // operation to the gate, so a paused start can be stepped from event one.
+  const body = startPaused ? Effect.zipRight(Effect.yieldNow(), rootEffect) : rootEffect;
+  const program = Effect.scoped(body).pipe(Effect.withScheduler(scheduler), Effect.provide(allLayers));
+
+  process.stdout.write(_encodeReply({ reply: "ready", virtualNow: now() }));
+
+  const { fiber, promise } = _runProgramFork(program, onEmit, now);
+  rootFiber = fiber;
   promise.then(
     (result) => console.log("Program completed:", result),
     (error) => console.error("Program failed:", error),
-  );
+  ).finally(() => {
+    // Nothing left to control, so let the event loop drain and the process exit.
+    process.stdin.off("data", readStdin);
+    process.stdin.pause();
+  });
 }
 main();
 `;

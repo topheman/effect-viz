@@ -4,6 +4,10 @@
     "path": "file:///types/trace.d.ts"
   },
   {
+    "url": "/app/runtime/controlChannel.d.ts",
+    "path": "file:///runtime/controlChannel.d.ts"
+  },
+  {
     "url": "/app/runtime/dateShim.d.ts",
     "path": "file:///runtime/dateShim.d.ts"
   },
