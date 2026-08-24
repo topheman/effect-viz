@@ -121,6 +121,39 @@ only be inferred by elimination.
 | 5a | UI: speed combo + playback state matrix | ✅ |
 | 5b | UI: ⏯️ ⏭️ stepper controls (fallback path) | ✅ |
 | 6 | Example programs + explainers | ⬜ |
+| 7 | Tag instrumentation events, with a show/hide toggle | ⬜ |
+
+## Open Decisions
+
+### Instrumentation events in the trace (step 7)
+
+A paused start injects `Effect.yieldNow()` before the program body, so that the
+very first operation is handed to the gate rather than running on the fork's own
+stack. The runtime yields for real, so the Supervisor emits a `fiber:suspend` and
+a matching `fiber:resume (after 0ms)` that the program's author never wrote. The
+same program therefore reads slightly differently depending on whether it was
+started with Play or with Step. For the Basic Example, the marked lines are the
+injected yield:
+
+```diff
+[1] ⚡fiber:forked #2 (root)
++ [2] ⏸️fiber:suspend #2
++ [3] ▶️fiber:resume #2 (after 0ms)
+[4] 🚀effect:started initialization
+[5] ✅effect:ended initialization
+```
+
+`[2]` is the yield handing control back, `[3]` is the same yield returning once
+the first step releases it. It reads `after 0ms` because virtual time is frozen
+while paused, however long the user takes.
+
+Rather than choose between leaving the pair visible and filtering it away, trace
+events will carry an origin — the program's own, or the tool's — and the
+Execution Log will offer a toggle. The Timeline and Fiber Tree keep consuming
+everything, since a suspend that genuinely happened still belongs on a timeline.
+
+This is deferred until after 4b and 6, and is expected to cover more than the
+injected yield: the control channel will likely have a handshake of its own.
 
 ## Step 1: VirtualClock ✅
 
