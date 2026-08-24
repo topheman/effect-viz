@@ -378,6 +378,18 @@ question: what happens when the user clicks step.
 A fiber that can run now must run before time is allowed to move, otherwise a
 step would skip past work that was already due.
 
+#### The timeline must read the clock, not model it
+
+The live cursor was computed by extrapolating from the run's rate: anchor the
+first event, then add wall time multiplied by the rate. That is correct only
+while the clock runs freely. A paused clock kept extrapolating, so the timeline
+grew a bar to eight seconds for a program that was frozen with two events on it,
+and a step moved virtual time in a jump the extrapolation could not see.
+
+The in-browser path holds the clock, so the store now reads it directly and only
+falls back to extrapolation for the WebContainer, where the program runs in
+another process and cannot be paused anyway.
+
 #### Pause has to stop the clock as well as the scheduler
 
 Gating the scheduler stops fibers from running, but virtual time keeps advancing

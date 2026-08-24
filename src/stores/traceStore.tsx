@@ -19,6 +19,11 @@ interface TraceStore {
   clear: () => void;
   /** Virtual ms per wall ms for the current run */
   setRate: (rate: number) => void;
+  /**
+   * Read virtual time straight from the running clock, when there is one to
+   * read. Extrapolating from a rate cannot see a paused or stepped clock.
+   */
+  setNowSource: (nowSource: (() => number) | null) => void;
   /** Current virtual timestamp, in the same units as event timestamps */
   getVirtualNow: () => number;
 }
@@ -33,6 +38,7 @@ export function TraceStoreProvider({ children }: TraceStoreProviderProps) {
   const [events, setEvents] = useState<TraceEvent[]>([]);
   const rateRef = useRef(1);
   const anchorRef = useRef<VirtualAnchor | null>(null);
+  const nowSourceRef = useRef<(() => number) | null>(null);
 
   const addEvent = useCallback((event: TraceEvent) => {
     // Add timestamp if not provided
@@ -50,6 +56,7 @@ export function TraceStoreProvider({ children }: TraceStoreProviderProps) {
 
   const clear = useCallback(() => {
     anchorRef.current = null;
+    nowSourceRef.current = null;
     setEvents([]);
   }, []);
 
@@ -57,8 +64,13 @@ export function TraceStoreProvider({ children }: TraceStoreProviderProps) {
     rateRef.current = rate;
   }, []);
 
+  const setNowSource = useCallback((nowSource: (() => number) | null) => {
+    nowSourceRef.current = nowSource;
+  }, []);
+
   const getVirtualNow = useCallback(
     () =>
+      nowSourceRef.current?.() ??
       computeVirtualNow(anchorRef.current, rateRef.current, performance.now()),
     [],
   );
@@ -69,9 +81,10 @@ export function TraceStoreProvider({ children }: TraceStoreProviderProps) {
       addEvent,
       clear,
       setRate,
+      setNowSource,
       getVirtualNow,
     }),
-    [events, addEvent, clear, setRate, getVirtualNow],
+    [events, addEvent, clear, setRate, setNowSource, getVirtualNow],
   );
 
   return (

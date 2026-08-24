@@ -34,7 +34,12 @@ export interface WebContainerBridge {
 }
 
 export function useEventHandlers(webContainer?: WebContainerBridge | null) {
-  const { addEvent, clear: clearEvents, setRate } = useTraceStore();
+  const {
+    addEvent,
+    clear: clearEvents,
+    setRate,
+    setNowSource,
+  } = useTraceStore();
   const { processEvent, clear: clearFibers } = useFiberStore();
   const { addLog } = useWebContainerLogsStore();
 
@@ -78,6 +83,8 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
     setRate(rate);
 
     if (webContainer?.isReady) {
+      // No clock to read on this path: the program runs in another process.
+      setNowSource(null);
       stepperRef.current = null;
       return webContainer
         .runPlay({
@@ -144,6 +151,9 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
         runningFiberRef.current.unsafePoll() !== null,
     });
     stepperRef.current = stepper;
+    // The timeline follows this clock directly, so it freezes when the stepper
+    // does and jumps when a step moves virtual time.
+    setNowSource(() => virtualClock.now());
     // Gate before the program is forked, so even its first task is held.
     if (startPaused) stepper.pause();
     const now = () => virtualClock.now();
