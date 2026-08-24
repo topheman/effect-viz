@@ -50,18 +50,24 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
    */
   const runIdRef = useRef(0);
   /**
-   * Only the in-browser path can be stepped. The WebContainer runs the program
+   * Only the in-browser path can be stepped: the WebContainer runs the program
    * in another process, which needs a control channel we do not have yet.
+   *
+   * Derived rather than set when a run starts, because Step can *begin* a run —
+   * the button has to know before there is anything to step.
    */
-  const [supportsStepping, setSupportsStepping] = useState(false);
+  const supportsStepping = !webContainer?.isReady;
 
   const handlePlay = ({
     onFirstChunk,
     rate,
+    startPaused = false,
   }: {
     onFirstChunk: () => void;
     /** Virtual ms per wall ms. Fixed for the run: see PlaybackControls. */
     rate: number;
+    /** Gate the scheduler before the program runs, so its first step is yours. */
+    startPaused?: boolean;
   }) => {
     const runId = ++runIdRef.current;
     const isCurrentRun = () => runIdRef.current === runId;
@@ -72,7 +78,6 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
     setRate(rate);
 
     if (webContainer?.isReady) {
-      setSupportsStepping(false);
       stepperRef.current = null;
       return webContainer
         .runPlay({
@@ -95,22 +100,32 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
         });
     }
 
-    return runFallbackPlay({ onFirstChunk, rate, isCurrentRun });
+    return runFallbackPlay({ onFirstChunk, rate, isCurrentRun, startPaused });
   };
 
   function runFallbackPlay({
     onFirstChunk,
     rate,
     isCurrentRun,
+    startPaused,
   }: {
     onFirstChunk: () => void;
     rate: number;
     isCurrentRun: () => boolean;
+    startPaused: boolean;
   }) {
     const { rootEffect, requirements } = programs[selectedProgram];
-    const scoped = Effect.scoped(
-      rootEffect as Effect.Effect<unknown, unknown, unknown>,
-    );
+    // `Effect.runFork` runs a fiber synchronously until its first yield, and the
+    // scheduler only governs resumption. Yielding first therefore hands the very
+    // first operation to the gate, so a paused start can be stepped from event
+    // one instead of after the opening burst.
+    const body = startPaused
+      ? Effect.zipRight(
+          Effect.yieldNow(),
+          rootEffect as Effect.Effect<unknown, unknown, unknown>,
+        )
+      : (rootEffect as Effect.Effect<unknown, unknown, unknown>);
+    const scoped = Effect.scoped(body);
     const onEmit = (event: TraceEvent) => {
       if (!isCurrentRun()) return;
       addEvent(event); // For ExecutionLog
@@ -129,7 +144,8 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
         runningFiberRef.current.unsafePoll() !== null,
     });
     stepperRef.current = stepper;
-    setSupportsStepping(true);
+    // Gate before the program is forked, so even its first task is held.
+    if (startPaused) stepper.pause();
     const now = () => virtualClock.now();
     const traceLayer = makeTraceEmitterLayer(onEmit);
     const supervisorLayer = makeVizLayers(onEmit, now);
@@ -183,7 +199,6 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
     }
     stepperRef.current?.reset();
     stepperRef.current = null;
-    setSupportsStepping(false);
     clearEvents();
     clearFibers();
   };

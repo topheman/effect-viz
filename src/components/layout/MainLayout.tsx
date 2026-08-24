@@ -196,6 +196,27 @@ export function MainLayout() {
     </TooltipProvider>
   );
 
+  const startRun = ({ startPaused }: { startPaused: boolean }) => {
+    const runId = ++runIdRef.current;
+    const isCurrentRun = () => runIdRef.current === runId;
+
+    setPauseReason("user");
+    handlePlay({
+      // A gated run stays paused; only a free-running one reaches "running".
+      onFirstChunk: () => {
+        if (!startPaused) setPlaybackState("running");
+      },
+      rate: speed,
+      startPaused,
+    })
+      .then(() => {
+        if (isCurrentRun()) setPlaybackState("finished");
+      })
+      .catch(() => {
+        if (isCurrentRun()) setPlaybackState("idle");
+      });
+  };
+
   const onPlay = async () => {
     setShowVisualizer(true);
 
@@ -209,18 +230,9 @@ export function MainLayout() {
     if (webContainer.isReady) {
       await webContainer.flushSync(editorContent);
     }
-    const runId = ++runIdRef.current;
-    const isCurrentRun = () => runIdRef.current === runId;
 
     setPlaybackState("starting");
-    setPauseReason("user");
-    handlePlay({ onFirstChunk: () => setPlaybackState("running"), rate: speed })
-      .then(() => {
-        if (isCurrentRun()) setPlaybackState("finished");
-      })
-      .catch(() => {
-        if (isCurrentRun()) setPlaybackState("idle");
-      });
+    startRun({ startPaused: false });
   };
 
   const onPause = () => {
@@ -230,6 +242,16 @@ export function MainLayout() {
   };
 
   const onStep = () => {
+    // From idle, Step starts the program already gated so that its first events
+    // can be stepped through; there is no other way into a paused run.
+    if (playbackState === "idle") {
+      setShowVisualizer(true);
+      startRun({ startPaused: true });
+      setPlaybackState("paused");
+      setPauseReason("user");
+      return;
+    }
+
     const outcome = handleStep();
     if (outcome === null) return;
     if (outcome._tag === "finished") {

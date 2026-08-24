@@ -492,7 +492,7 @@ editor flushes) is orthogonal and can coincide with any of them.
 | | ⏯️ | ⏭️ | ↺ | Speed |
 |---|---|---|---|---|
 | `idle` + booting | – | – | – | ✓ |
-| `idle` ready | ✓ | – | – | ✓ |
+| `idle` ready | ✓ | ✓ (starts paused) | – | ✓ |
 | `starting` | – | – | ✓ | – |
 | `running` | ✓ (pause) | – | ✓ | – |
 | `paused` | ✓ (resume) | ✓ | ✓ | ✓ |
@@ -502,6 +502,17 @@ Speed is locked while running because the WebContainer receives the rate as a
 spawn environment variable and cannot be retuned without restarting. That is a
 temporary limitation: pausing the container will require a host→container control
 channel anyway, and once it exists the rate can travel the same way.
+
+⏭️ is enabled at `idle` because there is otherwise no way *into* a paused run:
+Play starts a free-running program, and by the time the user pauses it, the
+opening events have gone. Step from `idle` starts the program already gated. It
+stays disabled while `running` — stepping remains a pause-mode operation.
+
+Gating alone does not catch the very first events, because `Effect.runFork` runs
+a fiber synchronously until its first yield and the scheduler only governs
+resumption. A paused start therefore yields before the program body, which hands
+the first operation to the gate. The cost is one extra suspend/resume pair in the
+trace, present only on a paused start.
 
 `paused` carries a reason — `user`, `deadlock` or `waiting-external` — because
 only a user pause can be stepped. The other two mean the runtime has nothing left
