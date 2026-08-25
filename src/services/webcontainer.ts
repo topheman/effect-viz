@@ -64,7 +64,7 @@ Example:
 
 /** Runner: imports program.js, injects trace layer, runs. Fixed bootstrap — no user code transformation for tracing. */
 const RUNNER_JS = `import { Effect, Layer } from "effect";
-import { _makeTraceEmitterLayer, _makeVizLayers, _makeVizTracer, _runProgramFork, _VirtualClock, _makeVizClockLayer, _installDateShim, _GatedScheduler, _Stepper, _applyCommand, _decodeCommand, _encodeReply, _makeLineReader } from "./runtime.js";
+import { _makeTraceEmitterLayer, _makeVizLayers, _makeVizTracer, _runProgramFork, _VirtualClock, _makeVizClockLayer, _installDateShim, _GatedScheduler, _Stepper, _applyCommand, _decodeCommand, _encodeReply, _makeLineReader, _makeOriginTagger } from "./runtime.js";
 
 const ROOT_EFFECT_MISSING_MSG = ${JSON.stringify(ROOT_EFFECT_MISSING_MSG)};
 
@@ -106,8 +106,11 @@ async function main() {
     isFinished: () => rootFiber !== null && rootFiber.unsafePoll() !== null,
   });
 
+  // A paused start injects a yield the program never wrote; the tagger marks the
+  // suspend and resume it produces so the log can offer to hide them.
+  const tagOrigin = _makeOriginTagger({ startPaused });
   const onEmit = event => {
-    process.stdout.write("TRACE_EVENT:" + JSON.stringify(event) + "\\n");
+    process.stdout.write("TRACE_EVENT:" + JSON.stringify(tagOrigin(event)) + "\\n");
     stepper.noteEvent(); // A step runs until this moves
   };
 

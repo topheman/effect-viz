@@ -12,6 +12,7 @@ import { GatedScheduler } from "@/runtime/gatedScheduler";
 import { runProgramFork } from "@/runtime/runProgram";
 import { Stepper, type StepOutcome } from "@/runtime/stepper";
 import { makeTraceEmitterLayer } from "@/runtime/tracedRunner";
+import { makeOriginTagger } from "@/runtime/traceOrigin";
 import { VirtualClock } from "@/runtime/virtualClock";
 import { makeVizClockLayer } from "@/runtime/vizClock";
 import { makeVizLayers } from "@/runtime/vizSupervisor";
@@ -170,10 +171,14 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
         )
       : (rootEffect as Effect.Effect<unknown, unknown, unknown>);
     const scoped = Effect.scoped(body);
+    // A paused start injects a yield the program never wrote; the tagger marks
+    // the suspend and resume it produces so the log can offer to hide them.
+    const tagOrigin = makeOriginTagger({ startPaused });
     const onEmit = (event: TraceEvent) => {
       if (!isCurrentRun()) return;
-      addEvent(event); // For ExecutionLog
-      processEvent(event); // For FiberTreeView
+      const tagged = tagOrigin(event);
+      addEvent(tagged); // For ExecutionLog
+      processEvent(tagged); // For FiberTreeView
       stepperRef.current?.noteEvent(); // A step runs until this moves
     };
     // Same virtual clock as the WebContainer path, so both record virtual

@@ -6,8 +6,19 @@ import {
   useState,
 } from "react";
 
+/**
+ * Which stream an entry came from, and how the console treats it.
+ *
+ * - `boot` — the visualizer's own progress while starting the container
+ * - `output` — anything the program wrote to stdout, rendered with ANSI colours
+ * - `error` — shown in the Errors tab rather than the Logs tab
+ * - `control` — commands the page sent the container, echoed back by its
+ *   terminal; hidden unless the user asks to see the visualizer's internals
+ */
+export type WebContainerLogLabel = "boot" | "output" | "error" | "control";
+
 export interface WebContainerLogEntry {
-  label: string;
+  label: WebContainerLogLabel;
   message: string;
   timestamp?: number;
 }
@@ -16,7 +27,7 @@ interface WebContainerLogsStore {
   /** All logged entries in order */
   logs: WebContainerLogEntry[];
   /** Add a new log entry */
-  addLog: (label: string, message: string) => void;
+  addLog: (label: WebContainerLogLabel, message: string) => void;
   /** Clear all logs */
   clear: () => void;
   /** Clear logs only (keeps errors) */
@@ -37,7 +48,7 @@ export function WebContainerLogsStoreProvider({
 }: WebContainerLogsStoreProviderProps) {
   const [logs, setLogs] = useState<WebContainerLogEntry[]>([]);
 
-  const addLog = useCallback((label: string, message: string) => {
+  const addLog = useCallback((label: WebContainerLogLabel, message: string) => {
     setLogs((prev) => [...prev, { label, message, timestamp: Date.now() }]);
   }, []);
 

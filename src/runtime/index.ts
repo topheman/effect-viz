@@ -47,5 +47,8 @@ export {
   type ControlReply as _ControlReply,
 } from "./controlChannel";
 
+// From traceOrigin (Phase 10) — mark the events the visualizer itself caused
+export { makeOriginTagger as _makeOriginTagger } from "./traceOrigin";
+
 // From dateShim (Phase 10) — WebContainer only; see the module doc
 export { installDateShim as _installDateShim } from "./dateShim";

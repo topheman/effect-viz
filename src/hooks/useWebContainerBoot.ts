@@ -159,7 +159,8 @@ export function useWebContainerBoot() {
         spawnAndParseTraceEvents({
           callbacks,
           onFirstChunk,
-          onStdout: (line) => addLog("output", line),
+          onStdout: (line, origin) =>
+            addLog(origin === "tool" ? "control" : "output", line),
           rate,
           startPaused,
           control,

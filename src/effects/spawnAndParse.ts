@@ -9,11 +9,12 @@ import {
   CONTROL_REPLY_PREFIX,
   type ControlCommand,
   type ControlReply,
+  decodeCommand,
   decodeReply,
   encodeCommand,
 } from "@/runtime/controlChannel";
 import { WebContainer } from "@/services/webcontainer";
-import type { TraceEvent } from "@/types/trace";
+import type { TraceEvent, TraceOrigin } from "@/types/trace";
 
 const TRACE_EVENT_PREFIX = "TRACE_EVENT:";
 const PERF_PREFIX = "PERF:";
@@ -91,7 +92,7 @@ export function spawnAndParseTraceEvents({
 }: {
   callbacks: SpawnAndParseCallbacks;
   onFirstChunk: () => void;
-  onStdout?: (line: string) => void;
+  onStdout?: (line: string, origin: TraceOrigin) => void;
   /** Virtual ms per wall ms, read by runner.js. Fixed for the life of the process. */
   rate: number;
   /** Gate the runtime before the program runs, so its first step is the user's. */
@@ -190,11 +191,19 @@ export function spawnAndParseTraceEvents({
             if (reply !== null) control?.handleReply(reply);
             return;
           }
+          // Every process gets a pseudoterminal, and a terminal echoes what is
+          // written to it, so each command we send comes straight back here.
+          // Nothing else writes to this stdin, so a line that decodes as a
+          // command is one of ours rather than the program's output.
+          if (decodeCommand(line) !== null) {
+            onStdout?.(line, "tool");
+            return;
+          }
           // Anything left that is not a trace event comes from something else
           // writing to stdout inside the container (Node errors, stack traces,
           // the program's own console.log).
           if (line.startsWith(TRACE_EVENT_PREFIX) || line.trim() === "") return;
-          onStdout?.(line);
+          onStdout?.(line, "program");
         }),
       ),
       Stream.filterMap((line) => Option.fromNullable(parseTraceEvent(line))),

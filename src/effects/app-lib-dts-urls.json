@@ -32,6 +32,10 @@
     "path": "file:///runtime/traceEmitter.d.ts"
   },
   {
+    "url": "/app/runtime/traceOrigin.d.ts",
+    "path": "file:///runtime/traceOrigin.d.ts"
+  },
+  {
     "url": "/app/runtime/tracedRunner.d.ts",
     "path": "file:///runtime/tracedRunner.d.ts"
   },
