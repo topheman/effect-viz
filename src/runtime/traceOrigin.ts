@@ -13,8 +13,32 @@
  */
 import type { TraceEvent } from "@/types/trace";
 
+/** Events with no origin are the program's, so only an explicit tag hides one. */
+export function isToolEvent(event: TraceEvent): boolean {
+  return event.origin === "tool";
+}
+
+/**
+ * The fiber that *acted*, or null for events that name no fiber.
+ *
+ * A fork names the fiber being created, not the one doing the forking, so its
+ * parent is the actor.
+ */
+function actingFiberId(event: TraceEvent): string | null {
+  if (event.type === "fiber:fork") return event.parentId ?? null;
+  return "fiberId" in event ? event.fiberId : null;
+}
+
 /** Which part of the injected yield is still to come. */
-type Phase = "awaiting-fork" | "awaiting-suspend" | "awaiting-resume" | "done";
+type Phase =
+  /** Nothing seen yet. The run opens with the root's fork, which names the fiber to watch. */
+  | "awaiting-fork"
+  /** The root is known, and its next act should be the injected yield suspending it. */
+  | "awaiting-suspend"
+  /** The yield has suspended. Its matching resume, once the first step releases it, closes the pair. */
+  | "awaiting-resume"
+  /** Nothing left to look for: both tagged, the search abandoned, or the run started with Play. */
+  | "done";
 
 export interface OriginTaggerOptions {
   /** Whether the run was started paused, which is the only source of injection. */
@@ -41,20 +65,24 @@ export function makeOriginTagger({
     if (phase === "done") return event;
 
     if (phase === "awaiting-fork") {
-      // The root's fork opens every run. Its id is what identifies the pair, and
-      // has to be read rather than hardcoded: the two runtimes number fibers
-      // differently.
-      if (event.type === "fiber:fork") {
-        rootFiberId = event.fiberId;
-        phase = "awaiting-suspend";
+      // The root's fork opens every run, and its id is what identifies the pair:
+      // it has to be read rather than hardcoded, because the two runtimes number
+      // fibers differently. Anything else first means this is not the run we
+      // expect, and the next fork would be a child rather than the root.
+      if (event.type !== "fiber:fork") {
+        phase = "done";
+        return event;
       }
+      rootFiberId = event.fiberId;
+      phase = "awaiting-suspend";
       return event;
     }
 
     // Only the root can settle this. Another fiber's events say nothing either
     // way; events naming no fiber — a span opening, a finalizer — mean the
     // program is already working, so they fall through and end the search.
-    if ("fiberId" in event && event.fiberId !== rootFiberId) return event;
+    const actor = actingFiberId(event);
+    if (actor !== null && actor !== rootFiberId) return event;
 
     if (phase === "awaiting-suspend" && event.type === "fiber:suspend") {
       phase = "awaiting-resume";

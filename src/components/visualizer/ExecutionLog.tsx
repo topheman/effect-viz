@@ -9,13 +9,13 @@ import {
 } from "@/components/ui/card";
 import { useShowInternals } from "@/hooks/useShowInternals";
 import { cn } from "@/lib/utils";
+import { isToolEvent } from "@/runtime/traceOrigin";
 import { useTraceStore } from "@/stores/traceStore";
-import {
-  type EffectStartEvent,
-  type FiberForkEvent,
-  type FiberSuspendEvent,
-  type TraceEvent,
-  isToolEvent,
+import type {
+  EffectStartEvent,
+  FiberForkEvent,
+  FiberSuspendEvent,
+  TraceEvent,
 } from "@/types/trace";
 
 function formatError(err: unknown): string {

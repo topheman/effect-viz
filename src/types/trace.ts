@@ -129,11 +129,6 @@ type TraceEventBody =
  */
 export type TraceEvent = TraceEventBody & { origin?: TraceOrigin };
 
-/** Events with no origin are the program's, so only an explicit tag hides one. */
-export function isToolEvent(event: TraceEvent): boolean {
-  return event.origin === "tool";
-}
-
 /**
  * Possible states a fiber can be in.
  * Used by the FiberTreeView to show fiber lifecycle.
