@@ -992,3 +992,17 @@ asserts the virtual times at which each task reports in fall into three batches
 rather than one, structured interruption asserts both children's finalizers ran
 along with the parent's, and deadlock asserts the fiber is still unresolved after
 ten virtual seconds.
+
+### Known issue: the two paths run different Effect versions
+
+The Timeout example exposed a drift the other programs never revealed. The
+container's `package.json` asks for `"effect": "^3.19.15"`, so it installs
+whatever 3.x is current — 3.22.1 today — while the in-browser path bundles the
+version this repo locks, 3.19.15. The two disagree about the fiber that loses a
+timeout race: on 3.19.15 its exit is an interrupt, on 3.22.1 a success. Since the
+Supervisor labels a fiber's end from its exit, the same program traces
+`fiber:interrupt` in the browser and `fiber:end` in the container.
+
+Left as is for now, to be settled by a separate upgrade of `effect` — at which
+point the container's dependency should be pinned to the app's own version rather
+than a caret range, so the two paths cannot drift again.
