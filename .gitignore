@@ -32,3 +32,6 @@ public/esbuild.wasm
 .opencode/package-lock.json
 
 src/types/editor-bundled-definitions.d.ts
+
+# Worktrees created by t3code / Claude Code
+.claude/worktrees
