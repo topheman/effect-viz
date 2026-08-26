@@ -3,7 +3,16 @@
  * These demonstrate different Effect patterns with tracing.
  */
 
-import { Context, Effect, Fiber, Layer, Ref, Schedule } from "effect";
+import {
+  Context,
+  Deferred,
+  Duration,
+  Effect,
+  Fiber,
+  Layer,
+  Ref,
+  Schedule,
+} from "effect";
 
 import { addFinalizer, acquireRelease, retry } from "@/runtime";
 
@@ -315,6 +324,155 @@ export const loggerWithRequirementsExample = Effect.gen(function* () {
 });
 
 // =============================================================================
+// Cooperative Interleaving: fibers take turns at yield points
+// =============================================================================
+
+/**
+ * Two fibers that never sleep, yet still interleave.
+ */
+export const interleavingExample = Effect.gen(function* () {
+  const worker = (label: string) =>
+    Effect.gen(function* () {
+      for (let step = 1; step <= 3; step++) {
+        yield* Effect.withSpan(`${label}-step-${step}`)(
+          Effect.sync(() => console.log(`${label} step ${step}`)),
+        );
+        // Hand the runtime back. Drop this line and the whole loop runs to the
+        // end before the other fiber gets a single turn.
+        yield* Effect.yieldNow();
+      }
+      return `${label} done`;
+    });
+
+  // Neither fiber sleeps, yet they still alternate: Effect is concurrent, not
+  // parallel, so a fiber keeps the runtime until it yields.
+  const a = yield* Effect.fork(worker("A"));
+  const b = yield* Effect.fork(worker("B"));
+  return [yield* Fiber.join(a), yield* Fiber.join(b)];
+});
+
+// =============================================================================
+// Bounded Concurrency: Effect.all with a concurrency limit
+// =============================================================================
+
+/**
+ * Five tasks run two at a time.
+ * Effect.all runs a whole collection; `concurrency` is what stops it from
+ * starting everything at once.
+ */
+export const boundedConcurrencyExample = Effect.gen(function* () {
+  const task = (id: number) =>
+    Effect.withSpan(`task-${id}`)(
+      Effect.gen(function* () {
+        yield* Effect.sleep("500 millis");
+        yield* Effect.sync(() => console.log(`task ${id} done`));
+        return id;
+      }),
+    );
+
+  // Tasks 3 and 4 only start once 1 and 2 are done: two fibers are alive at a
+  // time, not five. Use "unbounded" to lift the limit.
+  return yield* Effect.all([task(1), task(2), task(3), task(4), task(5)], {
+    concurrency: 2,
+  });
+});
+
+// =============================================================================
+// Structured Interruption: cancelling a parent unwinds its children
+// =============================================================================
+
+/**
+ * One interrupt at the top, and everything below it unwinds.
+ * Interruption is structured: children are cancelled with their parent, and
+ * the finalizers registered along the way still run, in reverse order.
+ */
+export const structuredInterruptionExample = Effect.gen(function* () {
+  const child = (label: string) =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        yield* addFinalizer(() => Effect.sync(() => {}), `${label}-cleanup`);
+        // Far longer than the program lasts: this sleep never completes.
+        yield* Effect.withSpan(label)(Effect.sleep("10 seconds"));
+      }),
+    );
+
+  const parent = yield* Effect.fork(
+    Effect.scoped(
+      Effect.gen(function* () {
+        yield* addFinalizer(() => Effect.sync(() => {}), "parent-cleanup");
+        yield* Effect.fork(child("child-1"));
+        yield* Effect.fork(child("child-2"));
+        yield* Effect.sleep("10 seconds");
+      }),
+    ),
+  );
+
+  yield* Effect.sleep("300 millis");
+  // The children are never named here; cancelling their parent is enough.
+  yield* Fiber.interrupt(parent);
+  return "parent and children interrupted";
+});
+
+// =============================================================================
+// Timeout: a deadline measured on the program's own clock
+// =============================================================================
+
+/**
+ * A deadline that interrupts work which takes too long.
+ * Effect.timeout reads the same clock the program sleeps on, so slowing
+ * playback stretches the work and the deadline alike and the outcome holds.
+ */
+export const timeoutExample = Effect.gen(function* () {
+  const withDeadline = (label: string, work: Duration.DurationInput) =>
+    Effect.withSpan(label)(Effect.sleep(work)).pipe(
+      Effect.timeout("1 second"),
+      Effect.as(`${label} finished`),
+      // A missed deadline fails the effect, so recover to keep going.
+      Effect.catchAll(() => Effect.succeed(`${label} timed out`)),
+    );
+
+  const quick = yield* withDeadline("quick-task", "300 millis");
+  const slow = yield* withDeadline("slow-task", "2 seconds");
+  return { quick, slow };
+});
+
+// =============================================================================
+// Deadlock: two fibers waiting on each other
+// =============================================================================
+
+/**
+ * A program that never finishes, on purpose.
+ * A Deferred is a value a fiber can wait for. Here each fiber waits for the
+ * one the other would complete, so no fiber can ever run again. Step will
+ * report that nothing can run; Reset stops it.
+ */
+export const deadlockExample = Effect.gen(function* () {
+  const first = yield* Deferred.make<string>();
+  const second = yield* Deferred.make<string>();
+
+  yield* Effect.fork(
+    Effect.withSpan("waits-for-second")(
+      Effect.gen(function* () {
+        const value = yield* Deferred.await(second);
+        yield* Deferred.succeed(first, value);
+      }),
+    ),
+  );
+
+  yield* Effect.fork(
+    Effect.withSpan("waits-for-first")(
+      Effect.gen(function* () {
+        const value = yield* Deferred.await(first);
+        yield* Deferred.succeed(second, value);
+      }),
+    ),
+  );
+
+  // Never returns: both fibers are parked on a Deferred nobody will complete.
+  return yield* Deferred.await(first);
+});
+
+// =============================================================================
 // Program Registry (with source code for display)
 // =============================================================================
 
@@ -432,6 +590,37 @@ export const rootEffect = Effect.gen(function* () {
 export const requirements = [];
 `,
   },
+  interleaving: {
+    name: "Cooperative Interleaving",
+    description: "Two fibers taking turns at yield points",
+    rootEffect: interleavingExample,
+    requirements: [] as const,
+    source: `import { Effect, Fiber } from "effect";
+
+export const rootEffect = Effect.gen(function* () {
+  const worker = (label: string) =>
+    Effect.gen(function* () {
+      for (let step = 1; step <= 3; step++) {
+        yield* Effect.withSpan(\`\${label}-step-\${step}\`)(
+          Effect.sync(() => console.log(\`\${label} step \${step}\`))
+        );
+        // Hand the runtime back. Drop this line and the whole loop runs to the
+        // end before the other fiber gets a single turn.
+        yield* Effect.yieldNow();
+      }
+      return \`\${label} done\`;
+    });
+
+  // Neither fiber sleeps, yet they still alternate: Effect is concurrent, not
+  // parallel, so a fiber keeps the runtime until it yields.
+  const a = yield* Effect.fork(worker("A"));
+  const b = yield* Effect.fork(worker("B"));
+  return [yield* Fiber.join(a), yield* Fiber.join(b)];
+});
+
+export const requirements = [];
+`,
+  },
   racing: {
     name: "Racing",
     description:
@@ -462,6 +651,73 @@ export const rootEffect = Effect.gen(function* () {
   yield* Fiber.interrupt(slowRunner);
 
   return winner;
+});
+
+export const requirements = [];
+`,
+  },
+  boundedConcurrency: {
+    name: "Bounded Concurrency",
+    description: "Effect.all running five tasks two at a time",
+    rootEffect: boundedConcurrencyExample,
+    requirements: [] as const,
+    source: `import { Effect } from "effect";
+
+export const rootEffect = Effect.gen(function* () {
+  const task = (id: number) =>
+    Effect.withSpan(\`task-\${id}\`)(
+      Effect.gen(function* () {
+        yield* Effect.sleep("500 millis");
+        yield* Effect.sync(() => console.log(\`task \${id} done\`));
+        return id;
+      })
+    );
+
+  // Tasks 3 and 4 only start once 1 and 2 are done: two fibers are alive at a
+  // time, not five. Use "unbounded" to lift the limit.
+  return yield* Effect.all([task(1), task(2), task(3), task(4), task(5)], {
+    concurrency: 2,
+  });
+});
+
+export const requirements = [];
+`,
+  },
+  structuredInterruption: {
+    name: "Structured Interruption",
+    description: "Interrupt a parent, children and finalizers unwind",
+    rootEffect: structuredInterruptionExample,
+    requirements: [] as const,
+    source: `import { Effect, Fiber } from "effect";
+// Use @/runtime (not Effect.addFinalizer) so the visualizer can trace finalizers
+import { addFinalizer } from "@/runtime";
+
+export const rootEffect = Effect.gen(function* () {
+  const child = (label: string) =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        yield* addFinalizer(() => Effect.sync(() => {}), \`\${label}-cleanup\`);
+        // Far longer than the program lasts: this sleep never completes.
+        yield* Effect.withSpan(label)(Effect.sleep("10 seconds"));
+      })
+    );
+
+  const parent = yield* Effect.fork(
+    Effect.scoped(
+      Effect.gen(function* () {
+        yield* addFinalizer(() => Effect.sync(() => {}), "parent-cleanup");
+        yield* Effect.fork(child("child-1"));
+        yield* Effect.fork(child("child-2"));
+        yield* Effect.sleep("10 seconds");
+      })
+    )
+  );
+
+  yield* Effect.sleep("300 millis");
+  // The children are never named here; cancelling their parent is enough.
+  // Every finalizer still runs, in reverse order.
+  yield* Fiber.interrupt(parent);
+  return "parent and children interrupted";
 });
 
 export const requirements = [];
@@ -562,6 +818,32 @@ export const rootEffect = Effect.gen(function* () {
 export const requirements = [];
 `,
   },
+  timeout: {
+    name: "Timeout",
+    description: "A deadline that interrupts work taking too long",
+    rootEffect: timeoutExample,
+    requirements: [] as const,
+    source: `import { Duration, Effect } from "effect";
+
+export const rootEffect = Effect.gen(function* () {
+  const withDeadline = (label: string, work: Duration.DurationInput) =>
+    Effect.withSpan(label)(Effect.sleep(work)).pipe(
+      Effect.timeout("1 second"),
+      Effect.as(\`\${label} finished\`),
+      // A missed deadline fails the effect, so recover to keep going.
+      Effect.catchAll(() => Effect.succeed(\`\${label} timed out\`))
+    );
+
+  // The deadline is read from the same clock the program sleeps on, so slowing
+  // playback stretches the work and the deadline alike: quick still wins.
+  const quick = yield* withDeadline("quick-task", "300 millis");
+  const slow = yield* withDeadline("slow-task", "2 seconds");
+  return { quick, slow };
+});
+
+export const requirements = [];
+`,
+  },
   basicFinalizers: {
     name: "Basic Finalizers",
     description:
@@ -648,6 +930,44 @@ export const rootEffect = Effect.gen(function* () {
 });
 
 export const requirements = [loggerLayer];
+`,
+  },
+  deadlock: {
+    name: "Deadlock (never finishes)",
+    description: "Two fibers each waiting on the other, forever",
+    rootEffect: deadlockExample,
+    requirements: [] as const,
+    source: `import { Deferred, Effect } from "effect";
+
+export const rootEffect = Effect.gen(function* () {
+  // A Deferred is a value a fiber can wait for, completed by another fiber.
+  const first = yield* Deferred.make<string>();
+  const second = yield* Deferred.make<string>();
+
+  yield* Effect.fork(
+    Effect.withSpan("waits-for-second")(
+      Effect.gen(function* () {
+        const value = yield* Deferred.await(second);
+        yield* Deferred.succeed(first, value);
+      })
+    )
+  );
+
+  yield* Effect.fork(
+    Effect.withSpan("waits-for-first")(
+      Effect.gen(function* () {
+        const value = yield* Deferred.await(first);
+        yield* Deferred.succeed(second, value);
+      })
+    )
+  );
+
+  // Each fiber waits for the one the other would complete, so no fiber can ever
+  // run again. Step reports that nothing can run; Reset stops the program.
+  return yield* Deferred.await(first);
+});
+
+export const requirements = [];
 `,
   },
 } as const;

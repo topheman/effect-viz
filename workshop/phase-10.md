@@ -120,7 +120,7 @@ only be inferred by elimination.
 | 4b | Control channel for the WebContainer | ✅ |
 | 5a | UI: speed combo + playback state matrix | ✅ |
 | 5b | UI: ⏯️ ⏭️ stepper controls (fallback path) | ✅ |
-| 6 | Example programs + explainers | ⬜ |
+| 6 | Example programs + explainers | ✅ |
 | 7 | Tag instrumentation events, with a show/hide toggle | ✅ |
 
 ## Step 1: VirtualClock ✅
@@ -922,3 +922,73 @@ program's output rather than the protocol — with both available to anyone who
 wants to see how the visualizer works. That last part is worth keeping for step 6:
 turning the internals on and stepping is the clearest explanation of the control
 channel the app can give.
+
+## Step 6: Example programs ✅
+
+The ten programs the visualizer shipped with were all sleep-shaped: every fork is
+followed straight away by an `Effect.sleep`, so the trace reads fork, fork,
+suspend, suspend, wait, resume, resume. That is the speed control's territory —
+those programs are already slow, and slowing them further only stretches gaps the
+reader could see anyway. The stepper earns its keep in the burst *between* the
+sleeps, and no example had one.
+
+Choosing what to add by concept rather than by what would look busy, five things
+turned out to be missing outright. `Effect.yieldNow`, `Effect.all`, its
+`concurrency` option, `Deferred` and `Effect.timeout` appeared nowhere in the set.
+Interruption did appear, but only as `Fiber.interrupt` on two flat siblings in
+Racing: a hierarchy was never cancelled, and a finalizer never unwound on anything
+but the success path.
+
+| Program | Teaches |
+|---------|---------|
+| Cooperative Interleaving | Fibers take turns at yield points; concurrency is not parallelism |
+| Bounded Concurrency | `Effect.all` with a `concurrency` limit, rather than hand-rolled forks |
+| Structured Interruption | Cancelling a parent cancels its children, and finalizers still run |
+| Timeout | A deadline read from the same clock the program sleeps on |
+| Deadlock | `Deferred`, and what a fiber deadlock is |
+
+### Created/Modified Files
+
+| File | Changes |
+|------|---------|
+| `src/lib/programs.ts` | Five effects and their registry entries, with the lesson in the code |
+| `src/lib/programs.test.ts` | 5 tests asserting each example does what its comments claim |
+| `src/lib/programCache.test.ts` | Fixture extended to the new keys |
+
+### Key Learnings
+
+#### The explanation belongs in the program, not beside it
+
+Each entry carries a `description`, and it renders nowhere — so there was no
+explainer surface to extend, only one to choose. It stays a label, a few words in
+the picker, and the teaching text lives as short comments on the lines it
+describes. Someone reading `concurrency: 2` wants to be told there that tasks 3
+and 4 wait for 1 and 2; a paragraph in a panel they are not looking at would not
+reach them.
+
+#### Every example is written twice
+
+A program exists as a real effect, which the in-browser path runs, and as a source
+string, which the editor shows and the container executes. Nothing links them, so
+the two can drift silently — and the string is invisible to `tsc`. Writing each
+`source` out to a scratch file under `src/` and running the project's own
+typecheck over it catches both a syntax slip and an API that has moved. All
+fifteen pass.
+
+#### A program that never finishes is a legitimate lesson
+
+Deadlock hangs by design, which felt wrong until it was clear that hanging is the
+concept. It is also the first program that can reach the stepper's `noProgress`
+outcome: until now the "Nothing can run" pause reason built in step 4a existed
+without a single example able to produce it.
+
+### Verification
+
+The tests drive the same layers the app does, on a `VirtualClock` the test
+advances, so a program with seconds of sleeping in it runs in milliseconds. They
+check the claims the comments make rather than the shape of the output:
+interleaving asserts the two fibers alternate step for step, bounded concurrency
+asserts the virtual times at which each task reports in fall into three batches
+rather than one, structured interruption asserts both children's finalizers ran
+along with the parent's, and deadlock asserts the fiber is still unresolved after
+ten virtual seconds.

@@ -12,12 +12,17 @@ const mockPrograms: ProgramsMap = {
   multiStep: { source: "// multiStep template" },
   nestedForks: { source: "// nestedForks template" },
   racing: { source: "// racing template" },
+  interleaving: { source: "// interleaving template" },
+  boundedConcurrency: { source: "// boundedConcurrency template" },
+  structuredInterruption: { source: "// structuredInterruption template" },
   failureAndRecovery: { source: "// failureAndRecovery template" },
   retry: { source: "// retry template" },
   retryExponentialBackoff: { source: "// retryExponentialBackoff template" },
+  timeout: { source: "// timeout template" },
   basicFinalizers: { source: "// basicFinalizers template" },
   acquireRelease: { source: "// acquireRelease template" },
   loggerWithRequirements: { source: "// loggerWithRequirements template" },
+  deadlock: { source: "// deadlock template" },
 };
 
 describe("programCache", () => {
