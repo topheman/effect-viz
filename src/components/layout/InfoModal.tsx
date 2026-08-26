@@ -113,7 +113,7 @@ export function InfoModal({
         </DialogHeader>
 
         <div
-          className={`flex max-h-[60vh] flex-col gap-6 overflow-y-auto py-4`}
+          className={`flex max-h-[60vh] flex-col gap-4 overflow-y-auto py-4`}
           data-testid="info-modal-body"
         >
           {/* About the project */}
