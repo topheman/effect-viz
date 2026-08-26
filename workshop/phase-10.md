@@ -1,6 +1,6 @@
 # Phase 10: Slow Mode and Stepper (issue #13)
 
-**Status**: 🚧 IN PROGRESS — speed, pause, step and origin tagging are done; what remains is the examples and explainers (6)
+**Status**: ✅ COMPLETE — all steps done. Follow-up work continues in [#18](https://github.com/topheman/effect-viz/issues/18) (Effect upgrade + trace audit)
 
 Issue [#13](https://github.com/topheman/effect-viz/issues/13) asks for a slow mode:
 _"It goes too fast so a slow stepper would be cool like Browser Debugger is."_

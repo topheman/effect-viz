@@ -3,9 +3,11 @@
 **Quick Context**: See [`workshop/README.md`](workshop/README.md) for full documentation.
 
 ## Current Phase
-**Phase 10**: IN PROGRESS 🚧 — slow mode & stepper (issue #13). Speed, pause and step work on both paths and instrumentation events are tagged; what remains is the examples and explainers (6)
+**Phase 10**: COMPLETE ✅ — slow mode & stepper (issue #13). All steps done: VirtualClock, Effect Clock layer, Date shim, virtual timestamps, GatedScheduler + step ladder, control channel for the WebContainer, speed combo + stepper controls, origin tagging with show-internals toggle, and five new example programs.
 
-**Recent**: trace events carry an origin — the program's own, or the visualizer's — so the yield injected into a paused start can be hidden, along with the control commands the container's terminal echoes back. One shared "show internals" preference drives both panels. See [`workshop/phase-10.md`](workshop/phase-10.md).
+**Next up (not yet a phase)**: [#18](https://github.com/topheman/effect-viz/issues/18) — upgrade `effect` to latest 3.x; the trace-behaviour changes between 3.19 and 3.22 need an audit (e.g. timeout-loser exits as success instead of interrupt).
+
+**Recent**: five new examples teach what no sleep-shaped program could — `Effect.yieldNow` interleaving, bounded concurrency, structured interruption, timeout on the shared clock, and a Deferred deadlock that reaches the stepper's `noProgress`. See [`workshop/phase-10.md`](workshop/phase-10.md).
 
 ## Completed Phases
 
@@ -116,6 +118,19 @@
 - Finalizers run LIFO; use Effect.scoped(effect) so programs have a scope
 - acquireReleaseWithTrace built on addFinalizerWithTrace; AcquireEvent for acquire outcome, FinalizerEvent for release
 
+### Key Learning (Phase 10)
+- Two clocks: **wall** (performance.now, unshimmable) vs **virtual** (the program's Clock); connected by `rate`; re-anchor on every rate change so time never jumps
+- Pause must **park** timers, not `setTimeout(d/0)` — Infinity overflows to 1ms and wakes every sleeper instantly
+- Scaling the Clock preserves semantics: the program only observes virtual time, so slow motion is genuine
+- Speed stretches sleeps; the **stepper handles bursts** between them, which no rate can stretch
+- Step is a pause-mode operation; "release one task" is the primitive, the button releases until one visible trace event (`maxTasks` bounds it)
+- Never answer `shouldYield` while paused — the released task yields forever and the stepper livelocks
+- Pause sets rate to 0 AND gates the scheduler; Reset must play() before interrupting or the interrupt queues forever
+- A step needs a full event-loop turn to settle; two steps in one turn report false `noProgress`
+- The page models the container's clock (MirroredClock): extrapolate between readings, snap forward-only on each reply's `virtualNow`
+- stdin listener is the container process's keep-alive — ref'd while paused, released when the root promise settles
+- Origin tagging: absent means the program's own; only `"tool"` is ever set, so unknown events are shown, never hidden
+
 ## Design Decisions
 - **Service + Layer** pattern for TraceEmitter
 - R channel (Requirements) introduced early
@@ -142,6 +157,10 @@
 - `src/hooks/useSpeed.ts` - Speed options, localStorage persistence (Phase 10)
 - `src/runtime/gatedScheduler.ts` - GatedScheduler: pause/step the runtime by gating tasks (Phase 10)
 - `src/runtime/stepper.ts` - Stepper: the step ladder over scheduler + clock (Phase 10)
+- `src/runtime/controlChannel.ts` - Command/reply codecs over container stdin/stdout (Phase 10)
+- `src/lib/mirroredClock.ts` - Page's model of the container's virtual clock (Phase 10)
+- `src/lib/containerController.ts` - Clicks → commands; steps resolve on reply (Phase 10)
+- `src/runtime/traceOrigin.ts` - makeOriginTagger: finds the injected yield (Phase 10)
 
 ## Learning Phases
 1. ~~**Phase 1**: Lazy evaluation, success/failure~~ ✅ See [`workshop/phase-1.md`](workshop/phase-1.md)
@@ -153,7 +172,7 @@
 7. ~~**Phase 7**: Custom Tracer for Effect.withSpan~~ ✅ See [`workshop/phase-7.md`](workshop/phase-7.md)
 8. ~~**Phase 8**: Sleep visibility via onSuspend/onResume~~ ✅ See [`workshop/phase-8.md`](workshop/phase-8.md)
 9. ~~**Phase 9**: retry with Schedule API~~ ✅ See [`workshop/phase-9.md`](workshop/phase-9.md)
-10. **Phase 10**: Slow mode & stepper (issue #13) 🚧 See [`workshop/phase-10.md`](workshop/phase-10.md)
+10. ~~**Phase 10**: Slow mode & stepper (issue #13)~~ ✅ See [`workshop/phase-10.md`](workshop/phase-10.md)
 
 ## Documentation
 - [`workshop/README.md`](workshop/README.md) - Documentation overview
