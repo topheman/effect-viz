@@ -993,16 +993,19 @@ rather than one, structured interruption asserts both children's finalizers ran
 along with the parent's, and deadlock asserts the fiber is still unresolved after
 ten virtual seconds.
 
-### Known issue: the two paths run different Effect versions
+### Known issue: the two paths ran different Effect versions
 
 The Timeout example exposed a drift the other programs never revealed. The
-container's `package.json` asks for `"effect": "^3.19.15"`, so it installs
-whatever 3.x is current — 3.22.1 today — while the in-browser path bundles the
-version this repo locks, 3.19.15. The two disagree about the fiber that loses a
+container's `package.json` asked for `"effect": "^3.19.15"`, so it installed
+whatever 3.x was current — 3.22.1 at the time — while the in-browser path bundles
+the version this repo locks, 3.19.15. The two disagreed about the fiber that loses a
 timeout race: on 3.19.15 its exit is an interrupt, on 3.22.1 a success. Since the
-Supervisor labels a fiber's end from its exit, the same program traces
+Supervisor labels a fiber's end from its exit, the same program traced
 `fiber:interrupt` in the browser and `fiber:end` in the container.
 
-Left as is for now, to be settled by a separate upgrade of `effect` — at which
-point the container's dependency should be pinned to the app's own version rather
-than a caret range, so the two paths cannot drift again.
+Settled by [#17](https://github.com/topheman/effect-viz/pull/17): pinning the
+container to the app's own exact version rather than a caret range, so the two
+paths cannot drift again — both now run 3.19.15. The upgrade of `effect` itself
+to the latest 3.x remains open as separate work in
+[#18](https://github.com/topheman/effect-viz/issues/18), where the
+trace-behaviour changes between 3.19 and 3.22 will need an audit.
