@@ -442,9 +442,9 @@ export const timeoutExample = Effect.gen(function* () {
 
 /**
  * A program that never finishes, on purpose.
- * A Deferred is a value a fiber can wait for. Here each fiber waits for the
- * one the other would complete, so no fiber can ever run again. Step will
- * report that nothing can run; Reset stops it.
+ *
+ * A Deferred is a value a fiber can wait for, completed by another fiber. Each fiber here waits for the one the other would complete, so no fiber can ever run again.
+ * Step reports that nothing can run; Reset stops the program.
  */
 export const deadlockExample = Effect.gen(function* () {
   const first = yield* Deferred.make<string>();
@@ -468,7 +468,6 @@ export const deadlockExample = Effect.gen(function* () {
     ),
   );
 
-  // Never returns: both fibers are parked on a Deferred nobody will complete.
   return yield* Deferred.await(first);
 });
 
@@ -939,8 +938,9 @@ export const requirements = [loggerLayer];
     requirements: [] as const,
     source: `import { Deferred, Effect } from "effect";
 
+// A Deferred is a value a fiber can wait for, completed by another fiber. Each fiber here waits for the one the other would complete, so no fiber can ever run again.
+// Step reports that nothing can run; Reset stops the program.
 export const rootEffect = Effect.gen(function* () {
-  // A Deferred is a value a fiber can wait for, completed by another fiber.
   const first = yield* Deferred.make<string>();
   const second = yield* Deferred.make<string>();
 
@@ -962,8 +962,6 @@ export const rootEffect = Effect.gen(function* () {
     )
   );
 
-  // Each fiber waits for the one the other would complete, so no fiber can ever
-  // run again. Step reports that nothing can run; Reset stops the program.
   return yield* Deferred.await(first);
 });
 
