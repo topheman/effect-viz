@@ -241,9 +241,10 @@ export function MainLayout() {
   };
 
   const onStep = async () => {
-    // From idle, Step starts the program already gated so that its first events
-    // can be stepped through; there is no other way into a paused run.
-    if (playbackState === "idle") {
+    // With nothing running, Step starts the program already gated so that its
+    // first events can be stepped through; there is no other way into a paused
+    // run. As with Play, a finished program starts over.
+    if (playbackState === "idle" || playbackState === "finished") {
       setShowVisualizer(true);
       // Same flush as Play: the container would otherwise step through whatever
       // it was last given rather than what is on screen.

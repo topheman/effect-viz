@@ -88,11 +88,12 @@ export function PlaybackControls({
   const canPlay =
     (state === "idle" || state === "paused" || state === "finished") &&
     !isPlayDisabled;
-  // Step from idle starts the program already gated, so its very first events
-  // can be stepped through. Otherwise stepping needs a live, frozen program; a
-  // stuck pause has nothing the runtime could release.
+  // Step from a stopped program starts it already gated, so its very first
+  // events can be stepped through; like Play, that includes re-running one that
+  // has finished. Otherwise stepping needs a live, frozen program, and a stuck
+  // pause has nothing the runtime could release.
   const canStep =
-    (state === "idle" && !isPlayDisabled) ||
+    ((state === "idle" || state === "finished") && !isPlayDisabled) ||
     (state === "paused" && pauseReason === "user");
   const canPause = isRunning;
   // Nothing to reset before the first run.
@@ -243,7 +244,7 @@ export function PlaybackControls({
             <TooltipContent>
               {state === "paused" && pauseReason === "stuck"
                 ? "Nothing can run: deadlocked, or waiting on something outside"
-                : state === "idle"
+                : state === "idle" || state === "finished"
                   ? "Start paused, then step"
                   : "Step"}
             </TooltipContent>
