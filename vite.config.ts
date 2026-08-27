@@ -52,13 +52,24 @@ export default defineConfig({
             urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/npm\/monaco-editor@.*/i,
             handler: "CacheFirst",
             options: {
-              cacheName: "monaco-editor-cdn",
+              // Bumped from "monaco-editor-cdn", whose entries are unreadable.
+              cacheName: "monaco-editor-cdn-v2",
+              // Refetch as CORS so the cached response stays readable. Monaco arrives
+              // through a plain <script src>, so the request is no-cors and a plain
+              // fetch yields an opaque response - which cache.match() then refuses to
+              // return under the COEP: require-corp header WebContainer needs. See #21.
+              fetchOptions: {
+                mode: "cors",
+                credentials: "omit",
+              },
               expiration: {
                 maxEntries: 100,
                 maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
               },
               cacheableResponse: {
-                statuses: [0, 200],
+                // 200 only: an opaque response reports status 0, and caching one
+                // poisons the whole cache under COEP.
+                statuses: [200],
               },
             },
           },

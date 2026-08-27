@@ -101,12 +101,22 @@ function configureMonacoPaths(
 }
 
 /**
+ * Load Monaco itself. Rejects when its CDN assets can't be fetched, so this is a
+ * typed error rather than a defect - callers are expected to carry on without types.
+ * The rejection value is an unhelpful script `error` event, hence the fixed message.
+ */
+const initMonaco = Effect.tryPromise({
+  try: () => loader.init(),
+  catch: (cause) => new Error("Monaco failed to load from the CDN", { cause }),
+});
+
+/**
  * Acquire Monaco types for mobile fallback (no WebContainer).
  * Fetches fallback-types.d.ts (Effect stubs) and app libs from public/app/.
  */
 export const acquireMonacoTypesFallback: Effect.Effect<void, Error> =
   Effect.gen(function* () {
-    const monaco = yield* Effect.promise(() => loader.init());
+    const monaco = yield* initMonaco;
     configureMonacoPaths(monaco);
 
     const fallbackContent = yield* Effect.tryPromise({
@@ -124,11 +134,11 @@ export const acquireMonacoTypesFallback: Effect.Effect<void, Error> =
  */
 export const acquireMonacoTypes: Effect.Effect<
   void,
-  never,
+  Error,
   WebContainerHandle
 > = Effect.gen(function* () {
   const handle = yield* WebContainer;
-  const monaco = yield* Effect.promise(() => loader.init());
+  const monaco = yield* initMonaco;
   configureMonacoPaths(monaco, {
     effect: ["node_modules/effect/dist/dts/index.d.ts"],
     "effect/*": ["node_modules/effect/dist/dts/*"],

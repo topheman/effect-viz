@@ -6,6 +6,12 @@ import { cn } from "@/lib/utils";
 
 const COUNTDOWN_SECONDS = 5;
 
+/**
+ * Runtime caches replaced by a newer, differently named one (see vite.config.ts).
+ * The service worker never touches them again, so drop them to reclaim the storage.
+ */
+const OUTDATED_RUNTIME_CACHES = ["monaco-editor-cdn"];
+
 export function PwaUpdatePrompt() {
   const {
     offlineReady: [offlineReady],
@@ -15,6 +21,15 @@ export function PwaUpdatePrompt() {
 
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (!("caches" in window)) {
+      return;
+    }
+    for (const name of OUTDATED_RUNTIME_CACHES) {
+      void caches.delete(name);
+    }
+  }, []);
 
   const handleCancel = () => {
     setNeedRefresh(false);
