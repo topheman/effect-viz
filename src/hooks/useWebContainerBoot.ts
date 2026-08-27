@@ -72,10 +72,11 @@ export function useWebContainerBoot() {
           addLog("boot", "Fallback types acquired");
         })
         .catch((err) => {
+          // Stay in fallback rather than erroring out: types are an editor nicety,
+          // and the visualizer still runs the example programs in-browser without them.
           const msg = err instanceof Error ? err.message : String(err);
           addLog("boot", `Fallback types failed: ${msg}`);
-          setStatus("error");
-          setError(msg);
+          setStatus("fallback");
         });
       return () => {};
     }
@@ -93,9 +94,18 @@ export function useWebContainerBoot() {
       addLog("boot", "Boot complete, ready");
       console.log("[useWebContainerBoot] Boot complete, status=ready");
       addLog("boot", "Acquiring Monaco types...");
+      // Keep the container alive when types can't be acquired: letting the failure
+      // through would kill the boot fiber, close its scope and tear the WebContainer
+      // down. A degraded editor beats a dead app.
       yield* acquireMonacoTypes.pipe(
         Effect.tap(() => Effect.sync(() => addLog("boot", "Types acquired"))),
         Effect.tap(() => Effect.sync(() => setTypesReady(true))),
+        Effect.catchAll((err) =>
+          Effect.sync(() => {
+            addLog("boot", `Types unavailable: ${err.message}`);
+            console.error("[useWebContainerBoot] Type acquisition failed", err);
+          }),
+        ),
       );
       yield* Effect.never;
     }).pipe(
