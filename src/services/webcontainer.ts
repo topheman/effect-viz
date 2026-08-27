@@ -27,7 +27,7 @@ const PACKAGE_JSON = `{
     "run": "pnpm exec tsx program.ts"
   },
   "dependencies": {
-    "effect": "3.19.15",
+    "effect": "${__EFFECT_VERSION__}",
     "tsx": "^4.19.0",
     "typescript": "~5.9.3"
   }

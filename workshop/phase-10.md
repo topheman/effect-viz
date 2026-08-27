@@ -1005,7 +1005,7 @@ Supervisor labels a fiber's end from its exit, the same program traced
 
 Settled by [#17](https://github.com/topheman/effect-viz/pull/17): pinning the
 container to the app's own exact version rather than a caret range, so the two
-paths cannot drift again — both now run 3.19.15. The upgrade of `effect` itself
-to the latest 3.x remains open as separate work in
-[#18](https://github.com/topheman/effect-viz/issues/18), where the
-trace-behaviour changes between 3.19 and 3.22 will need an audit.
+paths cannot drift again. Both then ran 3.19.15, and
+[#18](https://github.com/topheman/effect-viz/issues/18) has since moved both to
+3.22.1 — where the timeout loser's exit is now a success on either path. See
+[effect-3.22-upgrade.md](./effect-3.22-upgrade.md).

@@ -47,6 +47,10 @@ Take over the runtime's clock and scheduler so execution can be slowed and stepp
 
 - [Phase 10: Slow mode & stepper (issue #13)](./phase-10.md) ✅
 
+### Maintenance
+
+- [Upgrading Effect to 3.22 (issue #18)](./effect-3.22-upgrade.md) ✅ — what three minor versions changed for the traces, and the one example that traces differently.
+
 **Why two versions?**
 - **V1** teaches concepts explicitly - you see exactly what gets traced
 - **V2** teaches Effect's production observability patterns
