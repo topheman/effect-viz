@@ -1,0 +1,143 @@
+/**
+ * Records the README demo video by replaying `scenario.ts` in a real browser.
+ *
+ * Run the dev server first: the app needs the `Cross-Origin-Embedder-Policy`
+ * and `Cross-Origin-Opener-Policy` headers that `vite.config.ts` sets on
+ * `server`, and `vite preview` does not send them, so the WebContainer would
+ * refuse to boot against a preview build.
+ *
+ *   npm run dev
+ *   npm run demo:record
+ *
+ * Flags:
+ *   --url=<url>     app to record (default http://localhost:5173)
+ *   --headed        show the browser while it plays
+ *   --keep-webm     keep the raw Playwright capture next to the mp4
+ */
+
+import { spawnSync } from "node:child_process";
+import { mkdir, readdir, rm, rename } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { chromium } from "playwright";
+
+import { Cursor, installCursor } from "./cursor.ts";
+import { runScenario, VIEWPORT } from "./scenario.ts";
+
+const ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../..",
+);
+const OUT_DIR = path.join(ROOT, "recordings");
+
+function flag(name: string): string | undefined {
+  const match = process.argv
+    .slice(2)
+    .find((a) => a === `--${name}` || a.startsWith(`--${name}=`));
+  if (!match) return undefined;
+  const [, value] = match.split("=");
+  return value ?? "";
+}
+
+async function main() {
+  const url = flag("url") || "http://localhost:5173";
+  const headed = flag("headed") !== undefined;
+  const keepWebm = flag("keep-webm") !== undefined;
+
+  await rm(OUT_DIR, { recursive: true, force: true });
+  await mkdir(OUT_DIR, { recursive: true });
+
+  const browser = await chromium.launch({ headless: !headed });
+  const context = await browser.newContext({
+    viewport: VIEWPORT,
+    deviceScaleFactor: 1,
+    recordVideo: { dir: OUT_DIR, size: VIEWPORT },
+    colorScheme: "dark",
+    reducedMotion: "no-preference",
+  });
+
+  // A fresh profile would start the onboarding tour, whose pulsing highlights
+  // fight with the scripted pointer for the viewer's attention.
+  await context.addInitScript(() => {
+    localStorage.setItem(
+      "effect-flow-onboarding",
+      JSON.stringify({
+        completed: "info",
+        version: 1,
+        date: new Date().toISOString(),
+      }),
+    );
+  });
+
+  await installCursor(context);
+
+  const page = await context.newPage();
+  page.on("console", (msg) => {
+    if (msg.type() === "error") console.error("[page]", msg.text());
+  });
+
+  try {
+    await page.goto(url, { waitUntil: "domcontentloaded" });
+  } catch (cause) {
+    throw new Error(
+      `Cannot reach ${url}. Start the dev server with \`npm run dev\` first.`,
+      { cause },
+    );
+  }
+
+  const cursor = new Cursor(page);
+  await runScenario({ page, cursor });
+
+  // The video file is only flushed once the context closes, and it is named
+  // after an internal id, so it can only be located afterwards.
+  await context.close();
+  await browser.close();
+
+  const webm = (await readdir(OUT_DIR)).find((f) => f.endsWith(".webm"));
+  if (!webm) throw new Error("Playwright produced no video file");
+
+  const rawPath = path.join(OUT_DIR, "demo.webm");
+  await rename(path.join(OUT_DIR, webm), rawPath);
+
+  const mp4Path = path.join(OUT_DIR, "demo.mp4");
+  const ffmpeg = spawnSync(
+    "ffmpeg",
+    [
+      "-y",
+      "-i",
+      rawPath,
+      // GitHub only plays H.264 in an MP4 container, and yuv420p is the pixel
+      // format Safari needs; the even-dimension filter keeps H.264 happy if the
+      // viewport is ever set to an odd size.
+      "-vf",
+      "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+      "-c:v",
+      "libx264",
+      "-pix_fmt",
+      "yuv420p",
+      "-crf",
+      "20",
+      "-preset",
+      "slow",
+      "-movflags",
+      "+faststart",
+      "-an",
+      mp4Path,
+    ],
+    { stdio: "inherit" },
+  );
+
+  if (ffmpeg.error || ffmpeg.status !== 0) {
+    console.warn(`\nffmpeg unavailable or failed; keeping ${rawPath}`);
+    return;
+  }
+
+  if (!keepWebm) await rm(rawPath);
+  console.log(`\nRecorded ${path.relative(ROOT, mp4Path)}`);
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

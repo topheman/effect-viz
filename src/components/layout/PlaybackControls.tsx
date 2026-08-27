@@ -173,6 +173,7 @@ export function PlaybackControls({
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
+                aria-label="Reset"
                 variant="ghost"
                 size="icon"
                 onClick={onReset}
@@ -188,6 +189,7 @@ export function PlaybackControls({
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
+                aria-label={isRunning ? "Pause" : "Run"}
                 data-onboarding-step="play"
                 variant="ghost"
                 size="icon"
@@ -233,6 +235,7 @@ export function PlaybackControls({
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
+                aria-label="Step"
                 variant="ghost"
                 size="icon"
                 onClick={onStep}
@@ -292,7 +295,7 @@ export function PlaybackControls({
                 }
               `}
             />
-            <span className="capitalize">
+            <span data-testid="playback-status" className="capitalize">
               {isSyncing
                 ? "Syncing..."
                 : state === "starting"

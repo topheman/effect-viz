@@ -69,6 +69,21 @@ export default defineConfig([
     }
   },
   {
+    // Playwright locators (`page.getByRole`, ...) read like Testing Library
+    // queries destructured from `render`, which those rules flag.
+    files: ['scripts/demo/**/*.ts'],
+    languageOptions: {
+      globals: globals.node,
+    },
+    rules: {
+      ...Object.fromEntries(
+        Object.keys(eslintPluginTestingLibrary.configs['flat/react'].rules).map(
+          (rule) => [rule, 'off']
+        )
+      ),
+    }
+  },
+  {
     files: ['public/app/**/*'],
     rules: {
       "prettier/prettier": "off",
