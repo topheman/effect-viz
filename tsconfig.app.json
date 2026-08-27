@@ -30,6 +30,13 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
+    /* Effect LSP: Effect-aware diagnostics, refactors and completions.
+       Requires the editor to use the workspace TypeScript (see .vscode/settings.json). */
+    "plugins": [
+      {
+        "name": "@effect/language-service"
+      }
+    ],
     /* Import alias */
     "baseUrl": ".",
     "paths": {

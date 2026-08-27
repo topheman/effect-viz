@@ -1,4 +1,5 @@
 /// <reference types="vitest/config" />
+import { createRequire } from "node:module";
 import path from "path";
 
 import tailwindcss from "@tailwindcss/vite";
@@ -8,8 +9,20 @@ import { VitePWA } from "vite-plugin-pwa";
 
 import { runtimeWatchPlugin } from "./vite-plugin-runtime-watch";
 
+/**
+ * The version of `effect` this build resolves, injected into the WebContainer's
+ * package.json (`PACKAGE_JSON` in src/services/webcontainer.ts). The container
+ * installs effect itself, so without this the two run paths could install
+ * different versions and trace the same program differently — see #17 and #18.
+ */
+const effectVersion = createRequire(import.meta.url)("effect/package.json")
+  .version as string;
+
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    __EFFECT_VERSION__: JSON.stringify(effectVersion),
+  },
   plugins: [
     runtimeWatchPlugin(),
     react({

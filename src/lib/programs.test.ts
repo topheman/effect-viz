@@ -5,6 +5,8 @@ import { makeTraceEmitterLayer } from "@/runtime/tracedRunner";
 import type { TraceEmitter } from "@/runtime/traceEmitter";
 import { VirtualClock, type VirtualClockHost } from "@/runtime/virtualClock";
 import { makeVizClockLayer } from "@/runtime/vizClock";
+import { makeVizLayers } from "@/runtime/vizSupervisor";
+import { makeVizTracer } from "@/runtime/vizTracer";
 import type { TraceEvent } from "@/types/trace";
 
 import {
@@ -26,11 +28,14 @@ const fakeHost: VirtualClockHost = {
 function start(effect: Effect.Effect<unknown, unknown, TraceEmitter>) {
   const events: TraceEvent[] = [];
   const clock = new VirtualClock({ rate: 1, origin: 0, host: fakeHost });
+  const onEmit = (event: TraceEvent) => events.push(event);
   const fiber = Effect.runFork(
     Effect.scoped(effect).pipe(
       Effect.provide(
         Layer.mergeAll(
-          makeTraceEmitterLayer((event) => events.push(event)),
+          makeTraceEmitterLayer(onEmit),
+          makeVizLayers(onEmit, () => clock.now()),
+          Layer.setTracer(makeVizTracer(onEmit, () => clock.now())),
           makeVizClockLayer(clock),
         ),
       ),
@@ -110,6 +115,65 @@ describe("example programs", () => {
       quick: "quick-task finished",
       slow: "slow-task timed out",
     });
+  });
+
+  it("timeout: the work that overruns the deadline reports its interruption as a span failure", async () => {
+    const { events, fiber } = start(timeoutExample);
+    await settle(fiber);
+
+    // Spans carry their label on effect:start only, so pair the two by id.
+    const labels = new Map(
+      events
+        .filter((event) => event.type === "effect:start")
+        .map((event) => [event.id, event.label]),
+    );
+    const spans = events
+      .filter((event) => event.type === "effect:end")
+      .map((event) => ({
+        label: labels.get(event.id),
+        result: event.result,
+        error: event.result === "failure" ? String(event.error) : "",
+      }));
+
+    expect(spans).toEqual([
+      { label: "quick-task", result: "success", error: "" },
+      {
+        label: "slow-task",
+        result: "failure",
+        error: expect.stringContaining("Interrupted"),
+      },
+    ]);
+  });
+
+  it("timeout: of the two fibers each deadline races, only a losing deadline exits interrupted", async () => {
+    const { events, fiber } = start(timeoutExample);
+    await settle(fiber);
+
+    // Each withDeadline forks a pair: the work first, then the sleep that is the
+    // deadline. Order the fibers by fork so the assertion does not name FiberIds.
+    const forked = events
+      .filter((event) => event.type === "fiber:fork")
+      .filter((event) => event.parentId !== undefined)
+      .map((event) => event.fiberId);
+    const exits = forked.map(
+      (fiberId) =>
+        events.find(
+          (event) =>
+            (event.type === "fiber:end" || event.type === "fiber:interrupt") &&
+            event.fiberId === fiberId,
+        )?.type,
+    );
+
+    expect(exits).toEqual([
+      // quick-task: the work wins, so its deadline is interrupted.
+      "fiber:end",
+      "fiber:interrupt",
+      // slow-task: the work loses and is interrupted, yet Effect >= 3.22 runs it
+      // under Effect.exit, so its own exit is a success and the Supervisor can
+      // only report an end. The interruption shows on its span instead.
+      "fiber:end",
+      "fiber:end",
+    ]);
   });
 
   it("deadlock: the program never finishes", async () => {
