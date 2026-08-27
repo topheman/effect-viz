@@ -7,7 +7,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useShowInternals } from "@/hooks/useShowInternals";
 import { cn } from "@/lib/utils";
+import { isToolEvent } from "@/runtime/traceOrigin";
 import { useTraceStore } from "@/stores/traceStore";
 import type {
   EffectStartEvent,
@@ -155,7 +157,15 @@ function getEventColor(event: TraceEvent): string {
 
 export function ExecutionLog() {
   const { events } = useTraceStore();
+  const [showInternals, setShowInternals] = useShowInternals();
   const cardContentRef = useRef<HTMLDivElement>(null);
+
+  const toolEventCount = events.filter(isToolEvent).length;
+  // Positions in the full list are kept: formatEvent pairs an event with its
+  // start, and a duration measured against a filtered list would be wrong.
+  const visible = events
+    .map((event, index) => ({ event, index }))
+    .filter(({ event }) => showInternals || !isToolEvent(event));
 
   useEffect(() => {
     const ref = cardContentRef.current;
@@ -175,7 +185,24 @@ export function ExecutionLog() {
           md:pb-3
         `}
       >
-        <CardTitle className="text-base">Execution Log</CardTitle>
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-base">Execution Log</CardTitle>
+          {toolEventCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowInternals(!showInternals)}
+              className={`
+                shrink-0 cursor-pointer text-xs text-muted-foreground
+                transition-colors
+                hover:text-foreground
+              `}
+            >
+              {showInternals
+                ? "hide visualizer events"
+                : `show ${toolEventCount} visualizer event${toolEventCount > 1 ? "s" : ""}`}
+            </button>
+          )}
+        </div>
         <CardDescription
           className={cn(events.length > 0 ? "hidden" : "block", "md:block")}
         >
@@ -183,7 +210,7 @@ export function ExecutionLog() {
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-1 overflow-hidden">
-        {events.length === 0 ? (
+        {visible.length === 0 ? (
           <div
             className={`
               flex h-full items-center justify-center text-center
@@ -202,17 +229,24 @@ export function ExecutionLog() {
             className="h-full overflow-y-auto font-mono text-sm"
             ref={cardContentRef}
           >
-            {events.map((event, index) => {
+            {visible.map(({ event, index }, position) => {
               const emojiInfo = getEventEmoji(event);
               return (
                 <div
                   key={`${event.type}-${event.timestamp}-${index}`}
-                  className={`
-                    border-b border-border/50 py-1.5
-                    last:border-b-0
-                  `}
+                  className={cn(
+                    `
+                      border-b border-border/50 py-1.5
+                      last:border-b-0
+                    `,
+                    // Dimmed rather than styled apart: it is a real event that
+                    // really happened, just not one the program asked for.
+                    isToolEvent(event) && "opacity-60",
+                  )}
                 >
-                  <span className="text-muted-foreground">[{index + 1}]</span>{" "}
+                  <span className="text-muted-foreground">
+                    [{position + 1}]
+                  </span>{" "}
                   <span
                     role="img"
                     aria-label={emojiInfo.label}

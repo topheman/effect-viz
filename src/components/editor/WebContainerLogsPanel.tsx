@@ -4,6 +4,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import type { ComponentType } from "react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useShowInternals } from "@/hooks/useShowInternals";
 import { cn } from "@/lib/utils";
 import { useWebContainerLogsStore } from "@/stores/webContainerLogsStore";
 
@@ -25,11 +26,16 @@ export function WebContainerLogsPanel({
   webContainerMode = true,
 }: WebContainerLogsPanelProps) {
   const { logs, clearLogs, clearErrors } = useWebContainerLogsStore();
+  const [showInternals, setShowInternals] = useShowInternals();
   const [activeTab, setActiveTab] = useState<"logs" | "errors">("logs");
   const logsScrollRef = useRef<HTMLDivElement>(null);
   const errorsScrollRef = useRef<HTMLDivElement>(null);
 
-  const logEntries = logs.filter((e) => e.label !== "error");
+  // "control" is the page's own commands, echoed back by the process's terminal.
+  const controlCount = logs.filter((e) => e.label === "control").length;
+  const logEntries = logs.filter(
+    (e) => e.label !== "error" && (showInternals || e.label !== "control"),
+  );
   const errorEntries = logs.filter((e) => e.label === "error");
 
   const isPnpmInstallRunning =
@@ -136,6 +142,21 @@ export function WebContainerLogsPanel({
                 </TabsList>
               )}
             </div>
+            {controlCount > 0 && activeTab === "logs" && (
+              <button
+                type="button"
+                onClick={() => setShowInternals(!showInternals)}
+                className={`
+                  shrink-0 cursor-pointer text-xs text-muted-foreground
+                  transition-colors
+                  hover:text-foreground
+                `}
+              >
+                {showInternals
+                  ? "hide control channel"
+                  : "show control channel"}
+              </button>
+            )}
             {canClear && (
               <button
                 type="button"
@@ -187,7 +208,7 @@ export function WebContainerLogsPanel({
                             `,
                             entry.label === "boot" &&
                               "bg-primary/20 text-primary",
-                            entry.label === "npm" &&
+                            entry.label === "control" &&
                               "bg-amber-500/20 text-amber-700",
                           )}
                         >

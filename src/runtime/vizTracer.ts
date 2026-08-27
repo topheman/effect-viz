@@ -2,9 +2,31 @@ import { Tracer, Exit, Cause, Option, Context } from "effect";
 import type { RuntimeFiber } from "effect/Fiber";
 
 import { randomUUID } from "@/lib/crypto";
+import type { Now } from "@/runtime/virtualClock";
 import type { TraceEvent } from "@/types/trace";
 
-export function makeVizTracer(onEmit: (event: TraceEvent) => void) {
+const NANOS_PER_MILLI = 1_000_000n;
+
+/**
+ * The runtime hands span times in as nanoseconds taken from the Clock service
+ * (`internal/core-effect.ts` builds them with `clock.unsafeCurrentTimeNanos()`),
+ * so they are already virtual and we use them rather than reading a clock again.
+ *
+ * `0n` is not a timestamp, it is Effect's "no timing recorded" sentinel: when the
+ * `currentTracerTimingEnabled` FiberRef is off — it defaults to on, and
+ * `Effect.withTracerTiming(false)` turns it off — the runtime skips the clock
+ * read entirely and passes a constant zero instead. Treating that as a value
+ * would date every span to 1 January 1970 and flatten the timeline, so we fall
+ * back to `now` in that case.
+ *
+ * Dividing as BigInt before converting keeps the value exact: a nanosecond epoch
+ * is around 1.8e18, well past `Number.MAX_SAFE_INTEGER`.
+ */
+function toMillis(nanos: bigint, now: Now): number {
+  return nanos === 0n ? now() : Number(nanos / NANOS_PER_MILLI);
+}
+
+export function makeVizTracer(onEmit: (event: TraceEvent) => void, now: Now) {
   return Tracer.make({
     span: function (
       label: string,
@@ -20,7 +42,7 @@ export function makeVizTracer(onEmit: (event: TraceEvent) => void) {
         type: "effect:start",
         label,
         id,
-        timestamp: Date.now(),
+        timestamp: toMillis(startTime, now),
       });
       return {
         _tag: "Span",
@@ -38,7 +60,7 @@ export function makeVizTracer(onEmit: (event: TraceEvent) => void) {
         sampled: false,
         kind,
         end: function (
-          _endTime: bigint,
+          endTime: bigint,
           exit: Exit.Exit<unknown, unknown>,
         ): void {
           const { result, value, error } = Exit.isSuccess(exit)
@@ -50,7 +72,7 @@ export function makeVizTracer(onEmit: (event: TraceEvent) => void) {
             result,
             value,
             error,
-            timestamp: Date.now(),
+            timestamp: toMillis(endTime, now),
           });
         },
         attribute: function (): void {},

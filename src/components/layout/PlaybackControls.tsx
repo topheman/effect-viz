@@ -10,6 +10,7 @@ import {
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import {
   Tooltip,
   TooltipContent,
@@ -17,13 +18,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { OnboardingStepId } from "@/hooks/useOnboarding";
+import { SPEED_OPTIONS, type Speed, formatSpeed } from "@/hooks/useSpeed";
 import { cn } from "@/lib/utils";
 
 import { InfoModal } from "./InfoModal";
 
-const STEP_IS_IMPLEMENTED = false;
 const STEP_OVER_IS_IMPLEMENTED = false;
-const PAUSE_IS_IMPLEMENTED = false;
 
 export type PlaybackState =
   | "idle"
@@ -31,6 +31,16 @@ export type PlaybackState =
   | "running"
   | "paused"
   | "finished";
+
+/**
+ * Why execution is paused. Only a user pause can be stepped: `stuck` means
+ * nothing is runnable and no deadline is pending, so a step would do nothing.
+ *
+ * A stuck program is either deadlocked or waiting on something outside. Telling
+ * those apart needs a fiber's status, which is itself an Effect and so needs the
+ * scheduler that a pause is holding.
+ */
+export type PauseReason = "user" | "stuck";
 
 interface PlaybackControlsProps {
   state?: PlaybackState;
@@ -48,6 +58,11 @@ interface PlaybackControlsProps {
   isPlayDisabled?: boolean;
   /** When true, show "Syncing..." in status (e.g. flushing editor to container) */
   isSyncing?: boolean;
+  /** Playback speed applied on the next run */
+  speed?: Speed;
+  onSpeedChange?: (speed: Speed) => void;
+  /** Only meaningful while paused; decides whether Step can do anything */
+  pauseReason?: PauseReason;
 }
 
 export function PlaybackControls({
@@ -64,10 +79,28 @@ export function PlaybackControls({
   onRestartOnboarding,
   isPlayDisabled = false,
   isSyncing = false,
+  speed = 1,
+  onSpeedChange,
+  pauseReason = "user",
 }: PlaybackControlsProps) {
   const isRunning = state === "running";
-  const canPlay = (state === "idle" || state === "paused") && !isPlayDisabled;
-  const canStep = state === "idle" || state === "paused";
+  // Play doubles as resume (from paused) and re-run (from finished).
+  const canPlay =
+    (state === "idle" || state === "paused" || state === "finished") &&
+    !isPlayDisabled;
+  // Step from a stopped program starts it already gated, so its very first
+  // events can be stepped through; like Play, that includes re-running one that
+  // has finished. Otherwise stepping needs a live, frozen program, and a stuck
+  // pause has nothing the runtime could release.
+  const canStep =
+    ((state === "idle" || state === "finished") && !isPlayDisabled) ||
+    (state === "paused" && pauseReason === "user");
+  const canPause = isRunning;
+  // Nothing to reset before the first run.
+  const canReset = state !== "idle";
+  // The rate is fixed when the program starts: the WebContainer receives it as a
+  // spawn environment variable and cannot be retuned until it is restarted.
+  const canChangeSpeed = state !== "running" && state !== "starting";
   const [playMountAnimationEnded, setPlayMountAnimationEnded] = useState(false);
 
   // Skip showVisualizer step on desktop (toggle is hidden)
@@ -139,7 +172,12 @@ export function PlaybackControls({
           {/* Reset */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={onReset}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onReset}
+                disabled={!canReset}
+              >
                 <RotateCcw className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -161,10 +199,7 @@ export function PlaybackControls({
                     onOnboardingComplete?.("play");
                   }
                 }}
-                disabled={
-                  (!canPlay && !isRunning) ||
-                  (isRunning && !PAUSE_IS_IMPLEMENTED)
-                }
+                disabled={(!canPlay && !isRunning) || (isRunning && !canPause)}
                 onAnimationEnd={(e) => {
                   if (e.animationName === "play-button-mount") {
                     setPlayMountAnimationEnded(true);
@@ -195,21 +230,25 @@ export function PlaybackControls({
           </Tooltip>
 
           {/* Step */}
-          {STEP_IS_IMPLEMENTED && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onStep}
-                  disabled={!canStep}
-                >
-                  <StepForward className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Step</TooltipContent>
-            </Tooltip>
-          )}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onStep}
+                disabled={!canStep}
+              >
+                <StepForward className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {state === "paused" && pauseReason === "stuck"
+                ? "Nothing can run: deadlocked, or waiting on something outside"
+                : state === "idle" || state === "finished"
+                  ? "Start paused, then step"
+                  : "Step"}
+            </TooltipContent>
+          </Tooltip>
 
           {/* Step Over */}
           {STEP_OVER_IS_IMPLEMENTED && (
@@ -261,6 +300,32 @@ export function PlaybackControls({
                   : state}
             </span>
           </div>
+
+          {/* Speed */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Select
+                aria-label="Playback speed"
+                className="h-8 w-[4.5rem] px-2"
+                value={speed}
+                disabled={!canChangeSpeed}
+                onChange={(e) =>
+                  onSpeedChange?.(Number(e.target.value) as Speed)
+                }
+              >
+                {SPEED_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {formatSpeed(option)}
+                  </option>
+                ))}
+              </Select>
+            </TooltipTrigger>
+            <TooltipContent>
+              {canChangeSpeed
+                ? "Speed — slows the program's own clock"
+                : "Speed applies on the next run"}
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         {/* Right: Info button */}

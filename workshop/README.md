@@ -41,6 +41,12 @@ Refactor to use Effect's built-in observability, removing manual wrappers.
 - [Phase 8: Sleep visibility via onSuspend/onResume](./phase-8.md) ✅
 - [Phase 9: retryWithTrace with Schedule API](./phase-9.md) ✅
 
+### Version 3: Controlling Time
+
+Take over the runtime's clock and scheduler so execution can be slowed and stepped.
+
+- [Phase 10: Slow mode & stepper (issue #13)](./phase-10.md) ✅
+
 **Why two versions?**
 - **V1** teaches concepts explicitly - you see exactly what gets traced
 - **V2** teaches Effect's production observability patterns

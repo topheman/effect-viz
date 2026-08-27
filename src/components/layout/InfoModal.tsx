@@ -1,4 +1,4 @@
-import { Info, X } from "lucide-react";
+import { Info, Play, StepForward, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState } from "react";
 
@@ -113,7 +113,7 @@ export function InfoModal({
         </DialogHeader>
 
         <div
-          className={`flex max-h-[60vh] flex-col gap-6 overflow-y-auto py-4`}
+          className={`flex max-h-[60vh] flex-col gap-4 overflow-y-auto py-4`}
           data-testid="info-modal-body"
         >
           {/* About the project */}
@@ -132,6 +132,22 @@ export function InfoModal({
                 <p>On desktop, you can also edit the example programs.</p>
               </>
             )}
+          </section>
+
+          <section
+            className="flex flex-col gap-3 text-sm text-muted-foreground"
+            aria-label="Slow motion and step by step"
+          >
+            <p>
+              You can press{" "}
+              <StepForward className="inline h-3.5 w-3.5 align-text-bottom" />{" "}
+              to run the program step by step.
+            </p>
+            <p>
+              You can pick a speed before pressing{" "}
+              <Play className="inline h-3.5 w-3.5 align-text-bottom" /> to watch
+              the same program run slower.
+            </p>
           </section>
 
           <section

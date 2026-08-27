@@ -6,6 +6,7 @@ import { Effect, Fiber, Layer } from "effect";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
+  type ControlSink,
   spawnAndParseTraceEvents,
   type SpawnAndParseCallbacks,
 } from "@/effects/spawnAndParse";
@@ -137,9 +138,15 @@ export function useWebContainerBoot() {
     ({
       callbacks,
       onFirstChunk,
+      rate,
+      startPaused = false,
+      control,
     }: {
       callbacks: SpawnAndParseCallbacks;
       onFirstChunk: () => void;
+      rate: number;
+      startPaused?: boolean;
+      control?: ControlSink;
     }): Promise<{ success: boolean; exitCode?: number }> => {
       const handle = handleRef.current;
       if (!handle || status !== "ready") {
@@ -152,7 +159,11 @@ export function useWebContainerBoot() {
         spawnAndParseTraceEvents({
           callbacks,
           onFirstChunk,
-          onStdout: (line) => addLog("output", line),
+          onStdout: (line, origin) =>
+            addLog(origin === "tool" ? "control" : "output", line),
+          rate,
+          startPaused,
+          control,
         }).pipe(Effect.provide(layer)),
       );
       // Use runFork (not scoped fork): scoped(fork(program)) closes the scope
