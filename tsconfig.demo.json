@@ -4,7 +4,7 @@
     "target": "ES2023",
     /* The demo scripts run on Node, but their `page.evaluate` callbacks are
        serialised and executed in the browser, so they need the DOM lib too. */
-    "lib": ["ES2023", "DOM"],
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "types": ["node"],
     "skipLibCheck": true,

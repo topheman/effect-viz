@@ -18,6 +18,40 @@ interface ScenarioContext {
 }
 
 /**
+ * The grab point of the resize separator above the Timeline panel.
+ *
+ * Returns a point rather than a locator for two reasons. The separator is a
+ * zero-height element, which Playwright does not count as visible, and
+ * react-resizable-panels hit-tests pointers against a margin around it rather
+ * than against the element itself. The layout holds several separators under
+ * library-generated ids, so this one is found structurally: it is the sibling
+ * immediately before the panel that holds the Timeline.
+ */
+async function timelineHandlePoint(page: Page): Promise<Point> {
+  const point = await page.evaluate(() => {
+    // Panels nest, and every ancestor of the Timeline contains its text too.
+    // Document order puts ancestors first, so the innermost match is the last.
+    const timelinePanels = [
+      ...document.querySelectorAll('[data-slot="resizable-panel"]'),
+    ].filter((panel) => {
+      const rect = panel.getBoundingClientRect();
+      // The mobile layout is rendered too, collapsed to zero size.
+      if (rect.width === 0 || rect.height === 0) return false;
+      return panel.textContent?.includes("Visualize concurrency, delays");
+    });
+
+    const handle = timelinePanels.at(-1)?.previousElementSibling;
+    if (handle?.getAttribute("role") !== "separator") return null;
+
+    const rect = handle.getBoundingClientRect();
+    return { x: rect.left + rect.width / 2, y: rect.top };
+  });
+
+  if (!point) throw new Error("Cannot find the Timeline resize handle");
+  return point;
+}
+
+/**
  * Finds where a piece of text sits on screen inside Monaco.
  *
  * Monaco splits a line across many spans and re-renders them on scroll, so a
@@ -83,7 +117,7 @@ export async function runScenario({ page, cursor }: ScenarioContext) {
   await cursor.pause(1200);
 
   // --- Act 1: slow the clock down, run, and pause mid-flight ---------------
-  await cursor.moveTo({ x: 320, y: 300 }, 900);
+  await cursor.moveTo({ x: 320, y: 300 });
   await cursor.pause(800);
 
   await cursor.select(speedSelect, "0.25");
@@ -101,16 +135,21 @@ export async function runScenario({ page, cursor }: ScenarioContext) {
 
   // Walk the three panels. Holding the runtime still while the pointer moves
   // also gives the viewer a frame stable enough to actually read.
-  await cursor.moveToLocator(fiberTree, 900);
+  await cursor.moveToLocator(fiberTree);
   await cursor.pause(1300);
-  await cursor.moveToLocator(executionLog, 800);
+  await cursor.moveToLocator(executionLog);
   await cursor.pause(1300);
-  await cursor.moveToLocator(timeline, 800);
+  await cursor.moveToLocator(timeline);
   await cursor.pause(1300);
+
+  // Drag the separator above the Timeline up, to give the lanes more room and
+  // to show that the panels are resizable.
+  await cursor.drag(await timelineHandlePoint(page), { x: 0, y: -25 });
+  await cursor.pause(1200);
 
   // --- Act 2: step the runtime forward one event at a time -----------------
   for (let i = 0; i < 4; i++) {
-    await cursor.click(stepButton, { duration: 300 });
+    await cursor.click(stepButton);
     await cursor.pause(700);
   }
 
@@ -126,7 +165,7 @@ export async function runScenario({ page, cursor }: ScenarioContext) {
   await cursor.pause(400);
 
   const delay = await locateText(page, "1.5");
-  await cursor.moveTo({ x: delay.x + 2, y: delay.y }, 800);
+  await cursor.moveTo({ x: delay.x + 2, y: delay.y });
   await cursor.pause(300);
   await page.mouse.down();
   await page.mouse.up();
@@ -155,6 +194,6 @@ export async function runScenario({ page, cursor }: ScenarioContext) {
 
   // Ends on the fiber tree, where the interrupted children are the point of
   // this program.
-  await cursor.moveToLocator(fiberTree, 900);
+  await cursor.moveToLocator(fiberTree);
   await cursor.pause(2500);
 }
