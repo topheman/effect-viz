@@ -248,11 +248,13 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
   await cursor.moveToLocator(timeline);
   await cursor.pause(430);
 
-  // Panels are resizable: give the timeline lanes more room.
+  // Panels are resizable, and the Basic Example needs the room: at the default
+  // split the third fiber lane is cut off by the time axis. Fifty pixels puts
+  // all three on screen at once.
   await cursor.drag(
     await timelineHandlePoint(page),
-    { x: 0, y: -25 },
-    { duration: 600 },
+    { x: 0, y: -50 },
+    { duration: 700 },
   );
   await cursor.pause(350);
   mark("act 1 — run and inspect");
@@ -261,7 +263,6 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
   // The speed change lands between two runs of the same program on purpose:
   // the only thing that differs is how long it takes, which is the point.
   await cursor.select(speedSelect, "0.5");
-  await cursor.pause(300);
 
   await cursor.click(runButton);
   await untilStatus("running");
@@ -285,7 +286,6 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
   await cursor.click(resetButton);
   await cursor.pause(400);
   await cursor.select(speedSelect, "1");
-  await cursor.pause(300);
 
   // Renaming a span keeps the run the same length, and the new names come back
   // out of the runtime in the execution log — which is the point being made.
@@ -311,7 +311,7 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
   await cursor.pause(250);
 
   await cursor.select(programSelect, "retryExponentialBackoff");
-  await cursor.pause(700);
+  await cursor.pause(350);
 
   await cursor.click(runButton);
   await untilStatus("finished");

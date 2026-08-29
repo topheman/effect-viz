@@ -108,7 +108,9 @@ log rows — is pacing, giving the viewer somewhere to look while a program runs
 
 - **The open dropdown** (13.0, 25.5, 33.5) is not reproduced. It is a native
   `<select>`, so macOS draws the popup outside the page and a browser capture
-  cannot see it. The switch still reads, through the picker label and the code.
+  cannot see it — not even in a headed run. The switch still reads: the pointer
+  presses the picker, holds for as long as picking from a menu takes, and the
+  label and the code change together.
 - **The multi-caret rename targets two spans, not three.** The original suffixes
   all three Multi-Step Worker spans at once, reaching the extra carets with
   "add cursor below". The script stays in the Basic Example, which is already on

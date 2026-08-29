@@ -430,12 +430,39 @@ export class Cursor {
     await this.page.waitForTimeout(280);
   }
 
-  /** Selects a value in a native `<select>`, flashing the pointer over it first. */
+  /**
+   * Selects a value in a native `<select>`.
+   *
+   * The open popup cannot be filmed. The browser draws it as an OS menu outside
+   * the page, so it is absent from a page capture even though it is on screen
+   * for a real viewer. What the beat can show is the press and the result: an
+   * untrusted `pointerdown` flashes the pointer exactly as a real click does,
+   * without the browser acting on it, and then the new value is held long
+   * enough to read.
+   */
   async select(target: Locator, value: string): Promise<void> {
     await this.moveToLocator(target);
     await this.page.waitForTimeout(220);
+
+    const { x, y } = this.position;
+    const flash = (type: string) =>
+      this.page.evaluate(
+        ({ type, x, y }: { type: string; x: number; y: number }) => {
+          document.dispatchEvent(
+            new PointerEvent(type, { clientX: x, clientY: y, bubbles: true }),
+          );
+        },
+        { type, x, y },
+      );
+
+    await flash("pointerdown");
+    await this.page.waitForTimeout(160);
+    await flash("pointerup");
+    // Stand still for about as long as picking from an open menu would take.
+    await this.page.waitForTimeout(450);
+
     await target.selectOption(value);
-    await this.page.waitForTimeout(320);
+    await this.page.waitForTimeout(350);
   }
 
   /** A beat: holds the frame still so the viewer can read what just changed. */
