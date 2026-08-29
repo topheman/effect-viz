@@ -151,7 +151,10 @@ async function revealText(
     const point = await locateText(page, needle, options);
     if (point) return point;
   }
-  throw new Error(`Cannot reach "${needle}" in the editor`);
+  throw new Error(
+    `Cannot reach "${needle}" in the editor. Scrolling only goes down from ` +
+      "where the editor already is, so a target above the fold is out of reach.",
+  );
 }
 
 /**
@@ -211,6 +214,27 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
   /** Blocks until the playback bar reports a state, so beats never race the run. */
   const untilStatus = (state: string, timeout = 60_000) =>
     status.filter({ hasText: new RegExp(`^${state}$`) }).waitFor({ timeout });
+
+  const untilNotStatus = (state: string, timeout = 30_000) =>
+    status
+      .filter({ hasNotText: new RegExp(`^${state}$`) })
+      .waitFor({ timeout });
+
+  /**
+   * Runs the program and waits for *this* run to end.
+   *
+   * Waiting for `finished` on its own is only safe from a standing start. Press
+   * Run on a program that has already finished and the status still reads
+   * `finished` at the moment of the press, so the wait would return before the
+   * new run had produced anything, and the beat after it would describe the
+   * previous run's results. Watching the status leave that state first anchors
+   * the wait to this press; from `idle` or `paused` it passes straight through.
+   */
+  const runToCompletion = async () => {
+    await cursor.click(runButton);
+    await untilNotStatus("finished");
+    await untilStatus("finished");
+  };
 
   // The WebContainer boots before anything can run, and Run stays disabled
   // until it is ready, which makes it the readiness signal.
@@ -276,8 +300,7 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
     await cursor.pause(380);
   }
 
-  await cursor.click(runButton);
-  await untilStatus("finished");
+  await runToCompletion();
   await cursor.pause(700);
   mark("act 2 — slow down and step");
 
@@ -300,8 +323,7 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
   await page.keyboard.type("job", { delay: 110 });
   await cursor.pause(550);
 
-  await cursor.click(runButton);
-  await untilStatus("finished");
+  await runToCompletion();
   await cursor.pause(650);
   mark("act 3 — edit and re-run");
 
@@ -312,8 +334,7 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
   await cursor.select(programSelect, "retryExponentialBackoff");
   await cursor.pause(350);
 
-  await cursor.click(runButton);
-  await untilStatus("finished");
+  await runToCompletion();
   await cursor.pause(450);
 
   // `flakyEffect` only succeeds once n >= 5, and the `if (n < 5)` guard is left
@@ -326,8 +347,7 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
   await page.keyboard.type("3", { delay: 110 });
   await cursor.pause(450);
 
-  await cursor.click(runButton);
-  await untilStatus("finished");
+  await runToCompletion();
   await cursor.pause(700);
 
   await cursor.moveToLocator(fiberTree);

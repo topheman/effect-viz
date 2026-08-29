@@ -31,15 +31,16 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "preview": "vite preview",
-    "demo:record": "node scripts/demo/record.ts",
     "test": "vitest run",
     "test:watch": "vitest",
+    "demo:prepare": "playwright install chromium",
+    "demo:record": "node scripts/demo/record.ts",
     "typecheck:app": "tsc --noEmit -p ./tsconfig.app.json",
     "typecheck:node": "tsc --noEmit -p ./tsconfig.node.json",
+    "typecheck:demo": "tsc --noEmit -p ./tsconfig.demo.json",
     "typecheck": "npm run typecheck:app && npm run typecheck:node && npm run typecheck:demo",
     "prepare": "husky",
-    "bootstrap": "./scripts/bootstrap.ts",
-    "typecheck:demo": "tsc --noEmit -p ./tsconfig.demo.json"
+    "bootstrap": "./scripts/bootstrap.ts"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",

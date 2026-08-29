@@ -4,11 +4,18 @@ Replays a scripted tour of the app in a real browser and records it as an mp4
 for the README.
 
 ```sh
+npm run demo:prepare               # once per machine
 npm run build && npm run preview   # in one terminal
 npm run demo:record
 ```
 
 The result lands in `recordings/demo.mp4` (gitignored).
+
+`npm install` brings in the Playwright package but not the browser it drives,
+which is a separate few hundred megabytes. `demo:prepare` downloads it, and is
+kept out of `postinstall` on purpose: nothing but this script needs a browser,
+least of all CI. Encoding needs `ffmpeg` on the `PATH` as well; without it the
+raw `.webm` is kept instead of an mp4.
 
 Record against a build rather than the dev server: a built app gives the
 WebContainer less to do before it is ready, and that boot is dead time at the

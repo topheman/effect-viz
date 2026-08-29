@@ -55,7 +55,16 @@ async function main() {
   await rm(OUT_DIR, { recursive: true, force: true });
   await mkdir(OUT_DIR, { recursive: true });
 
-  const browser = await chromium.launch({ headless: !headed });
+  // `npm install` fetches the Playwright package but not the browser it drives,
+  // deliberately: only this script needs it, and CI never does.
+  const browser = await chromium
+    .launch({ headless: !headed })
+    .catch((cause) => {
+      throw new Error(
+        "Cannot launch Chromium. Run `npm run demo:prepare` once to download it.",
+        { cause },
+      );
+    });
   const context = await browser.newContext({
     viewport: VIEWPORT,
     deviceScaleFactor: 1,
@@ -113,7 +122,16 @@ async function main() {
   };
 
   console.log("\nScenario:");
-  await runScenario({ page, cursor, mark });
+  // A scenario that fails halfway is exactly when the video is worth having:
+  // it shows what the app was doing when the beat went wrong. Encode it first
+  // and rethrow afterwards, rather than losing the take to the error.
+  let failure: unknown;
+  try {
+    await runScenario({ page, cursor, mark });
+  } catch (error) {
+    failure = error;
+    console.error("\nScenario failed. Encoding the partial take anyway.");
+  }
 
   // The video file is only flushed once the context closes, and it is named
   // after an internal id, so it can only be located afterwards.
@@ -164,15 +182,22 @@ async function main() {
   );
 
   if (ffmpeg.error || ffmpeg.status !== 0) {
-    console.warn(`\nffmpeg unavailable or failed; keeping ${rawPath}`);
+    console.warn(
+      `\nffmpeg unavailable or failed; keeping ${rawPath}. ` +
+        "Install ffmpeg to get an mp4 the README can play.",
+    );
+    if (failure) throw failure;
     return;
   }
 
   if (!keepWebm) await rm(rawPath);
   console.log(
-    `\nRecorded ${path.relative(ROOT, mp4Path)} ` +
+    `\n${failure ? "Partial recording in" : "Recorded"} ` +
+      `${path.relative(ROOT, mp4Path)} ` +
       `(trimmed ${trim.toFixed(1)}s of boot from the head)`,
   );
+
+  if (failure) throw failure;
 }
 
 main().catch((error) => {

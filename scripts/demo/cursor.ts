@@ -271,6 +271,27 @@ const paceFor = (distance: number) =>
   Math.min(MAX_MOVE_MS, Math.max(MIN_MOVE_MS, distance / SPEED_PX_PER_MS));
 
 /**
+ * Blocks until a target will accept a press.
+ *
+ * `mouse.down()` fires wherever the pointer happens to be and runs none of the
+ * checks `locator.click()` does. That is deliberate — the play button animates
+ * on mount, and Playwright refuses to click an element it considers unstable —
+ * but it means nothing notices a press that lands on a disabled control. Run is
+ * disabled while an edit syncs into the WebContainer, and a press swallowed
+ * there would leave every beat after it describing a run that never started.
+ */
+async function untilEnabled(target: Locator, timeout = 15_000): Promise<void> {
+  const deadline = Date.now() + timeout;
+  for (;;) {
+    if (await target.isEnabled()) return;
+    if (Date.now() > deadline) {
+      throw new Error(`Target still disabled after ${timeout}ms: ${target}`);
+    }
+    await target.page().waitForTimeout(100);
+  }
+}
+
+/**
  * Drives the pointer for one page. Holds the last position, because Playwright's
  * mouse is stateless from the script's point of view and a glide needs to know
  * where it is starting from.
@@ -341,6 +362,7 @@ export class Cursor {
     { duration }: { duration?: number } = {},
   ): Promise<void> {
     await this.moveToLocator(target, duration);
+    await untilEnabled(target);
     await this.page.waitForTimeout(220);
     await this.page.mouse.down();
     // Long enough for the pressed state to land on a frame: the capture runs at
@@ -400,22 +422,6 @@ export class Cursor {
   }
 
   /**
-   * Rests on a target long enough for a hover affordance to appear.
-   *
-   * Monaco's type tooltip is on a delay, and the pointer has to stay inside the
-   * word for the whole of it, so the dwell is the point of this rather than an
-   * afterthought.
-   */
-  async hover(target: Locator | Point, dwell = 1100): Promise<void> {
-    if ("x" in target) {
-      await this.moveTo(target);
-    } else {
-      await this.moveToLocator(target);
-    }
-    await this.page.waitForTimeout(dwell);
-  }
-
-  /**
    * Scrolls the wheel under the pointer, in increments.
    *
    * One large delta jumps the content in a single frame; several smaller ones
@@ -445,10 +451,14 @@ export class Cursor {
     await this.page.waitForTimeout(220);
 
     const { x, y } = this.position;
+    // Dispatched on the control rather than on the document. The pointer
+    // overlay listens on the document either way, because the event bubbles,
+    // but anything else watching for a press outside itself — a popover, a
+    // tooltip — sees a press that truthfully happened inside the picker.
     const flash = (type: string) =>
-      this.page.evaluate(
-        ({ type, x, y }: { type: string; x: number; y: number }) => {
-          document.dispatchEvent(
+      target.evaluate(
+        (el, { type, x, y }: { type: string; x: number; y: number }) => {
+          el.dispatchEvent(
             new PointerEvent(type, { clientX: x, clientY: y, bubbles: true }),
           );
         },
