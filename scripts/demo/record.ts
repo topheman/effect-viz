@@ -1,16 +1,20 @@
 /**
  * Records the README demo video by replaying `scenario.ts` in a real browser.
  *
- * Run the dev server first: the app needs the `Cross-Origin-Embedder-Policy`
- * and `Cross-Origin-Opener-Policy` headers that `vite.config.ts` sets on
- * `server`, and `vite preview` does not send them, so the WebContainer would
- * refuse to boot against a preview build.
+ * Record against a production build. The WebContainer boots much faster there
+ * than under the dev server, and that boot is dead time at the head of the
+ * video.
  *
- *   npm run dev
+ *   npm run build && npm run preview
  *   npm run demo:record
  *
+ * The dev server works too, via `--url`. Both send the
+ * `Cross-Origin-Embedder-Policy` and `Cross-Origin-Opener-Policy` headers the
+ * WebContainer needs: Vite applies the `server.headers` from `vite.config.ts`
+ * to the preview server as well.
+ *
  * Flags:
- *   --url=<url>     app to record (default http://localhost:5173)
+ *   --url=<url>     app to record (default http://localhost:4173)
  *   --headed        show the browser while it plays
  *   --keep-webm     keep the raw Playwright capture next to the mp4
  */
@@ -44,7 +48,7 @@ function flag(name: string): string | undefined {
 }
 
 async function main() {
-  const url = flag("url") || "http://localhost:5173";
+  const url = flag("url") || "http://localhost:4173";
   const headed = flag("headed") !== undefined;
   const keepWebm = flag("keep-webm") !== undefined;
 
@@ -86,7 +90,8 @@ async function main() {
     await page.goto(url, { waitUntil: "domcontentloaded" });
   } catch (cause) {
     throw new Error(
-      `Cannot reach ${url}. Start the dev server with \`npm run dev\` first.`,
+      `Cannot reach ${url}. Serve a build with ` +
+        "`npm run build && npm run preview` first, or point --url at a dev server.",
       { cause },
     );
   }

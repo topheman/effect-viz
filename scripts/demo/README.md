@@ -4,15 +4,18 @@ Replays a scripted tour of the app in a real browser and records it as an mp4
 for the README.
 
 ```sh
-npm run dev        # in one terminal
+npm run build && npm run preview   # in one terminal
 npm run demo:record
 ```
 
 The result lands in `recordings/demo.mp4` (gitignored).
 
-The dev server is required rather than `vite preview`: the WebContainer needs
-the `Cross-Origin-Embedder-Policy` and `Cross-Origin-Opener-Policy` headers that
-`vite.config.ts` only sets on `server`.
+Record against a build rather than the dev server: a built app gives the
+WebContainer less to do before it is ready, and that boot is dead time at the
+head of the video. The dev server works too, via `--url=http://localhost:5173`.
+Both send the `Cross-Origin-Embedder-Policy` and `Cross-Origin-Opener-Policy`
+headers the WebContainer needs, because Vite applies the `server.headers` from
+`vite.config.ts` to the preview server as well.
 
 ## Files
 
@@ -40,6 +43,22 @@ between takes.
 - `--url=<url>` — record a different origin, e.g. the deployed app
 - `--headed` — watch the browser while it plays
 - `--keep-webm` — keep Playwright's raw capture next to the mp4
+
+## Length
+
+The recorder prints where each act falls, measured from the moment the app is
+ready:
+
+```
+    0.0s  ready
+   16.1s  act 1 — run and inspect
+   ...
+```
+
+Use those numbers to trim rather than guessing. The WebContainer boot ahead of
+`ready` swings from about five seconds to fifteen on a cold start, so the
+recorder keeps a short glimpse of it and cuts the rest, which leaves the running
+time decided by the scenario alone.
 
 ## Writing a scenario
 
