@@ -384,6 +384,52 @@ export class Cursor {
     await this.page.waitForTimeout(320);
   }
 
+  /**
+   * Glides to a point and double-clicks, which in a text editor selects the
+   * word under the pointer.
+   */
+  async doubleClick(target: Locator | Point): Promise<void> {
+    if ("x" in target) {
+      await this.moveTo(target);
+    } else {
+      await this.moveToLocator(target);
+    }
+    await this.page.waitForTimeout(220);
+    await this.page.mouse.dblclick(this.position.x, this.position.y);
+    await this.page.waitForTimeout(320);
+  }
+
+  /**
+   * Rests on a target long enough for a hover affordance to appear.
+   *
+   * Monaco's type tooltip is on a delay, and the pointer has to stay inside the
+   * word for the whole of it, so the dwell is the point of this rather than an
+   * afterthought.
+   */
+  async hover(target: Locator | Point, dwell = 1100): Promise<void> {
+    if ("x" in target) {
+      await this.moveTo(target);
+    } else {
+      await this.moveToLocator(target);
+    }
+    await this.page.waitForTimeout(dwell);
+  }
+
+  /**
+   * Scrolls the wheel under the pointer, in increments.
+   *
+   * One large delta jumps the content in a single frame; several smaller ones
+   * read as scrolling. The pointer stays put, as a real one would.
+   */
+  async scroll(deltaY: number, { steps = 5 }: { steps?: number } = {}) {
+    const per = deltaY / steps;
+    for (let i = 0; i < steps; i++) {
+      await this.page.mouse.wheel(0, per);
+      await this.page.waitForTimeout(70);
+    }
+    await this.page.waitForTimeout(280);
+  }
+
   /** Selects a value in a native `<select>`, flashing the pointer over it first. */
   async select(target: Locator, value: string): Promise<void> {
     await this.moveToLocator(target);

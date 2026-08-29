@@ -36,7 +36,7 @@ const ROOT = path.resolve(
 const OUT_DIR = path.join(ROOT, "recordings");
 
 /** How much of the WebContainer boot to keep at the head of the video. */
-const BOOT_LEAD_IN_SECONDS = 1.8;
+const BOOT_LEAD_IN_SECONDS = 0.8;
 
 function flag(name: string): string | undefined {
   const match = process.argv

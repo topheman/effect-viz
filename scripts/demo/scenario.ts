@@ -58,31 +58,100 @@ async function timelineHandlePoint(page: Page): Promise<Point> {
 /**
  * Finds where a piece of text sits on screen inside Monaco.
  *
- * Monaco splits a line across many spans and re-renders them on scroll, so a
- * CSS selector cannot address a token. Walking the text nodes and measuring a
- * `Range` finds the token wherever the editor happened to put it.
+ * Three things make this harder than a CSS selector. Monaco splits a line
+ * across a span per token, so the text being searched for is rarely inside a
+ * single node; it renders only the lines near the viewport, so anything below
+ * the fold is absent from the DOM entirely; and the page holds a second,
+ * zero-sized editor whose content would otherwise match first.
+ *
+ * `within` disambiguates: pass a longer string that contains `needle` when the
+ * needle alone would match somewhere else on screen. Searching for "5" in the
+ * retry program finds `if (n < 5)` long before `Schedule.recurs(5)`.
  */
-async function locateText(page: Page, needle: string): Promise<Point> {
-  const box = await page.evaluate((text: string) => {
-    const lines = document.querySelector(".view-lines");
-    if (!lines) return null;
+async function locateText(
+  page: Page,
+  needle: string,
+  { within }: { within?: string } = {},
+): Promise<Point | null> {
+  return page.evaluate(
+    ({ needle, within }: { needle: string; within?: string }) => {
+      const editor = [...document.querySelectorAll(".view-lines")].find(
+        (el) => el.getBoundingClientRect().height > 0,
+      );
+      if (!editor) return null;
 
-    const walker = document.createTreeWalker(lines, NodeFilter.SHOW_TEXT);
-    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-      const index = node.textContent?.indexOf(text) ?? -1;
-      if (index < 0) continue;
+      // Monaco renders indentation and gaps as non-breaking spaces, so a needle
+      // typed with ordinary spaces never matches the DOM text. Substituting one
+      // character for another keeps every offset below valid.
+      const normalise = (value: string) => value.replace(/\u00A0/g, " ");
 
-      const range = document.createRange();
-      range.setStart(node, index);
-      range.setEnd(node, index + text.length);
-      const rect = range.getBoundingClientRect();
-      return { x: rect.left, y: rect.top + rect.height / 2 };
-    }
-    return null;
-  }, needle);
+      const context = normalise(within ?? needle);
+      const offsetInContext = within ? context.indexOf(normalise(needle)) : 0;
+      if (offsetInContext < 0) return null;
 
-  if (!box) throw new Error(`Cannot find "${needle}" in the editor`);
-  return box;
+      for (const line of editor.querySelectorAll(".view-line")) {
+        const text = normalise(line.textContent ?? "");
+        const at = text.indexOf(context);
+        if (at < 0) continue;
+
+        // Map a character offset in the line onto the text node that holds it.
+        const target = at + offsetInContext;
+        const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT);
+        let seen = 0;
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          const length = node.textContent?.length ?? 0;
+          if (seen + length > target) {
+            const range = document.createRange();
+            range.setStart(node, target - seen);
+            // The needle can spill into the next span; clamping to this node is
+            // enough, because only the left edge of the rect is used.
+            range.setEnd(node, Math.min(length, target - seen + needle.length));
+            const rect = range.getBoundingClientRect();
+            return { x: rect.left, y: rect.top + rect.height / 2 };
+          }
+          seen += length;
+        }
+      }
+      return null;
+    },
+    { needle, within },
+  );
+}
+
+/**
+ * Scrolls the editor until a piece of text is rendered, then returns its
+ * position. Monaco virtualises, so a target below the fold has to be brought
+ * into the DOM before it can be pointed at.
+ */
+async function revealText(
+  page: Page,
+  cursor: Cursor,
+  needle: string,
+  options: { within?: string } = {},
+): Promise<Point> {
+  const found = await locateText(page, needle, options);
+  if (found) return found;
+
+  // The wheel acts on whatever is under the pointer, so it has to be over the
+  // editor before scrolling, not wherever the last beat left it.
+  const editorBox = await page
+    .locator(".view-lines")
+    .filter({ visible: true })
+    .first()
+    .boundingBox();
+  if (editorBox) {
+    await cursor.moveTo({
+      x: editorBox.x + editorBox.width / 2,
+      y: editorBox.y + editorBox.height / 3,
+    });
+  }
+
+  for (let attempt = 0; attempt < 6; attempt++) {
+    await cursor.scroll(300, { steps: 4 });
+    const point = await locateText(page, needle, options);
+    if (point) return point;
+  }
+  throw new Error(`Cannot reach "${needle}" in the editor`);
 }
 
 export async function runScenario({ page, cursor, mark }: ScenarioContext) {
@@ -122,85 +191,108 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
   mark("ready");
   await cursor.pause(900);
 
-  // --- Act 1: slow the clock, run, and read the three views ----------------
-  await cursor.select(speedSelect, "0.25");
-  await cursor.pause(400);
+  // --- Act 1: run it once at full speed and read the three views -----------
+  await cursor.click(runButton);
+  await untilStatus("finished");
+  await cursor.pause(500);
+
+  await cursor.moveToLocator(fiberTree);
+  await cursor.pause(520);
+  await cursor.moveToLocator(executionLog);
+  await cursor.pause(520);
+  await cursor.moveToLocator(timeline);
+  await cursor.pause(430);
+
+  // Panels are resizable: give the timeline lanes more room.
+  await cursor.drag(
+    await timelineHandlePoint(page),
+    { x: 0, y: -25 },
+    { duration: 600 },
+  );
+  await cursor.pause(350);
+  mark("act 1 — run and inspect");
+
+  // --- Act 2: same program, slower clock, then step through it -------------
+  // The speed change lands between two runs of the same program on purpose:
+  // the only thing that differs is how long it takes, which is the point.
+  await cursor.select(speedSelect, "0.5");
+  await cursor.pause(300);
 
   await cursor.click(runButton);
   await untilStatus("running");
   await cursor.pause(600);
 
-  // Paused first: the panel tour takes longer than this program runs, and a
-  // still frame is the one a viewer can actually read.
   await cursor.click(pauseButton);
   await untilStatus("paused");
-  await cursor.pause(600);
+  await cursor.pause(500);
 
-  await cursor.moveToLocator(fiberTree);
-  await cursor.pause(900);
-  await cursor.moveToLocator(executionLog);
-  await cursor.pause(900);
-  await cursor.moveToLocator(timeline);
-  await cursor.pause(900);
-
-  // Panels are resizable: give the timeline lanes more room.
-  await cursor.drag(await timelineHandlePoint(page), { x: 0, y: -25 });
-  await cursor.pause(700);
-  mark("act 1 — run and inspect");
-
-  // --- Act 2: step the runtime forward one event at a time -----------------
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 2; i++) {
     await cursor.click(stepButton);
-    await cursor.pause(550);
+    await cursor.pause(380);
   }
 
   await cursor.click(runButton);
   await untilStatus("finished");
-  await cursor.pause(1200);
-  mark("act 2 — pause and step");
+  await cursor.pause(700);
+  mark("act 2 — slow down and step");
 
-  // --- Act 3: edit the program and re-run it -------------------------------
+  // --- Act 3: the editor is live, and it knows the types -------------------
   await cursor.click(resetButton);
-  await cursor.pause(500);
-
+  await cursor.pause(400);
   await cursor.select(speedSelect, "1");
   await cursor.pause(300);
 
-  const delay = await locateText(page, "1.5");
-  await cursor.moveTo({ x: delay.x + 2, y: delay.y });
+  const worker = await revealText(page, cursor, "worker1", {
+    within: "const worker1",
+  });
+  await cursor.hover(worker, 850);
+
+  // Renaming a span keeps the run the same length, and the new name comes back
+  // out of the runtime in the execution log — which is the point being made.
+  const span = await revealText(page, cursor, "task", {
+    within: "worker-1-task",
+  });
+  await cursor.doubleClick({ x: span.x + 3, y: span.y });
   await cursor.pause(250);
-  await page.mouse.down();
-  await page.mouse.up();
-  await cursor.pause(400);
-  // Select the three characters of "1.5" and retype the duration, so the video
-  // shows a live editor rather than a syntax-highlighted screenshot.
-  for (let i = 0; i < 3; i++) await page.keyboard.press("Shift+ArrowRight");
-  await cursor.pause(300);
-  await page.keyboard.type("4", { delay: 110 });
-  await cursor.pause(900);
+  await page.keyboard.type("job", { delay: 110 });
+  await cursor.pause(600);
 
   await cursor.click(runButton);
   await untilStatus("finished");
-  await cursor.pause(1400);
+  await cursor.pause(650);
   mark("act 3 — edit and re-run");
 
-  // --- Act 4: a second program, ending on its interrupted fibers -----------
+  // --- Act 4: break the retry policy and watch the run go red --------------
   await cursor.click(resetButton);
-  await cursor.pause(400);
+  await cursor.pause(250);
 
-  await cursor.select(programSelect, "structuredInterruption");
-  await cursor.pause(1100);
+  await cursor.select(programSelect, "retryExponentialBackoff");
+  await cursor.pause(700);
 
   await cursor.click(runButton);
   await untilStatus("finished");
-  await cursor.pause(800);
+  await cursor.pause(450);
+
+  // `flakyEffect` only succeeds once n >= 5, and the `if (n < 5)` guard is left
+  // alone, so cutting the schedule to three retries makes failure certain.
+  const recurs = await revealText(page, cursor, "5", {
+    within: "Schedule.recurs(5)",
+  });
+  await cursor.doubleClick({ x: recurs.x + 3, y: recurs.y });
+  await cursor.pause(300);
+  await page.keyboard.type("3", { delay: 110 });
+  await cursor.pause(450);
+
+  await cursor.click(runButton);
+  await untilStatus("finished");
+  await cursor.pause(700);
 
   await cursor.moveToLocator(fiberTree);
-  await cursor.pause(1800);
-  mark("act 4 — second program");
+  await cursor.pause(950);
+  mark("act 4 — break the retry policy");
 
   // --- Close on the about box, the way the hand-made video did -------------
   await cursor.click(infoButton);
-  await cursor.pause(2600);
+  await cursor.pause(1500);
   mark("act 5 — about");
 }

@@ -103,13 +103,16 @@ log rows — is pacing, giving the viewer somewhere to look while a program runs
 
 ## Coverage by the scripted scenario
 
-`scenario.ts` reproduces beats 1–3, plus controls that did not exist when this
-was recorded (speed, pause, step, reset). Deliberately not reproduced:
+`scenario.ts` reproduces every act of this demo, plus controls that postdate it
+(speed, pause, step, reset). Three deliberate departures:
 
-- **The open dropdown** (13.0, 25.5, 33.5). It is a native `<select>`, so macOS
-  draws the popup outside the page and a browser capture cannot see it. The
-  program switch itself still reads, through the picker label and the code.
-- **Type-hover tooltips** (30.0, 38.5). Reproducible with a hover and a dwell;
-  left out only for time.
-- **The second edit and the failing run** (41.5–48.5). The strongest act in the
-  original. It is out of the current cut for length, not for difficulty.
+- **The open dropdown** (13.0, 25.5, 33.5) is not reproduced. It is a native
+  `<select>`, so macOS draws the popup outside the page and a browser capture
+  cannot see it. The switch still reads, through the picker label and the code.
+- **The rename targets one span, not three.** The original suffixes all three
+  Multi-Step Worker spans at once with a multi-caret edit. The script renames
+  `worker-1-task` to `worker-1-job` in the Basic Example instead, which makes the
+  same point in one program and leaves the untouched `worker-2-task` on screen
+  as a control.
+- **The emoji edit is dropped**, for time. `Schedule.recurs(5)` →
+  `recurs(3)` and the failing run it causes are reproduced in full.
