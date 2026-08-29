@@ -31,6 +31,9 @@ const ROOT = path.resolve(
 );
 const OUT_DIR = path.join(ROOT, "recordings");
 
+/** How much of the WebContainer boot to keep at the head of the video. */
+const BOOT_LEAD_IN_SECONDS = 1.8;
+
 function flag(name: string): string | undefined {
   const match = process.argv
     .slice(2)
@@ -73,6 +76,8 @@ async function main() {
   await installCursor(context);
 
   const page = await context.newPage();
+  // Video capture starts with the page, so this is frame zero.
+  const videoStartedAt = Date.now();
   page.on("console", (msg) => {
     if (msg.type() === "error") console.error("[page]", msg.text());
   });
@@ -87,7 +92,23 @@ async function main() {
   }
 
   const cursor = new Cursor(page);
-  await runScenario({ page, cursor });
+
+  // Act timings, so the length can be trimmed against measurements. The clock
+  // starts when the app is ready, because the WebContainer boot happens before
+  // the recording has anything worth showing and varies run to run.
+  let clockStart = Date.now();
+  let readyAt = Date.now();
+  const mark = (label: string) => {
+    if (label === "ready") {
+      clockStart = Date.now();
+      readyAt = clockStart;
+    }
+    const elapsed = (Date.now() - clockStart) / 1000;
+    console.log(`  ${elapsed.toFixed(1).padStart(5)}s  ${label}`);
+  };
+
+  console.log("\nScenario:");
+  await runScenario({ page, cursor, mark });
 
   // The video file is only flushed once the context closes, and it is named
   // after an internal id, so it can only be located afterwards.
@@ -100,11 +121,20 @@ async function main() {
   const rawPath = path.join(OUT_DIR, "demo.webm");
   await rename(path.join(OUT_DIR, webm), rawPath);
 
+  // Everything before the app is usable is WebContainer boot, whose length
+  // swings by seconds between machines and would otherwise decide whether the
+  // video comes in under a minute. Keep a glimpse of it for context and cut the
+  // rest, so the running time is set by the scenario alone.
+  const bootSeconds = (readyAt - videoStartedAt) / 1000;
+  const trim = Math.max(0, bootSeconds - BOOT_LEAD_IN_SECONDS);
+
   const mp4Path = path.join(OUT_DIR, "demo.mp4");
   const ffmpeg = spawnSync(
     "ffmpeg",
     [
       "-y",
+      "-ss",
+      trim.toFixed(2),
       "-i",
       rawPath,
       // GitHub only plays H.264 in an MP4 container, and yuv420p is the pixel
@@ -134,7 +164,10 @@ async function main() {
   }
 
   if (!keepWebm) await rm(rawPath);
-  console.log(`\nRecorded ${path.relative(ROOT, mp4Path)}`);
+  console.log(
+    `\nRecorded ${path.relative(ROOT, mp4Path)} ` +
+      `(trimmed ${trim.toFixed(1)}s of boot from the head)`,
+  );
 }
 
 main().catch((error) => {
