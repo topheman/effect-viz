@@ -66,3 +66,10 @@ Wait on the app, never on the clock. `untilStatus("finished")` survives a slow
 machine; a `pause(6000)` guessed from one run does not. Beats after a click are
 for the viewer, so they can be generous — the panel tour deliberately happens
 while execution is paused, because a frozen frame is the one a viewer can read.
+
+The same goes for the editor. Monaco's first type hover of a session waits about
+two seconds on the TypeScript worker to load the program, and shows an empty
+`Loading...` box meanwhile, so `hoverType` holds until the tooltip has real text
+in it. Beats that cost seconds are worth hiding inside a run: the tour asks for
+that first type while the program is executing, which pays for the wait twice
+over.

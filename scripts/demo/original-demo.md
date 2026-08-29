@@ -109,10 +109,10 @@ log rows — is pacing, giving the viewer somewhere to look while a program runs
 - **The open dropdown** (13.0, 25.5, 33.5) is not reproduced. It is a native
   `<select>`, so macOS draws the popup outside the page and a browser capture
   cannot see it. The switch still reads, through the picker label and the code.
-- **The rename targets one span, not three.** The original suffixes all three
-  Multi-Step Worker spans at once with a multi-caret edit. The script renames
-  `worker-1-task` to `worker-1-job` in the Basic Example instead, which makes the
-  same point in one program and leaves the untouched `worker-2-task` on screen
-  as a control.
+- **The multi-caret rename targets two spans, not three.** The original suffixes
+  all three Multi-Step Worker spans at once, reaching the extra carets with
+  "add cursor below". The script stays in the Basic Example, which is already on
+  screen, and renames `worker-1-task` and `worker-2-task` to `-job` by selecting
+  every occurrence of `task` instead. Same edit, one program fewer.
 - **The emoji edit is dropped**, for time. `Schedule.recurs(5)` →
   `recurs(3)` and the failing run it causes are reproduced in full.

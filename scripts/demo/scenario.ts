@@ -154,6 +154,41 @@ async function revealText(
   throw new Error(`Cannot reach "${needle}" in the editor`);
 }
 
+/**
+ * Hovers an identifier and holds until Monaco has a type to show.
+ *
+ * The widget opens well before it has an answer: the first hover of a session
+ * waits on the TypeScript worker to load the program, and reads "Loading..."
+ * for about two seconds meanwhile. Waiting on the content instead of guessing a
+ * dwell keeps the beat as short as the language service allows, and stops the
+ * video moving on while the tooltip is still empty.
+ */
+async function hoverType(
+  page: Page,
+  cursor: Cursor,
+  point: Point,
+  { hold = 900, timeout = 8_000 }: { hold?: number; timeout?: number } = {},
+) {
+  await cursor.moveTo(point);
+  await page
+    .waitForFunction(
+      () => {
+        const widget = [...document.querySelectorAll(".monaco-hover")].find(
+          (el) => el.getBoundingClientRect().height > 0,
+        );
+        const text = widget?.textContent?.trim();
+        return Boolean(text) && text !== "Loading...";
+      },
+      undefined,
+      { timeout },
+    )
+    .catch(() => {
+      // A missing tooltip is not worth failing a recording over; the beat just
+      // reads as a pause over the code.
+    });
+  await cursor.pause(hold);
+}
+
 export async function runScenario({ page, cursor, mark }: ScenarioContext) {
   const runButton = page.getByRole("button", { name: "Run", exact: true });
   const pauseButton = page.getByRole("button", { name: "Pause", exact: true });
@@ -193,8 +228,18 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
 
   // --- Act 1: run it once at full speed and read the three views -----------
   await cursor.click(runButton);
+
+  // Ask the editor for a type while the program runs. The answer takes about as
+  // long as the run does, so this beat costs nothing, and it warms the language
+  // service for the edit later on.
+  await hoverType(
+    page,
+    cursor,
+    await revealText(page, cursor, "worker1", { within: "const worker1" }),
+  );
+
   await untilStatus("finished");
-  await cursor.pause(500);
+  await cursor.pause(300);
 
   await cursor.moveToLocator(fiberTree);
   await cursor.pause(520);
@@ -236,26 +281,25 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
   await cursor.pause(700);
   mark("act 2 — slow down and step");
 
-  // --- Act 3: the editor is live, and it knows the types -------------------
+  // --- Act 3: the editor is live, and the runtime says so ------------------
   await cursor.click(resetButton);
   await cursor.pause(400);
   await cursor.select(speedSelect, "1");
   await cursor.pause(300);
 
-  const worker = await revealText(page, cursor, "worker1", {
-    within: "const worker1",
-  });
-  await cursor.hover(worker, 850);
-
-  // Renaming a span keeps the run the same length, and the new name comes back
+  // Renaming a span keeps the run the same length, and the new names come back
   // out of the runtime in the execution log — which is the point being made.
+  // Double-clicking selects one `task`; selecting every occurrence puts a caret
+  // on the second worker too, so one three-letter edit renames both spans.
   const span = await revealText(page, cursor, "task", {
     within: "worker-1-task",
   });
   await cursor.doubleClick({ x: span.x + 3, y: span.y });
   await cursor.pause(250);
+  await page.keyboard.press("ControlOrMeta+Shift+L");
+  await cursor.pause(650);
   await page.keyboard.type("job", { delay: 110 });
-  await cursor.pause(600);
+  await cursor.pause(550);
 
   await cursor.click(runButton);
   await untilStatus("finished");
