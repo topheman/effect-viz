@@ -207,7 +207,6 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
     page.getByText(name, { exact: true }).filter({ visible: true }).first();
   const fiberTree = panelTitle("Fiber Tree");
   const executionLog = panelTitle("Execution Log");
-  const timeline = panelTitle("Timeline");
 
   /** Blocks until the playback bar reports a state, so beats never race the run. */
   const untilStatus = (state: string, timeout = 60_000) =>
@@ -229,13 +228,25 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
   // --- Act 1: run it once at full speed and read the three views -----------
   await cursor.click(runButton);
 
-  // Ask the editor for a type while the program runs. The answer takes about as
-  // long as the run does, so this beat costs nothing, and it warms the language
-  // service for the edit later on.
+  // Panels are resizable, and the Basic Example needs the room: at the default
+  // split the third fiber lane is cut off by the time axis. Fifty pixels puts
+  // all three on screen. Done while the program is still running, so the lanes
+  // arrive into a panel that already fits them.
+  await cursor.drag(
+    await timelineHandlePoint(page),
+    { x: 0, y: -50 },
+    { duration: 700 },
+  );
+  await cursor.pause(250);
+
+  // Ask the editor for a type. The first answer of a session takes seconds to
+  // come back, which is why the beat is held on the content rather than on a
+  // timer; it also warms the language service for the edit in act 3.
   await hoverType(
     page,
     cursor,
     await revealText(page, cursor, "worker1", { within: "const worker1" }),
+    { hold: 700 },
   );
 
   await untilStatus("finished");
@@ -244,19 +255,7 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
   await cursor.moveToLocator(fiberTree);
   await cursor.pause(520);
   await cursor.moveToLocator(executionLog);
-  await cursor.pause(520);
-  await cursor.moveToLocator(timeline);
-  await cursor.pause(430);
-
-  // Panels are resizable, and the Basic Example needs the room: at the default
-  // split the third fiber lane is cut off by the time axis. Fifty pixels puts
-  // all three on screen at once.
-  await cursor.drag(
-    await timelineHandlePoint(page),
-    { x: 0, y: -50 },
-    { duration: 700 },
-  );
-  await cursor.pause(350);
+  await cursor.pause(560);
   mark("act 1 — run and inspect");
 
   // --- Act 2: same program, slower clock, then step through it -------------
