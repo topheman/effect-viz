@@ -268,10 +268,6 @@ export function MainLayout() {
     setPauseReason(outcome._tag === "noProgress" ? "stuck" : "user");
   };
 
-  const onStepOver = () => {
-    // TODO: Step over in Effect execution
-  };
-
   const onReset = () => {
     runIdRef.current++;
     setPlaybackState("idle");
@@ -471,7 +467,6 @@ export function MainLayout() {
         onPlay={onPlay}
         onPause={onPause}
         onStep={onStep}
-        onStepOver={onStepOver}
         onReset={onReset}
         showVisualizer={showVisualizer}
         onToggleVisualizer={() => setShowVisualizer(!showVisualizer)}
