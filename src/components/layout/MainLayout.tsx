@@ -19,7 +19,7 @@ import {
 import { VisualizerPanel } from "@/components/visualizer/VisualizerPanel";
 import { useEventHandlers } from "@/hooks/useEventHandlers";
 import { useOnboarding } from "@/hooks/useOnboarding";
-import { useSpeed } from "@/hooks/useSpeed";
+import { type Speed, useSpeed } from "@/hooks/useSpeed";
 import { useWebContainerBoot } from "@/hooks/useWebContainerBoot";
 import { useCanSupportWebContainer } from "@/lib/mobileDetection";
 import {
@@ -35,6 +35,12 @@ import {
   type PauseReason,
   type PlaybackState,
 } from "./PlaybackControls";
+
+/**
+ * How long a speed change waits before it starts the program, so that walking
+ * the select with the keyboard settles on one run rather than one per option.
+ */
+const SPEED_AUTO_START_DELAY_MS = 250;
 
 export function MainLayout() {
   const canSupportWebContainer = useCanSupportWebContainer();
@@ -80,12 +86,42 @@ export function MainLayout() {
    */
   const runIdRef = useRef(0);
   const [speed, setSpeed] = useSpeed();
+  /** Pending auto-start from a speed change, waiting out the debounce. */
+  const autoStartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /**
+   * Bumped whenever an auto-start is called off. A fired one is still in flight
+   * while it flushes the editor, which is long enough for a control to be
+   * pressed, so it carries the value it read and drops itself if it moved on.
+   */
+  const autoStartTokenRef = useRef(0);
+
+  const cancelAutoStart = useCallback(() => {
+    autoStartTokenRef.current++;
+    if (autoStartTimerRef.current != null) {
+      clearTimeout(autoStartTimerRef.current);
+      autoStartTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (autoStartTimerRef.current != null) {
+        clearTimeout(autoStartTimerRef.current);
+      }
+    },
+    [],
+  );
+
+  const isPlayDisabled =
+    canSupportWebContainer &&
+    (webContainer.status === "booting" || webContainer.isSyncing);
   const [showVisualizer, setShowVisualizer] = useState(false);
   const [showLogsPanel, setShowLogsPanel] = useState(true);
   const [editorTabId, setEditorTabId] = useState("program");
 
   const handleProgramChange = useCallback(
     (programKey: ProgramKey) => {
+      cancelAutoStart();
       const { newContent, updatedCache } = computeProgramSwitch(
         selectedProgram,
         programKey,
@@ -112,10 +148,12 @@ export function MainLayout() {
       completeOnboardingStep,
       handleReset,
       webContainer,
+      cancelAutoStart,
     ],
   );
 
   const handleResetToTemplate = useCallback(() => {
+    cancelAutoStart();
     const { newContent, updatedCache } = computeResetToTemplate(
       selectedProgram,
       programs,
@@ -126,7 +164,7 @@ export function MainLayout() {
     if (webContainer.isReady) {
       webContainer.syncToContainer(newContent);
     }
-  }, [selectedProgram, programs, webContainer]);
+  }, [selectedProgram, programs, webContainer, cancelAutoStart]);
 
   const handleProgramContentChange = (content: string) => {
     setEditorContent(content);
@@ -195,7 +233,13 @@ export function MainLayout() {
     </TooltipProvider>
   );
 
-  const startRun = ({ startPaused }: { startPaused: boolean }) => {
+  const startRun = ({
+    startPaused,
+    rate = speed,
+  }: {
+    startPaused: boolean;
+    rate?: Speed;
+  }) => {
     const runId = ++runIdRef.current;
     const isCurrentRun = () => runIdRef.current === runId;
 
@@ -205,7 +249,7 @@ export function MainLayout() {
       onFirstChunk: () => {
         if (!startPaused) setPlaybackState("running");
       },
-      rate: speed,
+      rate,
       startPaused,
     })
       .then(() => {
@@ -216,7 +260,23 @@ export function MainLayout() {
       });
   };
 
+  const startFromStopped = async (
+    rate: Speed,
+    isStillWanted: () => boolean = () => true,
+  ) => {
+    setShowVisualizer(true);
+    if (webContainer.isReady) {
+      await webContainer.flushSync(editorContent);
+    }
+    // Whoever pressed a control during that flush wins: starting here too would
+    // leave their run racing a second one the Reset button cannot reach.
+    if (!isStillWanted()) return;
+    setPlaybackState("starting");
+    startRun({ startPaused: false, rate });
+  };
+
   const onPlay = async () => {
+    cancelAutoStart();
     setShowVisualizer(true);
 
     // Play doubles as resume: the program is already running, just gated.
@@ -226,12 +286,27 @@ export function MainLayout() {
       return;
     }
 
-    if (webContainer.isReady) {
-      await webContainer.flushSync(editorContent);
-    }
+    await startFromStopped(speed);
+  };
 
-    setPlaybackState("starting");
-    startRun({ startPaused: false });
+  /**
+   * Speed is read once, when a program starts, so changing it on a stopped
+   * program runs it again at the new rate rather than leaving the choice with
+   * nothing to show. A paused program keeps its session: the rate it was given
+   * holds until it is started again. The delay absorbs a keyboard user walking
+   * the options — a closed select fires a change per arrow key — instead of
+   * spawning a run for each one passed through.
+   */
+  const onSpeedChange = (next: Speed) => {
+    setSpeed(next);
+    cancelAutoStart();
+    if (playbackState !== "idle" && playbackState !== "finished") return;
+    if (isPlayDisabled) return;
+    const token = autoStartTokenRef.current;
+    autoStartTimerRef.current = setTimeout(() => {
+      autoStartTimerRef.current = null;
+      void startFromStopped(next, () => autoStartTokenRef.current === token);
+    }, SPEED_AUTO_START_DELAY_MS);
   };
 
   const onPause = () => {
@@ -241,6 +316,7 @@ export function MainLayout() {
   };
 
   const onStep = async () => {
+    cancelAutoStart();
     // With nothing running, Step starts the program already gated so that its
     // first events can be stepped through; there is no other way into a paused
     // run. As with Play, a finished program starts over.
@@ -269,6 +345,7 @@ export function MainLayout() {
   };
 
   const onReset = () => {
+    cancelAutoStart();
     runIdRef.current++;
     setPlaybackState("idle");
     setPauseReason("user");
@@ -473,13 +550,10 @@ export function MainLayout() {
         onboardingStep={onboardingStep}
         onOnboardingComplete={completeOnboardingStep}
         onRestartOnboarding={restartOnboarding}
-        isPlayDisabled={
-          canSupportWebContainer &&
-          (webContainer.status === "booting" || webContainer.isSyncing)
-        }
+        isPlayDisabled={isPlayDisabled}
         isSyncing={canSupportWebContainer && webContainer.isSyncing}
         speed={speed}
-        onSpeedChange={setSpeed}
+        onSpeedChange={onSpeedChange}
         pauseReason={pauseReason}
       />
     </div>

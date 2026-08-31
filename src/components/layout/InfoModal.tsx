@@ -1,4 +1,4 @@
-import { Info, Play, StepForward, X } from "lucide-react";
+import { Info, StepForward, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState } from "react";
 
@@ -144,9 +144,8 @@ export function InfoModal({
               to run the program step by step.
             </p>
             <p>
-              You can pick a speed before pressing{" "}
-              <Play className="inline h-3.5 w-3.5 align-text-bottom" /> to watch
-              the same program run slower.
+              You can pick a speed to watch the same program run slower. On a
+              stopped program, picking one runs it.
             </p>
           </section>
 

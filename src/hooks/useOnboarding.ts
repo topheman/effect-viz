@@ -10,6 +10,7 @@ const OnboardingStep = Schema.Literal(
   "programSelect",
   "info",
   "step",
+  "speed",
 );
 type OnboardingStep = Schema.Schema.Type<typeof OnboardingStep>;
 
@@ -24,11 +25,14 @@ type OnboardingStored = Schema.Schema.Type<typeof OnboardingStored>;
  * The tour, in the order it is walked. `since` is the onboarding version that
  * introduced the step, which is how a returning visitor is shown a step added
  * after their last visit without replaying the tour they already finished.
+ * Progress is stored as a single version number, so two steps sharing a `since`
+ * cannot be told apart: give each new step a version of its own.
  */
 const STEPS: readonly { id: OnboardingStep; since: number }[] = [
   { id: "play", since: 1 },
-  { id: "step", since: 2 },
   { id: "showVisualizer", since: 1 },
+  { id: "step", since: 2 },
+  { id: "speed", since: 3 },
   { id: "programSelect", since: 1 },
   { id: "info", since: 1 },
 ];
@@ -88,10 +92,33 @@ function subscribe(cb: () => void): () => void {
   };
 }
 
-function writeStored(completed: OnboardingStep): void {
+/**
+ * The version to store once `reached` has been walked to: high enough to retire
+ * the steps the visitor has now seen, low enough to keep the ones added behind
+ * their position that they have not. Storing the current version outright would
+ * drop a second back-inserted step, since it is only ever shown while the stored
+ * version is older than the one that introduced it.
+ */
+function getStoredVersion(
+  storedVersion: number,
+  reached: OnboardingStep,
+  justCompleted: OnboardingStep,
+): number {
+  const reachedIdx = STEPS_ORDER.indexOf(reached);
+  const pending = STEPS.filter(
+    (step, idx) =>
+      idx <= reachedIdx &&
+      step.since > storedVersion &&
+      step.id !== justCompleted,
+  );
+  if (pending.length === 0) return ONBOARDING_VERSION;
+  return Math.min(...pending.map((step) => step.since)) - 1;
+}
+
+function writeStored(completed: OnboardingStep, version: number): void {
   const value: OnboardingStored = {
     completed,
-    version: ONBOARDING_VERSION,
+    version,
     date: new Date().toISOString(),
   };
   localStorage.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify(value));
@@ -127,7 +154,8 @@ export function useOnboarding(): {
       STEPS_ORDER.indexOf(stored.completed) > STEPS_ORDER.indexOf(stepId)
         ? stored.completed
         : stepId;
-    writeStored(reached);
+    const storedVersion = stored?.version ?? ONBOARDING_VERSION;
+    writeStored(reached, getStoredVersion(storedVersion, reached, stepId));
   }, []);
 
   const restartOnboarding = useCallback(() => {

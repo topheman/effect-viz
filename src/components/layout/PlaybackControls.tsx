@@ -54,7 +54,7 @@ interface PlaybackControlsProps {
   isPlayDisabled?: boolean;
   /** When true, show "Syncing..." in status (e.g. flushing editor to container) */
   isSyncing?: boolean;
-  /** Playback speed applied on the next run */
+  /** Playback speed applied when a program starts */
   speed?: Speed;
   onSpeedChange?: (speed: Speed) => void;
   /** Only meaningful while paused; decides whether Step can do anything */
@@ -96,6 +96,12 @@ export function PlaybackControls({
   // The rate is fixed when the program starts: the WebContainer receives it as a
   // spawn environment variable and cannot be retuned until it is restarted.
   const canChangeSpeed = state !== "running" && state !== "starting";
+  // Changing the speed of a stopped program runs it at the new rate. A live one,
+  // running or paused, keeps the rate it was given until it is started again.
+  const speedHint =
+    state === "idle" || state === "finished"
+      ? "Speed — slows the program's own clock, and runs it"
+      : "Speed applies on the next run";
   const [playMountAnimationEnded, setPlayMountAnimationEnded] = useState(false);
 
   // Skip showVisualizer step on desktop (toggle is hidden)
@@ -304,12 +310,19 @@ export function PlaybackControls({
             <TooltipTrigger asChild>
               <Select
                 aria-label="Playback speed"
-                className="h-8 w-[4.5rem] px-2"
+                data-onboarding-step="speed"
+                className={cn(
+                  "h-8 w-[4.5rem] px-2",
+                  onboardingStep === "speed" &&
+                    canChangeSpeed &&
+                    "animate-onboarding-glow",
+                )}
                 value={speed}
                 disabled={!canChangeSpeed}
-                onChange={(e) =>
-                  onSpeedChange?.(Number(e.target.value) as Speed)
-                }
+                onChange={(e) => {
+                  onSpeedChange?.(Number(e.target.value) as Speed);
+                  onOnboardingComplete?.("speed");
+                }}
               >
                 {SPEED_OPTIONS.map((option) => (
                   <option key={option} value={option}>
@@ -318,11 +331,7 @@ export function PlaybackControls({
                 ))}
               </Select>
             </TooltipTrigger>
-            <TooltipContent>
-              {canChangeSpeed
-                ? "Speed — slows the program's own clock"
-                : "Speed applies on the next run"}
-            </TooltipContent>
+            <TooltipContent>{speedHint}</TooltipContent>
           </Tooltip>
         </div>
 

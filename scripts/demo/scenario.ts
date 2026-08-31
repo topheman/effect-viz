@@ -285,9 +285,8 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
   // --- Act 2: same program, slower clock, then step through it -------------
   // The speed change lands between two runs of the same program on purpose:
   // the only thing that differs is how long it takes, which is the point.
+  // Picking a speed starts the run itself, so there is no Run press here.
   await cursor.select(speedSelect, "0.5");
-
-  await cursor.click(runButton);
   await untilStatus("running");
   await cursor.pause(600);
 
@@ -307,7 +306,6 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
   // --- Act 3: the editor is live, and the runtime says so ------------------
   await cursor.click(resetButton);
   await cursor.pause(400);
-  await cursor.select(speedSelect, "1");
 
   // Renaming a span keeps the run the same length, and the new names come back
   // out of the runtime in the execution log — which is the point being made.
@@ -323,7 +321,10 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
   await page.keyboard.type("job", { delay: 110 });
   await cursor.pause(550);
 
-  await runToCompletion();
+  // Back to full speed, which starts the run: act 2 left the clock at 0.5, and
+  // the edit is meant to be read at the same pace as act 1.
+  await cursor.select(speedSelect, "1");
+  await untilStatus("finished");
   await cursor.pause(650);
   mark("act 3 — edit and re-run");
 

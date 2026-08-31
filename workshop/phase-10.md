@@ -482,8 +482,11 @@ superseded run.
 
 ## Step 5a: Speed control ✅
 
-Issue #13's actual request, clickable. Selecting a speed and pressing Play runs
-the program with its clock scaled by that factor.
+Issue #13's actual request, clickable. Selecting a speed runs the program with
+its clock scaled by that factor: a stopped program is started by the choice
+itself, since the rate is only read at start and there is otherwise nothing to
+see. A paused program is left where it is, and keeps the rate it was given until
+it is started again.
 
 ### Created/Modified Files
 
@@ -491,7 +494,7 @@ the program with its clock scaled by that factor.
 |------|---------|
 | `src/hooks/useSpeed.ts` | `SPEED_OPTIONS`, `useSpeed` (localStorage-backed), `formatSpeed` |
 | `src/components/layout/PlaybackControls.tsx` | Speed `Select`, `PauseReason`, corrected enable/disable rules |
-| `src/components/layout/MainLayout.tsx` | Speed state; `finished` on completion |
+| `src/components/layout/MainLayout.tsx` | Speed state, debounced auto-start on speed change; `finished` on completion |
 | `src/hooks/useEventHandlers.ts` | `rate` through to both paths |
 | `src/hooks/useWebContainerBoot.ts`, `src/effects/spawnAndParse.ts` | `VIZ_RATE` spawn environment variable |
 
@@ -509,7 +512,7 @@ editor flushes) is orthogonal and can coincide with any of them.
 | `starting` | – | – | ✓ | – |
 | `running` | ✓ (pause) | – | ✓ | – |
 | `paused` | ✓ (resume) | ✓ | ✓ | ✓ |
-| `finished` | ✓ (re-run) | – | ✓ | ✓ |
+| `finished` | ✓ (re-run) | ✓ (starts paused) | ✓ | ✓ |
 
 Speed is locked while running because the WebContainer receives the rate as a
 spawn environment variable and cannot be retuned without restarting. That is a

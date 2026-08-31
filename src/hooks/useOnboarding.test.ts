@@ -29,16 +29,22 @@ describe("useOnboarding", () => {
       result.current.completeStep("play");
     });
 
+    expect(result.current.currentStep).toBe("showVisualizer");
+
+    act(() => {
+      result.current.completeStep("showVisualizer");
+    });
+
     expect(result.current.currentStep).toBe("step");
 
     act(() => {
       result.current.completeStep("step");
     });
 
-    expect(result.current.currentStep).toBe("showVisualizer");
+    expect(result.current.currentStep).toBe("speed");
 
     act(() => {
-      result.current.completeStep("showVisualizer");
+      result.current.completeStep("speed");
     });
 
     expect(result.current.currentStep).toBe("programSelect");
@@ -68,7 +74,7 @@ describe("useOnboarding", () => {
     expect(raw).not.toBeNull();
     const stored = JSON.parse(raw!) as { completed: string; version: number };
     expect(stored.completed).toBe("play");
-    expect(stored.version).toBe(2);
+    expect(stored.version).toBe(3);
   });
 
   it("resumes from next step after reload (simulated)", () => {
@@ -78,12 +84,12 @@ describe("useOnboarding", () => {
       result1.current.completeStep("play");
     });
 
-    expect(result1.current.currentStep).toBe("step");
+    expect(result1.current.currentStep).toBe("showVisualizer");
 
     // Simulate reload: new hook instance reads from same localStorage
     const { result: result2 } = renderHook(() => useOnboarding());
 
-    expect(result2.current.currentStep).toBe("step");
+    expect(result2.current.currentStep).toBe("showVisualizer");
   });
 
   it("returns null when all steps completed (simulated)", () => {
@@ -91,8 +97,9 @@ describe("useOnboarding", () => {
 
     act(() => {
       result1.current.completeStep("play");
-      result1.current.completeStep("step");
       result1.current.completeStep("showVisualizer");
+      result1.current.completeStep("step");
+      result1.current.completeStep("speed");
       result1.current.completeStep("programSelect");
       result1.current.completeStep("info");
     });
@@ -112,7 +119,7 @@ describe("useOnboarding", () => {
     expect(result.current.currentStep).toBe("play");
   });
 
-  it("shows a step added since the stored version, then ends", () => {
+  it("shows the steps added since the stored version, then ends", () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -128,6 +135,12 @@ describe("useOnboarding", () => {
 
     act(() => {
       result.current.completeStep("step");
+    });
+
+    expect(result.current.currentStep).toBe("speed");
+
+    act(() => {
+      result.current.completeStep("speed");
     });
 
     expect(result.current.currentStep).toBe(null);
@@ -151,6 +164,12 @@ describe("useOnboarding", () => {
       result.current.completeStep("step");
     });
 
+    expect(result.current.currentStep).toBe("speed");
+
+    act(() => {
+      result.current.completeStep("speed");
+    });
+
     expect(result.current.currentStep).toBe("info");
   });
 
@@ -160,12 +179,12 @@ describe("useOnboarding", () => {
     act(() => {
       result.current.completeStep("play");
     });
-    expect(result.current.currentStep).toBe("step");
+    expect(result.current.currentStep).toBe("showVisualizer");
 
     act(() => {
       result.current.completeStep("play");
     });
-    expect(result.current.currentStep).toBe("step");
+    expect(result.current.currentStep).toBe("showVisualizer");
 
     const raw = localStorage.getItem(STORAGE_KEY);
     const stored = JSON.parse(raw!) as { completed: string };
@@ -177,8 +196,9 @@ describe("useOnboarding", () => {
 
     act(() => {
       result.current.completeStep("play");
-      result.current.completeStep("step");
       result.current.completeStep("showVisualizer");
+      result.current.completeStep("step");
+      result.current.completeStep("speed");
       result.current.completeStep("programSelect");
       result.current.completeStep("info");
     });
