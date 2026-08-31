@@ -8,7 +8,7 @@ This folder documents the WebContainer integration for EffectViz — running edi
 |----------|---------|
 | [webcontainers-spec.md](./webcontainers-spec.md) | Full specification: boot sequence, project structure, sync model, stdout protocol, editor behavior |
 | [webcontainer-impl.md](./webcontainer-impl.md) | Phased implementation plan (headers, tracedRunner bundle, Effect services, sync, spawn, types) |
-| [webcontainer-perf-and-sync.md](./webcontainer-perf-and-sync.md) | Pre-compile (esbuild-wasm), sync UX (500ms debounce, flush-on-Play), perf instrumentation, remaining todos |
+| [webcontainer-perf-and-sync.md](./webcontainer-perf-and-sync.md) | Pre-compile (esbuild-wasm), sync UX (500ms debounce, flush-on-Play), perf instrumentation, stdout protocol |
 | [MOBILE_FALLBACK.md](./MOBILE_FALLBACK.md) | Mobile fallback when WebContainer fails to boot (readonly editor, in-browser Effect) |
 
 ## Quick Context
