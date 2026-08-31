@@ -9,6 +9,7 @@ const OnboardingStep = Schema.Literal(
   "showVisualizer",
   "programSelect",
   "info",
+  "step",
 );
 type OnboardingStep = Schema.Schema.Type<typeof OnboardingStep>;
 
@@ -19,17 +20,33 @@ const OnboardingStored = Schema.Struct({
 });
 type OnboardingStored = Schema.Schema.Type<typeof OnboardingStored>;
 
-const STEPS_ORDER: OnboardingStep[] = [
-  "play",
-  "showVisualizer",
-  "programSelect",
-  "info",
+/**
+ * The tour, in the order it is walked. `since` is the onboarding version that
+ * introduced the step, which is how a returning visitor is shown a step added
+ * after their last visit without replaying the tour they already finished.
+ */
+const STEPS: readonly { id: OnboardingStep; since: number }[] = [
+  { id: "play", since: 1 },
+  { id: "step", since: 2 },
+  { id: "showVisualizer", since: 1 },
+  { id: "programSelect", since: 1 },
+  { id: "info", since: 1 },
 ];
 
-function getNextStep(completed: OnboardingStep): OnboardingStep | null {
-  const idx = STEPS_ORDER.indexOf(completed);
-  if (idx < 0 || idx >= STEPS_ORDER.length - 1) return null;
-  return STEPS_ORDER[idx + 1];
+const STEPS_ORDER: OnboardingStep[] = STEPS.map((step) => step.id);
+
+/**
+ * The step to show next: the first one the visitor has neither completed nor
+ * had the chance to see. A step is unseen when it comes after the last one they
+ * completed, or when it was added after the version they stored.
+ */
+function getNextStep(stored: OnboardingStored): OnboardingStep | null {
+  const completedIdx = STEPS_ORDER.indexOf(stored.completed);
+  if (completedIdx < 0) return STEPS_ORDER[0];
+  const next = STEPS.find(
+    (step, idx) => idx > completedIdx || step.since > stored.version,
+  );
+  return next?.id ?? null;
 }
 
 function readStored(): OnboardingStored | null {
@@ -37,9 +54,7 @@ function readStored(): OnboardingStored | null {
     const raw = localStorage.getItem(ONBOARDING_STORAGE_KEY);
     if (raw == null) return null;
     const parsed: unknown = JSON.parse(raw);
-    const decoded = Schema.decodeUnknownSync(OnboardingStored)(parsed);
-    if (decoded.version !== ONBOARDING_VERSION) return null;
-    return decoded;
+    return Schema.decodeUnknownSync(OnboardingStored)(parsed);
   } catch {
     return null;
   }
@@ -47,9 +62,8 @@ function readStored(): OnboardingStored | null {
 
 function getCurrentStepFromStorage(): OnboardingStep | null {
   const stored = readStored();
-  if (stored == null) return "play";
-  const next = getNextStep(stored.completed);
-  return next;
+  if (stored == null) return STEPS_ORDER[0];
+  return getNextStep(stored);
 }
 
 function getSnapshot(): OnboardingStep | null {
@@ -104,7 +118,16 @@ export function useOnboarding(): {
     const current = getCurrentStepFromStorage();
     if (current === null) return; // onboarding already completed
     if (current !== stepId) return; // only advance when completing the current step
-    writeStored(stepId);
+    // A step added behind the visitor's position is shown out of order, so keep
+    // the furthest one they have reached: writing the earlier id would walk them
+    // back through the tour they already finished.
+    const stored = readStored();
+    const reached =
+      stored != null &&
+      STEPS_ORDER.indexOf(stored.completed) > STEPS_ORDER.indexOf(stepId)
+        ? stored.completed
+        : stepId;
+    writeStored(reached);
   }, []);
 
   const restartOnboarding = useCallback(() => {

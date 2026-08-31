@@ -3,7 +3,6 @@ import {
   Pause,
   Play,
   RotateCcw,
-  SkipForward,
   StepForward,
   Workflow,
 } from "lucide-react";
@@ -22,8 +21,6 @@ import { SPEED_OPTIONS, type Speed, formatSpeed } from "@/hooks/useSpeed";
 import { cn } from "@/lib/utils";
 
 import { InfoModal } from "./InfoModal";
-
-const STEP_OVER_IS_IMPLEMENTED = false;
 
 export type PlaybackState =
   | "idle"
@@ -47,7 +44,6 @@ interface PlaybackControlsProps {
   onPlay?: () => void;
   onPause?: () => void;
   onStep?: () => void;
-  onStepOver?: () => void;
   onReset?: () => void;
   showVisualizer?: boolean;
   onToggleVisualizer?: () => void;
@@ -70,7 +66,6 @@ export function PlaybackControls({
   onPlay,
   onPause,
   onStep,
-  onStepOver,
   onReset,
   showVisualizer = true,
   onToggleVisualizer,
@@ -236,10 +231,27 @@ export function PlaybackControls({
             <TooltipTrigger asChild>
               <Button
                 aria-label="Step"
+                data-onboarding-step="step"
                 variant="ghost"
                 size="icon"
-                onClick={onStep}
+                onClick={() => {
+                  onStep?.();
+                  onOnboardingComplete?.("step");
+                }}
                 disabled={!canStep}
+                className={cn(
+                  onboardingStep === "step" &&
+                    canStep &&
+                    "origin-center animate-onboarding-pulse",
+                )}
+                style={
+                  {
+                    "--onboarding-pulse-x": "0",
+                    "--onboarding-pulse-y": "-30%",
+                    zIndex:
+                      onboardingStep === "step" && canStep ? "100" : "auto",
+                  } as React.CSSProperties
+                }
               >
                 <StepForward className="h-4 w-4" />
               </Button>
@@ -252,23 +264,6 @@ export function PlaybackControls({
                   : "Step"}
             </TooltipContent>
           </Tooltip>
-
-          {/* Step Over */}
-          {STEP_OVER_IS_IMPLEMENTED && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onStepOver}
-                  disabled={!canStep}
-                >
-                  <SkipForward className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Step Over</TooltipContent>
-            </Tooltip>
-          )}
 
           {/* Status indicator */}
           <div

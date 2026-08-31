@@ -20,7 +20,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { mkdir, readdir, rm, rename } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, rename } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -37,6 +37,17 @@ const OUT_DIR = path.join(ROOT, "recordings");
 
 /** How much of the WebContainer boot to keep at the head of the video. */
 const BOOT_LEAD_IN_SECONDS = 0.8;
+
+/**
+ * The version the app is built with, read from the same `.env` the build reads.
+ * Seeding the tour as finished under an older version would leave the steps
+ * added since it pulsing through the recording.
+ */
+async function onboardingVersion(): Promise<number> {
+  const env = await readFile(path.join(ROOT, ".env"), "utf8");
+  const match = /^VITE_ONBOARDING_VERSION=(\d+)/m.exec(env);
+  return match ? Number(match[1]) : 1;
+}
 
 function flag(name: string): string | undefined {
   const match = process.argv
@@ -75,16 +86,19 @@ async function main() {
 
   // A fresh profile would start the onboarding tour, whose pulsing highlights
   // fight with the scripted pointer for the viewer's attention.
-  await context.addInitScript(() => {
-    localStorage.setItem(
-      "effect-flow-onboarding",
-      JSON.stringify({
-        completed: "info",
-        version: 1,
-        date: new Date().toISOString(),
-      }),
-    );
-  });
+  await context.addInitScript(
+    (version: number) => {
+      localStorage.setItem(
+        "effect-flow-onboarding",
+        JSON.stringify({
+          completed: "info",
+          version,
+          date: new Date().toISOString(),
+        }),
+      );
+    },
+    await onboardingVersion(),
+  );
 
   await installCursor(context);
 

@@ -9,7 +9,7 @@
 
 - **Pre-compile**: Transpile TS→JS on the host with esbuild-wasm, run `node program.js` in the container instead of `pnpm exec tsx program.ts`. Reduces Play→first-event from ~3.5s to ~1s.
 - **Sync UX**: 500ms debounce on edit, flush-on-Play (always run latest), "Syncing..." indicator.
-- **Stdout**: Lines not matching `TRACE_EVENT:` or `PERF:` come from container stdout (errors, `console.log`). Currently logged to browser console; todo: bubble to WebContainerLogsPanel.
+- **Stdout**: Lines not matching a known prefix come from the program itself (Node errors, `console.log`) and are shown in the WebContainerLogsPanel.
 
 ---
 
@@ -176,16 +176,19 @@ before `Effect.runFork`. Logged as `[container] ready: <ms>`.
 |--------|---------|
 | `TRACE_EVENT:` | JSON trace event (effect:start, fiber:fork, etc.) |
 | `PERF:` | Performance checkpoint from container |
+| `TRACE_CONTROL:` | Reply to a pause, resume or step command (see [phase-10.md](../phase-10.md)) |
 | *(none)* | Anything else → from something writing to stdout inside the container |
 
 ### 5.2 Un-tracked Lines
 
-Any line **not** starting with `TRACE_EVENT` or `PERF` comes from:
+Any line **not** carrying one of those prefixes comes from:
 
 - Node.js errors (e.g. `ERR_MODULE_NOT_FOUND`) and stack traces
 - User's `console.log` in their program
 
-These are currently logged with `console.warn("[spawnAndParse] container output:", line)`.
+`spawnAndParse` passes them to the host through its `onStdout` callback, and they appear in the WebContainerLogsPanel with their ANSI colours intact.
+
+One kind of line is ours rather than the program's: the spawned process gets a pseudoterminal, which echoes back every command the page writes to its stdin. Those lines decode as control commands, so they are labelled `control` and stay hidden unless the user asks to see the visualizer's internals.
 
 ---
 
@@ -247,13 +250,7 @@ sequenceDiagram
   - Optional: timeout to kill runaway processes
 - **Phase 7.2**: Optional prompt when switching programs with unsaved edits
 
-### 7.2 Stdout / Console Output
-
-- **Properly bubble up `console.log`** (and any stdout from the spawned process) and format it in `WebContainerLogsPanel`:
-  - Currently: non-TRACE_EVENT/non-PERF lines are logged with `console.warn` in `spawnAndParse.ts`
-  - Target: pass a callback from the host to `spawnAndParse` (or via store) so these lines appear in `WebContainerLogsPanel` with appropriate formatting (e.g. error styling for stack traces, neutral for user `console.log`)
-
-### 7.3 Future Improvements
+### 7.2 Future Improvements
 
 - Run prewarm with `node prewarm.js` (transpile prewarm.ts) instead of tsx
 - Consider caching transpiled `program.js` when content unchanged between syncs (already skip write on unchanged content; could skip transpile too)
@@ -266,9 +263,9 @@ sequenceDiagram
 |------|------|
 | `src/lib/transpileForContainer.ts` | esbuild-wasm init + TS→ESM transform |
 | `src/lib/transformForContainer.ts` | Import path, trace emitter, program key, perf injection |
-| `src/effects/spawnAndParse.ts` | Spawn `node program.js`, parse TRACE_EVENT, log other stdout |
+| `src/effects/spawnAndParse.ts` | Spawn `node program.js`, parse TRACE_EVENT, forward other stdout to the host |
 | `src/hooks/useWebContainerBoot.ts` | syncToContainer, flushSync, isSyncing, runPlay |
 | `src/services/webcontainer.ts` | Boot, mount, INITIAL_PROGRAM + program.js, tracedRunner.js |
 | `src/components/layout/MainLayout.tsx` | onPlay with flushSync |
 | `src/components/layout/PlaybackControls.tsx` | Syncing... indicator |
-| `src/components/editor/WebContainerLogsPanel.tsx` | Boot logs (to be extended for stdout) |
+| `src/components/editor/WebContainerLogsPanel.tsx` | Boot logs, program stdout, errors |

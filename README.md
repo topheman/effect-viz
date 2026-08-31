@@ -6,6 +6,8 @@ This is a visualizer for Effect runtime.
 
 It allows you to **visualize** the execution of Effect code in the browser, and **edit** the example programs.
 
+You can **slow down** a program so that its sleeps stretch out, or **pause** it and **step** through it one event at a time.
+
 This project is a learning project for me to understand the Effect runtime. My learning journey is documented in the [`workshop/`](./workshop/) folder, with each phase covering different Effect concepts (lazy evaluation, fibers, scheduling, errors, scopes). Check out the [AGENTS.md](./AGENTS.md) file for the AI approach.
 
 https://github.com/user-attachments/assets/52c76062-61e9-47fa-8b3d-6032ea8e8f90

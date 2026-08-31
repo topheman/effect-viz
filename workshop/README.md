@@ -72,4 +72,4 @@ WebContainer integration docs live in [WebContainer/](./WebContainer/):
 - [webcontainers-spec.md](./WebContainer/webcontainers-spec.md) - Specification for running edited programs in a WebContainer (boot on mount, install sequence, root vs inner project structure). This step is **necessary for v2** — the editable editor and WebContainer runtime must be in place before refactoring to runtime hooks.
 - [webcontainer-impl.md](./WebContainer/webcontainer-impl.md) - Phased implementation plan (Effect services, sync, spawn).
 - [MOBILE_FALLBACK.md](./WebContainer/MOBILE_FALLBACK.md) - Mobile fallback path (readonly editor, in-browser Effect execution) when WebContainer doesn't boot.
-- [webcontainer-perf-and-sync.md](./WebContainer/webcontainer-perf-and-sync.md) - Pre-compile optimization, sync UX (500ms debounce, flush-on-Play, Syncing...), perf instrumentation, and remaining todos (stdout→WebContainerLogsPanel).
+- [webcontainer-perf-and-sync.md](./WebContainer/webcontainer-perf-and-sync.md) - Pre-compile optimization, sync UX (500ms debounce, flush-on-Play, Syncing...), perf instrumentation, and the stdout protocol.
