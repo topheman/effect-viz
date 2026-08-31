@@ -17,7 +17,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { OnboardingStepId } from "@/hooks/useOnboarding";
-import { useCanSupportWebContainer } from "@/lib/mobileDetection";
+import { formatShortcut } from "@/lib/keyboardShortcuts";
+import { useCanSupportWebContainer, useIsMobile } from "@/lib/mobileDetection";
 import { cn } from "@/lib/utils";
 
 const GITHUB_REPO_URL = "https://github.com/topheman/effect-viz";
@@ -44,6 +45,9 @@ export function InfoModal({
   });
 
   const canSupportWebContainer = useCanSupportWebContainer();
+  // Safari desktop cannot run the WebContainer but still has a keyboard, so the
+  // shortcuts are gated on the device rather than on that.
+  const isMobileDevice = useIsMobile();
 
   const [isMobile, setIsMobile] = useState(() => {
     if (
@@ -147,6 +151,12 @@ export function InfoModal({
               You can pick a speed to watch the same program run slower. On a
               stopped program, picking one runs it.
             </p>
+            {!isMobileDevice && (
+              <p>
+                Press {formatShortcut("playPause")} to run or pause,{" "}
+                {formatShortcut("step")} to step.
+              </p>
+            )}
           </section>
 
           <section
