@@ -29,6 +29,12 @@ describe("useOnboarding", () => {
       result.current.completeStep("play");
     });
 
+    expect(result.current.currentStep).toBe("step");
+
+    act(() => {
+      result.current.completeStep("step");
+    });
+
     expect(result.current.currentStep).toBe("showVisualizer");
 
     act(() => {
@@ -62,7 +68,7 @@ describe("useOnboarding", () => {
     expect(raw).not.toBeNull();
     const stored = JSON.parse(raw!) as { completed: string; version: number };
     expect(stored.completed).toBe("play");
-    expect(stored.version).toBe(1);
+    expect(stored.version).toBe(2);
   });
 
   it("resumes from next step after reload (simulated)", () => {
@@ -72,12 +78,12 @@ describe("useOnboarding", () => {
       result1.current.completeStep("play");
     });
 
-    expect(result1.current.currentStep).toBe("showVisualizer");
+    expect(result1.current.currentStep).toBe("step");
 
     // Simulate reload: new hook instance reads from same localStorage
     const { result: result2 } = renderHook(() => useOnboarding());
 
-    expect(result2.current.currentStep).toBe("showVisualizer");
+    expect(result2.current.currentStep).toBe("step");
   });
 
   it("returns null when all steps completed (simulated)", () => {
@@ -85,6 +91,7 @@ describe("useOnboarding", () => {
 
     act(() => {
       result1.current.completeStep("play");
+      result1.current.completeStep("step");
       result1.current.completeStep("showVisualizer");
       result1.current.completeStep("programSelect");
       result1.current.completeStep("info");
@@ -105,19 +112,46 @@ describe("useOnboarding", () => {
     expect(result.current.currentStep).toBe("play");
   });
 
-  it("starts at play when stored version does not match", () => {
+  it("shows a step added since the stored version, then ends", () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
         completed: "info",
-        version: 999,
+        version: 1,
         date: new Date().toISOString(),
       }),
     );
 
     const { result } = renderHook(() => useOnboarding());
 
-    expect(result.current.currentStep).toBe("play");
+    expect(result.current.currentStep).toBe("step");
+
+    act(() => {
+      result.current.completeStep("step");
+    });
+
+    expect(result.current.currentStep).toBe(null);
+  });
+
+  it("keeps mid-tour progress made under an older version", () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        completed: "programSelect",
+        version: 1,
+        date: new Date().toISOString(),
+      }),
+    );
+
+    const { result } = renderHook(() => useOnboarding());
+
+    expect(result.current.currentStep).toBe("step");
+
+    act(() => {
+      result.current.completeStep("step");
+    });
+
+    expect(result.current.currentStep).toBe("info");
   });
 
   it("does not go back when completing an earlier step", () => {
@@ -126,12 +160,12 @@ describe("useOnboarding", () => {
     act(() => {
       result.current.completeStep("play");
     });
-    expect(result.current.currentStep).toBe("showVisualizer");
+    expect(result.current.currentStep).toBe("step");
 
     act(() => {
       result.current.completeStep("play");
     });
-    expect(result.current.currentStep).toBe("showVisualizer");
+    expect(result.current.currentStep).toBe("step");
 
     const raw = localStorage.getItem(STORAGE_KEY);
     const stored = JSON.parse(raw!) as { completed: string };
@@ -143,6 +177,7 @@ describe("useOnboarding", () => {
 
     act(() => {
       result.current.completeStep("play");
+      result.current.completeStep("step");
       result.current.completeStep("showVisualizer");
       result.current.completeStep("programSelect");
       result.current.completeStep("info");

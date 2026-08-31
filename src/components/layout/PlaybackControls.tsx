@@ -23,6 +23,11 @@ import { cn } from "@/lib/utils";
 
 import { InfoModal } from "./InfoModal";
 
+/**
+ * Step Over — run to the end of the current span rather than stopping at every
+ * event inside it — is not implemented. The button is built and stays hidden
+ * until `MainLayout` has a handler with something to call.
+ */
 const STEP_OVER_IS_IMPLEMENTED = false;
 
 export type PlaybackState =
@@ -236,10 +241,27 @@ export function PlaybackControls({
             <TooltipTrigger asChild>
               <Button
                 aria-label="Step"
+                data-onboarding-step="step"
                 variant="ghost"
                 size="icon"
-                onClick={onStep}
+                onClick={() => {
+                  onStep?.();
+                  onOnboardingComplete?.("step");
+                }}
                 disabled={!canStep}
+                className={cn(
+                  onboardingStep === "step" &&
+                    canStep &&
+                    "origin-center animate-onboarding-pulse",
+                )}
+                style={
+                  {
+                    "--onboarding-pulse-x": "0",
+                    "--onboarding-pulse-y": "-30%",
+                    zIndex:
+                      onboardingStep === "step" && canStep ? "100" : "auto",
+                  } as React.CSSProperties
+                }
               >
                 <StepForward className="h-4 w-4" />
               </Button>
