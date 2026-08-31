@@ -15,13 +15,15 @@
     "url": "https://github.com/topheman/effect-viz/issues"
   },
   "keywords": [
-    "vite",
+    "effect",
+    "effect-ts",
+    "visualizer",
+    "fibers",
+    "stepper",
+    "webcontainer",
     "react",
     "typescript",
-    "tailwindcss",
-    "testing",
-    "linting",
-    "formatting"
+    "vite"
   ],
   "scripts": {
     "dev": "npm run copy:esbuild-wasm && npm run build:runtime && vite",
