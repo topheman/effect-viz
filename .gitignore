@@ -35,3 +35,6 @@ src/types/editor-bundled-definitions.d.ts
 
 # Worktrees created by t3code / Claude Code
 .claude/worktrees
+
+# Demo recordings produced by `npm run demo:record`
+recordings
