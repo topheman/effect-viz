@@ -3,6 +3,8 @@
 **Quick Context**: See [`workshop/README.md`](workshop/README.md) for full documentation.
 
 ## Current Phase
+**Phase 11**: COMPLETE ✅ — speed is live during a run (`workshop/phase-11.md`). The rate travels on the control channel alongside pause, resume and step, so a running program is retuned where it stands and a paused one resumes at the rate chosen while it was frozen. `VIZ_RATE` still sets the rate a run opens at.
+
 **Phase 10**: COMPLETE ✅ — slow mode & stepper (issue #13). All steps done: VirtualClock, Effect Clock layer, Date shim, virtual timestamps, GatedScheduler + step ladder, control channel for the WebContainer, speed combo + stepper controls, origin tagging with show-internals toggle, and five new example programs.
 
 **Deferred**: Step Over — running to the end of the current span rather than stopping at every event inside it — is not implemented, and `PlaybackControls` carries no button for it.

@@ -20,6 +20,14 @@ describe("ContainerController", () => {
     expect(sent).toEqual([{ cmd: "pause" }, { cmd: "resume" }]);
   });
 
+  it("sends a rate change with its payload", () => {
+    const { controller, sent } = setup();
+
+    controller.setRate(0.25);
+
+    expect(sent).toEqual([{ cmd: "setRate", rate: 0.25 }]);
+  });
+
   it("resolves a step with the outcome the container reports", async () => {
     const { controller, sent } = setup();
 
@@ -92,6 +100,7 @@ describe("ContainerController", () => {
     const controller = new ContainerController();
 
     controller.pause();
+    controller.setRate(0.5);
     await expect(controller.step()).resolves.toBeNull();
   });
 });

@@ -46,6 +46,7 @@ Refactor to use Effect's built-in observability, removing manual wrappers.
 Take over the runtime's clock and scheduler so execution can be slowed and stepped.
 
 - [Phase 10: Slow mode & stepper (issue #13)](./phase-10.md) ✅
+- [Phase 11: Changing speed during a run](./phase-11.md) ✅
 
 ### Maintenance
 

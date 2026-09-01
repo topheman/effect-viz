@@ -64,11 +64,11 @@ describe("getPlaybackAvailability", () => {
     expect(availability("finished").canReset).toBe(true);
   });
 
-  it("fixes the rate for the life of a run", () => {
+  it("lets the rate change in every state, including mid-run", () => {
     expect(availability("idle").canChangeSpeed).toBe(true);
     expect(availability("paused").canChangeSpeed).toBe(true);
     expect(availability("finished").canChangeSpeed).toBe(true);
-    expect(availability("running").canChangeSpeed).toBe(false);
-    expect(availability("starting").canChangeSpeed).toBe(false);
+    expect(availability("running").canChangeSpeed).toBe(true);
+    expect(availability("starting").canChangeSpeed).toBe(true);
   });
 });

@@ -72,12 +72,14 @@ export function PlaybackControls({
     getPlaybackAvailability({ state, pauseReason, isPlayDisabled });
   const playPauseShortcut = formatShortcut("playPause");
   const stepShortcut = formatShortcut("step");
-  // Changing the speed of a stopped program runs it at the new rate. A live one,
-  // running or paused, keeps the rate it was given until it is started again.
+  // Changing the speed of a stopped program runs it at the new rate. A live one
+  // is retuned where it stands, and a paused one resumes at the new rate.
   const speedHint =
     state === "idle" || state === "finished"
       ? "Speed — slows the program's own clock, and runs it"
-      : "Speed applies on the next run";
+      : state === "paused"
+        ? "Speed — resumes at this rate"
+        : "Speed — slows the program's own clock as it runs";
   const [playMountAnimationEnded, setPlayMountAnimationEnded] = useState(false);
 
   // Skip showVisualizer step on desktop (toggle is hidden)

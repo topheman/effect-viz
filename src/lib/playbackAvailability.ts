@@ -53,8 +53,8 @@ export function getPlaybackAvailability({
       (state === "paused" && pauseReason === "user"),
     // Nothing to reset before the first run.
     canReset: state !== "idle",
-    // The rate is fixed when the program starts: the WebContainer receives it as
-    // a spawn environment variable and cannot be retuned until it is restarted.
-    canChangeSpeed: state !== "running" && state !== "starting",
+    // Speed is live in every state: a stopped program is re-run at the new rate,
+    // a live one is retuned in place.
+    canChangeSpeed: true,
   };
 }

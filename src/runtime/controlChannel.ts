@@ -2,9 +2,9 @@
  * The wire between the page and a program running in the WebContainer.
  *
  * The in-browser fallback holds its `Stepper` in a ref and calls it directly.
- * The container runs the program in another process, so the same three verbs —
- * pause, resume, step — have to travel as messages: commands in on the process's
- * stdin, replies out on its stdout, one JSON object per line.
+ * The container runs the program in another process, so the same four verbs —
+ * pause, resume, step, setRate — have to travel as messages: commands in on the
+ * process's stdin, replies out on its stdout, one JSON object per line.
  *
  * Replies exist for two reasons. A step returns a `StepOutcome`, which is what
  * tells the user a program is stuck rather than merely slow. And every reply
@@ -13,10 +13,8 @@
  * over a five second sleep jumps the clock by five seconds in one go, which no
  * amount of extrapolating from a rate will predict. See `workshop/phase-10.md`.
  *
- * Speed is deliberately not on the wire. It is fixed for the life of a run on
- * both paths — the container reads it once from `VIZ_RATE` at spawn — so a live
- * rate command would give the container path a capability the fallback does not
- * have.
+ * `VIZ_RATE` still gives the container the rate a run *opens* at; `setRate`
+ * is how it is retuned afterwards, so speed is live on both paths.
  */
 import type { StepOutcome, Stepper } from "@/runtime/stepper";
 import type { VirtualClock } from "@/runtime/virtualClock";
@@ -25,7 +23,9 @@ import type { VirtualClock } from "@/runtime/virtualClock";
 export type ControlCommand =
   | { readonly cmd: "pause" }
   | { readonly cmd: "resume" }
-  | { readonly cmd: "step" };
+  | { readonly cmd: "step" }
+  /** Retune the running program. `rate` is virtual ms per wall ms. */
+  | { readonly cmd: "setRate"; readonly rate: number };
 
 /**
  * Container → page. `virtualNow` is the authoritative reading of the container's
@@ -36,6 +36,7 @@ export type ControlReply =
   | { readonly reply: "ready"; readonly virtualNow: number }
   | { readonly reply: "pause"; readonly virtualNow: number }
   | { readonly reply: "resume"; readonly virtualNow: number }
+  | { readonly reply: "setRate"; readonly virtualNow: number }
   | {
       readonly reply: "step";
       readonly virtualNow: number;
@@ -48,7 +49,7 @@ export type ControlReply =
  */
 export const CONTROL_REPLY_PREFIX = "TRACE_CONTROL:";
 
-const COMMANDS = ["pause", "resume", "step"] as const;
+const COMMANDS = ["pause", "resume", "step", "setRate"] as const;
 
 export function encodeCommand(command: ControlCommand): string {
   return `${JSON.stringify(command)}\n`;
@@ -66,9 +67,17 @@ export function decodeCommand(line: string): ControlCommand | null {
   }
   if (typeof parsed !== "object" || parsed === null) return null;
   const cmd = (parsed as { cmd?: unknown }).cmd;
-  return COMMANDS.some((known) => known === cmd)
-    ? ({ cmd } as ControlCommand)
-    : null;
+  if (!COMMANDS.some((known) => known === cmd)) return null;
+  if (cmd === "setRate") {
+    // The only command with a payload, so it is the only one the codec cannot
+    // reconstruct from the verb alone.
+    const rate = (parsed as { rate?: unknown }).rate;
+    if (typeof rate !== "number" || !Number.isFinite(rate) || rate < 0) {
+      return null;
+    }
+    return { cmd, rate };
+  }
+  return { cmd } as ControlCommand;
 }
 
 export function encodeReply(reply: ControlReply): string {
@@ -93,7 +102,12 @@ export function decodeReply(line: string): ControlReply | null {
   if (typeof virtualNow !== "number" || !Number.isFinite(virtualNow)) {
     return null;
   }
-  if (reply === "ready" || reply === "pause" || reply === "resume") {
+  if (
+    reply === "ready" ||
+    reply === "pause" ||
+    reply === "resume" ||
+    reply === "setRate"
+  ) {
     return { reply, virtualNow };
   }
   if (reply === "step") {
@@ -134,6 +148,9 @@ export function applyCommand(
       const outcome = stepper.step();
       return { reply: "step", virtualNow: clock.now(), outcome };
     }
+    case "setRate":
+      stepper.setRate(command.rate);
+      return { reply: "setRate", virtualNow: clock.now() };
   }
 }
 
