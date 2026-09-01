@@ -31,6 +31,25 @@ const QR_SIZE_MOBILE = 64;
 /** The mobile QR tapped to full screen, where there is room for a big one. */
 const QR_SIZE_FULLSCREEN = 200;
 
+/**
+ * Tells a dev machine host apart from a deployed one, matching `localhost`, the
+ * loopback addresses, `.local` names and the private IPv4 ranges the dev server
+ * is reached on from another device.
+ */
+function isLocalHostname(hostname: string): boolean {
+  return (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "0.0.0.0" ||
+    hostname === "[::1]" ||
+    hostname === "::1" ||
+    hostname.endsWith(".local") ||
+    /^10\./.test(hostname) ||
+    /^192\.168\./.test(hostname) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(hostname)
+  );
+}
+
 interface InfoModalProps {
   onboardingStep?: OnboardingStepId | null;
   onOnboardingComplete?: (stepId: OnboardingStepId) => void;
@@ -46,6 +65,17 @@ export function InfoModal({
     const [url] = window.location.href.split("#");
     return url;
   });
+
+  /**
+   * The URL shown under the QR code: the origin we are served from, so a Vercel
+   * preview deployment names itself, falling back to the canonical site URL on a
+   * dev machine, whose host means nothing to a viewer.
+   */
+  const [displayUrl] = useState<string>(() =>
+    isLocalHostname(window.location.hostname)
+      ? import.meta.env.VITE_WEBSITE_URL
+      : window.location.origin,
+  );
 
   const canSupportWebContainer = useCanSupportWebContainer();
   // Safari desktop cannot run the WebContainer but still has a keyboard, so the
@@ -255,7 +285,18 @@ export function InfoModal({
                 max-w-full text-center text-sm break-all text-muted-foreground
               `}
             >
-              {currentUrl}
+              <span title={currentUrl}>
+                {
+                  /*
+                   * Displays an origin instead of `currentUrl`, so that a screen
+                   * recording shows https://effect-viz.vercel.app rather than a
+                   * localhost or share URL. The QR code above is unaffected, it
+                   * still encodes `currentUrl`, which stays reachable through
+                   * the title tooltip.
+                   */
+                  displayUrl
+                }
+              </span>
             </p>
           </div>
         </div>
