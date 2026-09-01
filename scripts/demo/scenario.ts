@@ -215,6 +215,21 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
   const untilStatus = (state: string, timeout = 60_000) =>
     status.filter({ hasText: new RegExp(`^${state}$`) }).waitFor({ timeout });
 
+  /**
+   * Blocks until the Timeline has bars on it.
+   *
+   * `running` is reported by the playback bar as soon as the runtime starts,
+   * which is a beat before the run's first events have crossed out of the
+   * container and been drawn. A beat that changes what execution looks like has
+   * to wait for that, or it lands on an empty panel.
+   */
+  const untilTimelineDrawn = (timeout = 30_000) =>
+    page
+      .getByText("No events to display")
+      .filter({ visible: true })
+      .first()
+      .waitFor({ state: "hidden", timeout });
+
   const untilNotStatus = (state: string, timeout = 30_000) =>
     status
       .filter({ hasNotText: new RegExp(`^${state}$`) })
@@ -247,7 +262,7 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
     { timeout: 120_000 },
   );
   mark("ready");
-  await cursor.pause(900);
+  await cursor.pause(650);
 
   // --- Act 1: run it once at full speed and read the three views -----------
   await cursor.click(runButton);
@@ -274,38 +289,57 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
   );
 
   await untilStatus("finished");
-  await cursor.pause(300);
+  await cursor.pause(250);
 
   await cursor.moveToLocator(fiberTree);
-  await cursor.pause(520);
+  await cursor.pause(460);
   await cursor.moveToLocator(executionLog);
-  await cursor.pause(560);
+  await cursor.pause(500);
   mark("act 1 — run and inspect");
 
-  // --- Act 2: same program, slower clock, then step through it -------------
-  // The speed change lands between two runs of the same program on purpose:
-  // the only thing that differs is how long it takes, which is the point.
-  // Picking a speed starts the run itself, so there is no Run press here.
+  // --- Act 2: slow the clock mid-run, then step through it -----------------
+  // Picking a speed on a stopped program starts the run itself, so there is no
+  // Run press here.
   await cursor.select(speedSelect, "0.5");
   await untilStatus("running");
-  await cursor.pause(600);
+  await untilTimelineDrawn();
 
+  // The second pick lands on the live program: the run does not restart, it
+  // changes slope where it stands. It follows the first with no beat between
+  // them because the whole Basic Example is only about 1.5 virtual seconds
+  // long — every beat below has to fit in what is left of it, and a change that
+  // lands near the end has nothing left to be visible in.
+  await cursor.select(speedSelect, "0.25");
+
+  // No beat between the pick and the pause: the slower slope stays on screen
+  // for the second the pointer takes to travel to Pause, and pausing early
+  // leaves enough of the program for the steps below to walk through.
   await cursor.click(pauseButton);
   await untilStatus("paused");
-  await cursor.pause(500);
+  await cursor.pause(400);
 
-  for (let i = 0; i < 2; i++) {
+  // Several presses, not one: a single step reads as a twitch, while a run of
+  // them shows the ladder — one event released per press, the log growing a
+  // line at a time. Stepping costs no wall clock, because a paused program only
+  // advances when it is told to, so this is the one beat the 1.5 virtual
+  // seconds of the Basic Example do not have to pay for.
+  for (let i = 0; i < 4; i++) {
+    // Stepping off the end of the program does not stop: from `finished`, Step
+    // starts a fresh gated run, which would blank the panels mid-act.
+    if ((await status.textContent())?.trim() !== "paused") break;
     await cursor.click(stepButton);
-    await cursor.pause(380);
+    await cursor.pause(430);
   }
 
-  await runToCompletion();
-  await cursor.pause(700);
-  mark("act 2 — slow down and step");
+  // The act ends here, paused part way through: resuming would cost five
+  // seconds of watching a quarter-speed run reach an end act 1 already showed,
+  // and act 3 opens on Reset, which clears the paused run anyway.
+  await cursor.pause(600);
+  mark("act 2 — slow down mid-run, then step");
 
   // --- Act 3: the editor is live, and the runtime says so ------------------
   await cursor.click(resetButton);
-  await cursor.pause(400);
+  await cursor.pause(300);
 
   // Renaming a span keeps the run the same length, and the new names come back
   // out of the runtime in the execution log — which is the point being made.
@@ -317,15 +351,15 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
   await cursor.doubleClick({ x: span.x + 3, y: span.y });
   await cursor.pause(250);
   await page.keyboard.press("ControlOrMeta+Shift+L");
-  await cursor.pause(650);
-  await page.keyboard.type("job", { delay: 110 });
   await cursor.pause(550);
+  await page.keyboard.type("job", { delay: 110 });
+  await cursor.pause(450);
 
-  // Back to full speed, which starts the run: act 2 left the clock at 0.5, and
+  // Back to full speed, which starts the run: act 2 left the clock at 0.25, and
   // the edit is meant to be read at the same pace as act 1.
   await cursor.select(speedSelect, "1");
   await untilStatus("finished");
-  await cursor.pause(650);
+  await cursor.pause(550);
   mark("act 3 — edit and re-run");
 
   // --- Act 4: break the retry policy and watch the run go red --------------
@@ -333,10 +367,10 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
   await cursor.pause(250);
 
   await cursor.select(programSelect, "retryExponentialBackoff");
-  await cursor.pause(350);
+  await cursor.pause(300);
 
   await runToCompletion();
-  await cursor.pause(450);
+  await cursor.pause(350);
 
   // `flakyEffect` only succeeds once n >= 5, and the `if (n < 5)` guard is left
   // alone, so cutting the schedule to three retries makes failure certain.
@@ -344,19 +378,19 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
     within: "Schedule.recurs(5)",
   });
   await cursor.doubleClick({ x: recurs.x + 3, y: recurs.y });
-  await cursor.pause(300);
+  await cursor.pause(250);
   await page.keyboard.type("3", { delay: 110 });
-  await cursor.pause(450);
+  await cursor.pause(350);
 
   await runToCompletion();
-  await cursor.pause(700);
+  await cursor.pause(550);
 
   await cursor.moveToLocator(fiberTree);
-  await cursor.pause(950);
+  await cursor.pause(800);
   mark("act 4 — break the retry policy");
 
   // --- Close on the about box, the way the hand-made video did -------------
   await cursor.click(infoButton);
-  await cursor.pause(1500);
+  await cursor.pause(1200);
   mark("act 5 — about");
 }
