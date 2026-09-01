@@ -1,4 +1,4 @@
-# EffectViz - Tutor Memory
+# EffectViz - Workshop Memory (previously Tutor Memory)
 
 **Quick Context**: See [`workshop/README.md`](workshop/README.md) for full documentation.
 
