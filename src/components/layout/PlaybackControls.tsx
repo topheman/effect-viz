@@ -18,26 +18,15 @@ import {
 } from "@/components/ui/tooltip";
 import type { OnboardingStepId } from "@/hooks/useOnboarding";
 import { SPEED_OPTIONS, type Speed, formatSpeed } from "@/hooks/useSpeed";
+import { ariaKeyShortcuts, formatShortcut } from "@/lib/keyboardShortcuts";
+import {
+  getPlaybackAvailability,
+  type PauseReason,
+  type PlaybackState,
+} from "@/lib/playbackAvailability";
 import { cn } from "@/lib/utils";
 
 import { InfoModal } from "./InfoModal";
-
-export type PlaybackState =
-  | "idle"
-  | "starting"
-  | "running"
-  | "paused"
-  | "finished";
-
-/**
- * Why execution is paused. Only a user pause can be stepped: `stuck` means
- * nothing is runnable and no deadline is pending, so a step would do nothing.
- *
- * A stuck program is either deadlocked or waiting on something outside. Telling
- * those apart needs a fiber's status, which is itself an Effect and so needs the
- * scheduler that a pause is holding.
- */
-export type PauseReason = "user" | "stuck";
 
 interface PlaybackControlsProps {
   state?: PlaybackState;
@@ -79,23 +68,10 @@ export function PlaybackControls({
   pauseReason = "user",
 }: PlaybackControlsProps) {
   const isRunning = state === "running";
-  // Play doubles as resume (from paused) and re-run (from finished).
-  const canPlay =
-    (state === "idle" || state === "paused" || state === "finished") &&
-    !isPlayDisabled;
-  // Step from a stopped program starts it already gated, so its very first
-  // events can be stepped through; like Play, that includes re-running one that
-  // has finished. Otherwise stepping needs a live, frozen program, and a stuck
-  // pause has nothing the runtime could release.
-  const canStep =
-    ((state === "idle" || state === "finished") && !isPlayDisabled) ||
-    (state === "paused" && pauseReason === "user");
-  const canPause = isRunning;
-  // Nothing to reset before the first run.
-  const canReset = state !== "idle";
-  // The rate is fixed when the program starts: the WebContainer receives it as a
-  // spawn environment variable and cannot be retuned until it is restarted.
-  const canChangeSpeed = state !== "running" && state !== "starting";
+  const { canPlay, canPause, canStep, canReset, canChangeSpeed } =
+    getPlaybackAvailability({ state, pauseReason, isPlayDisabled });
+  const playPauseShortcut = formatShortcut("playPause");
+  const stepShortcut = formatShortcut("step");
   // Changing the speed of a stopped program runs it at the new rate. A live one,
   // running or paused, keeps the rate it was given until it is started again.
   const speedHint =
@@ -190,7 +166,11 @@ export function PlaybackControls({
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
+                // The label stays free of the shortcut, which reads differently
+                // per platform: the demo recorder matches these buttons by
+                // their accessible name (scripts/demo/scenario.ts).
                 aria-label={isRunning ? "Pause" : "Run"}
+                aria-keyshortcuts={ariaKeyShortcuts("playPause")}
                 data-onboarding-step="play"
                 variant="ghost"
                 size="icon"
@@ -229,7 +209,9 @@ export function PlaybackControls({
                 )}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{isRunning ? "Pause" : "Run"}</TooltipContent>
+            <TooltipContent>
+              {isRunning ? "Pause" : "Run"} · {playPauseShortcut}
+            </TooltipContent>
           </Tooltip>
 
           {/* Step */}
@@ -237,6 +219,7 @@ export function PlaybackControls({
             <TooltipTrigger asChild>
               <Button
                 aria-label="Step"
+                aria-keyshortcuts={ariaKeyShortcuts("step")}
                 data-onboarding-step="step"
                 variant="ghost"
                 size="icon"
@@ -266,8 +249,8 @@ export function PlaybackControls({
               {state === "paused" && pauseReason === "stuck"
                 ? "Nothing can run: deadlocked, or waiting on something outside"
                 : state === "idle" || state === "finished"
-                  ? "Start paused, then step"
-                  : "Step"}
+                  ? `Start paused, then step · ${stepShortcut}`
+                  : `Step · ${stepShortcut}`}
             </TooltipContent>
           </Tooltip>
 

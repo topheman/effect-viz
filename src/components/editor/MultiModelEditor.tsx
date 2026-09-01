@@ -32,6 +32,12 @@ interface MultiModelEditorProps {
    * Called when the Program tab content changes (only when that tab is editable).
    */
   onProgramContentChange?: (content: string) => void;
+  /**
+   * Playback shortcuts typed inside the editor. Monaco resolves them itself, so
+   * they reach the app through here rather than through the window listener.
+   */
+  onPlayPauseShortcut?: () => void;
+  onStepShortcut?: () => void;
 }
 
 /**
@@ -48,6 +54,8 @@ export function MultiModelEditor({
   onValueChange,
   onProgramContentChange,
   typesReady,
+  onPlayPauseShortcut,
+  onStepShortcut,
 }: MultiModelEditorProps) {
   const firstTabId = tabs[0]?.id ?? "";
   const [internalTabId, setInternalTabId] = useState(
@@ -106,6 +114,8 @@ export function MultiModelEditor({
           value={editorValue}
           readOnly={activeTab?.readOnly ?? true}
           typesReady={typesReady}
+          onPlayPauseShortcut={onPlayPauseShortcut}
+          onStepShortcut={onStepShortcut}
           onChange={
             activeTabId === "program" && onProgramContentChange
               ? (value) => value !== undefined && onProgramContentChange(value)

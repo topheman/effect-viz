@@ -17,15 +17,19 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { OnboardingStepId } from "@/hooks/useOnboarding";
-import { useCanSupportWebContainer } from "@/lib/mobileDetection";
+import { formatShortcut } from "@/lib/keyboardShortcuts";
+import { useCanSupportWebContainer, useIsMobile } from "@/lib/mobileDetection";
 import { cn } from "@/lib/utils";
 
 const GITHUB_REPO_URL = "https://github.com/topheman/effect-viz";
 const PORTFOLIO_URL = "https://topheman.github.io/me/";
 
 const MOBILE_BREAKPOINT_PX = 640; // Tailwind sm
-const QR_SIZE_DESKTOP = 200;
+/** Sized so the modal body fits a laptop viewport without scrolling. */
+const QR_SIZE_DESKTOP = 160;
 const QR_SIZE_MOBILE = 64;
+/** The mobile QR tapped to full screen, where there is room for a big one. */
+const QR_SIZE_FULLSCREEN = 200;
 
 interface InfoModalProps {
   onboardingStep?: OnboardingStepId | null;
@@ -44,6 +48,9 @@ export function InfoModal({
   });
 
   const canSupportWebContainer = useCanSupportWebContainer();
+  // Safari desktop cannot run the WebContainer but still has a keyboard, so the
+  // shortcuts are gated on the device rather than on that.
+  const isMobileDevice = useIsMobile();
 
   const [isMobile, setIsMobile] = useState(() => {
     if (
@@ -113,7 +120,7 @@ export function InfoModal({
         </DialogHeader>
 
         <div
-          className={`flex max-h-[60vh] flex-col gap-4 overflow-y-auto py-4`}
+          className={`flex max-h-[70vh] flex-col gap-4 overflow-y-auto py-4`}
           data-testid="info-modal-body"
         >
           {/* About the project */}
@@ -147,6 +154,12 @@ export function InfoModal({
               You can pick a speed to watch the same program run slower. On a
               stopped program, picking one runs it.
             </p>
+            {!isMobileDevice && (
+              <p>
+                Press {formatShortcut("playPause")} to run or pause,{" "}
+                {formatShortcut("step")} to step.
+              </p>
+            )}
           </section>
 
           <section
@@ -212,7 +225,7 @@ export function InfoModal({
                     >
                       <QRCodeSVG
                         value={currentUrl}
-                        size={QR_SIZE_DESKTOP}
+                        size={QR_SIZE_FULLSCREEN}
                         level="M"
                         fgColor="#09090b"
                         includeMargin={false}
@@ -244,38 +257,44 @@ export function InfoModal({
             >
               {currentUrl}
             </p>
-
-            <p>
-              {/* GitHub Link */}
-              <a
-                href={GITHUB_REPO_URL}
-                target="_blank"
-                title="Visit the GitHub repo"
-                rel="noopener noreferrer"
-                className={`
-                  text-sm text-primary underline-offset-4 transition-colors
-                  hover:underline
-                `}
-              >
-                Visit GitHub repo
-              </a>
-              {" - "}
-              {/* Portfolio Link */}
-              <a
-                href={PORTFOLIO_URL}
-                target="_blank"
-                title="Visit my portfolio"
-                rel="noopener noreferrer"
-                className={`
-                  text-sm text-primary underline-offset-4 transition-colors
-                  hover:underline
-                `}
-              >
-                Visit portfolio
-              </a>
-            </p>
           </div>
         </div>
+
+        {/*
+          The links sit outside the scrolling body so they stay in view however
+          far it has been scrolled. On a laptop the body is taller than its cap
+          and overlay scrollbars show nothing, so a footer left inside it reads
+          as missing rather than as further down.
+        */}
+        <p className="pt-4 text-center">
+          {/* GitHub Link */}
+          <a
+            href={GITHUB_REPO_URL}
+            target="_blank"
+            title="Visit the GitHub repo"
+            rel="noopener noreferrer"
+            className={`
+              text-sm text-primary underline-offset-4 transition-colors
+              hover:underline
+            `}
+          >
+            Visit GitHub repo
+          </a>
+          {" - "}
+          {/* Portfolio Link */}
+          <a
+            href={PORTFOLIO_URL}
+            target="_blank"
+            title="Visit my portfolio"
+            rel="noopener noreferrer"
+            className={`
+              text-sm text-primary underline-offset-4 transition-colors
+              hover:underline
+            `}
+          >
+            Visit portfolio
+          </a>
+        </p>
       </DialogContent>
     </Dialog>
   );

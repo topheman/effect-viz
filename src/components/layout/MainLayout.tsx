@@ -18,10 +18,16 @@ import {
 } from "@/components/ui/tooltip";
 import { VisualizerPanel } from "@/components/visualizer/VisualizerPanel";
 import { useEventHandlers } from "@/hooks/useEventHandlers";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { type Speed, useSpeed } from "@/hooks/useSpeed";
 import { useWebContainerBoot } from "@/hooks/useWebContainerBoot";
 import { useCanSupportWebContainer } from "@/lib/mobileDetection";
+import {
+  getPlaybackAvailability,
+  type PauseReason,
+  type PlaybackState,
+} from "@/lib/playbackAvailability";
 import {
   computeProgramSwitch,
   computeResetToTemplate,
@@ -30,11 +36,7 @@ import type { ProgramKey } from "@/lib/programs";
 import { cn } from "@/lib/utils";
 
 import { Header } from "./Header";
-import {
-  PlaybackControls,
-  type PauseReason,
-  type PlaybackState,
-} from "./PlaybackControls";
+import { PlaybackControls } from "./PlaybackControls";
 
 /**
  * How long a speed change waits before it starts the program, so that walking
@@ -352,6 +354,44 @@ export function MainLayout() {
     handleReset();
   };
 
+  // The same rules the buttons are enabled by, so a shortcut cannot reach a
+  // control the UI is refusing — a run started while the container was still
+  // booting would be one the Reset button cannot see.
+  const availability = getPlaybackAvailability({
+    state: playbackState,
+    pauseReason,
+    isPlayDisabled,
+  });
+
+  /**
+   * The keyboard path to Run/Pause. It retires the onboarding step the way the
+   * button does, so a visitor who found the keyboard is not pulsed at forever.
+   */
+  const onPlayPauseShortcut = () => {
+    if (playbackState === "running") {
+      if (availability.canPause) onPause();
+      return;
+    }
+    if (!availability.canPlay) return;
+    completeOnboardingStep("play");
+    void onPlay();
+  };
+
+  /** The keyboard path to Step, retiring its onboarding step the same way. */
+  const onStepShortcut = () => {
+    if (!availability.canStep) return;
+    completeOnboardingStep("step");
+    void onStep();
+  };
+
+  useKeyboardShortcuts({
+    onPlayPause: onPlayPauseShortcut,
+    onStep: onStepShortcut,
+  });
+
+  // Monaco resolves these itself; see registerPlaybackActions in CodeEditor.
+  const editorShortcuts = { onPlayPauseShortcut, onStepShortcut };
+
   return (
     <div
       className={`
@@ -379,6 +419,7 @@ export function MainLayout() {
                       onValueChange={setEditorTabId}
                       onProgramContentChange={handleProgramContentChange}
                       typesReady={webContainer.typesReady}
+                      {...editorShortcuts}
                       headerExtra={programSelectorHeader}
                       className="flex h-full min-w-0 flex-col"
                     />
@@ -414,6 +455,7 @@ export function MainLayout() {
                   onValueChange={setEditorTabId}
                   onProgramContentChange={handleProgramContentChange}
                   typesReady={webContainer.typesReady}
+                  {...editorShortcuts}
                   headerExtra={programSelectorHeader}
                   className="flex h-full min-w-0 flex-col"
                 />
@@ -468,6 +510,7 @@ export function MainLayout() {
                   onValueChange={setEditorTabId}
                   onProgramContentChange={handleProgramContentChange}
                   typesReady={webContainer.typesReady}
+                  {...editorShortcuts}
                   headerExtra={programSelectorHeader}
                   className="flex h-full min-w-0 flex-col"
                 />
@@ -503,6 +546,7 @@ export function MainLayout() {
                   onValueChange={setEditorTabId}
                   onProgramContentChange={handleProgramContentChange}
                   typesReady={webContainer.typesReady}
+                  {...editorShortcuts}
                   headerExtra={programSelectorHeader}
                   className="flex h-full min-w-0 flex-col"
                 />

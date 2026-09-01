@@ -86,6 +86,21 @@ describe("InfoModal", () => {
     ).toBeInTheDocument();
   });
 
+  it("keeps the links outside the scrolling body, so they stay in view", async () => {
+    const user = userEvent.setup();
+    render(<InfoModal />);
+
+    await user.click(screen.getByRole("button"));
+
+    const body = screen.getByTestId("info-modal-body");
+    expect(body).not.toContainElement(
+      screen.getByRole("link", { name: /visit github repo/i }),
+    );
+    expect(body).not.toContainElement(
+      screen.getByRole("link", { name: /visit portfolio/i }),
+    );
+  });
+
   it("closes the modal when clicking the close button", async () => {
     const user = userEvent.setup();
     render(<InfoModal />);

@@ -78,7 +78,52 @@ async function revalidateModels(monaco: Monaco) {
   }
 }
 
-interface CodeEditorProps {
+interface PlaybackShortcutHandlers {
+  onPlayPauseShortcut?: () => void;
+  onStepShortcut?: () => void;
+}
+
+/**
+ * Binds the playback shortcuts inside the editor. Monaco resolves keybindings
+ * on its own DOM node and stops the press from bubbling, so the window listener
+ * in `useKeyboardShortcuts` never sees one typed here — this registration is
+ * what makes the shortcuts work while editing. `KeyMod.CtrlCmd` is Cmd on
+ * macOS and Ctrl elsewhere, the same split `matchesShortcut` makes.
+ *
+ * These take over "Insert Line Below" and "Insert Line Above", which stay
+ * reachable from the editor's command palette. Registering them unconditionally
+ * means the key always belongs to the app: when a playback action is
+ * unavailable the shortcut does nothing, rather than sometimes inserting a line.
+ *
+ * `addAction` over `addCommand` so both also appear in the context menu and the
+ * command palette, which documents them for free.
+ */
+function registerPlaybackActions(
+  editor: MonacoTypes.editor.IStandaloneCodeEditor,
+  monaco: Monaco,
+  handlers: React.RefObject<PlaybackShortcutHandlers>,
+) {
+  editor.addAction({
+    id: "effect-viz.play-pause",
+    label: "Run / Pause program",
+    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
+    contextMenuGroupId: "navigation",
+    contextMenuOrder: 0,
+    run: () => handlers.current.onPlayPauseShortcut?.(),
+  });
+  editor.addAction({
+    id: "effect-viz.step",
+    label: "Step program",
+    keybindings: [
+      monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter,
+    ],
+    contextMenuGroupId: "navigation",
+    contextMenuOrder: 1,
+    run: () => handlers.current.onStepShortcut?.(),
+  });
+}
+
+interface CodeEditorProps extends PlaybackShortcutHandlers {
   value?: string;
   onChange?: (value: string | undefined) => void;
   className?: string;
@@ -102,8 +147,19 @@ export function CodeEditor({
   readOnly = false,
   path,
   typesReady = false,
+  onPlayPauseShortcut,
+  onStepShortcut,
 }: CodeEditorProps) {
   const monacoRef = useRef<Monaco | null>(null);
+  // Actions are registered once, at mount, so they reach their handlers through
+  // a ref rather than capturing the ones that happened to be current then.
+  const shortcutsRef = useRef<PlaybackShortcutHandlers>({
+    onPlayPauseShortcut,
+    onStepShortcut,
+  });
+  useEffect(() => {
+    shortcutsRef.current = { onPlayPauseShortcut, onStepShortcut };
+  });
 
   useEffect(() => {
     if (typesReady && monacoRef.current) {
@@ -124,8 +180,9 @@ export function CodeEditor({
         beforeMount={(monaco) => {
           monacoRef.current = monaco;
         }}
-        onMount={(_, monaco) => {
+        onMount={(editor, monaco) => {
           monacoRef.current = monaco;
+          registerPlaybackActions(editor, monaco, shortcutsRef);
           if (typesReady) {
             revalidateModels(monaco);
           }
