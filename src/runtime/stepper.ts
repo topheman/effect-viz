@@ -108,6 +108,24 @@ export class Stepper {
     }
   }
 
+  /**
+   * Change the speed of the running program.
+   *
+   * Pause is implemented as rate 0, so a paused stepper must not touch the
+   * clock: raising the rate there would let virtual time flow while the
+   * scheduler stays gated, and sleeps coming due would queue work into a gate
+   * that nothing is going to open. The new rate is stashed instead, and `play()`
+   * restores it.
+   */
+  setRate(rate: number): void {
+    if (this.#rateBeforePause !== null) {
+      this.#rateBeforePause = rate;
+      return;
+    }
+    // Re-anchors, so virtual time keeps its value and only changes slope.
+    this.#clock.setRate(rate);
+  }
+
   /** True when a step would do something. Drives the step button. */
   canStep(): boolean {
     if (this.#isFinished()) return false;

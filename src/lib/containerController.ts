@@ -53,6 +53,15 @@ export class ContainerController {
     this.#send?.({ cmd: "resume" });
   }
 
+  /**
+   * Retune the running program. Nothing in the UI waits on the outcome, so
+   * unlike `step` this needs no promise; the reply still matters, because it is
+   * what tells the mirrored clock when the container actually changed slope.
+   */
+  setRate(rate: number): void {
+    this.#send?.({ cmd: "setRate", rate });
+  }
+
   step(): Promise<StepOutcome | null> {
     if (this.#send === null) return Promise.resolve(null);
     return new Promise<StepOutcome | null>((resolve) => {

@@ -22,7 +22,8 @@ import { computeVirtualNow, type VirtualAnchor } from "@/lib/timelineTime";
 export class MirroredClock {
   /** The run's rate; 0 while paused. */
   #rate: number;
-  readonly #runRate: number;
+  /** The rate the run is going at when not paused; changes with the speed control. */
+  #runRate: number;
   #anchor: VirtualAnchor | null = null;
 
   constructor(rate: number) {
@@ -66,6 +67,20 @@ export class MirroredClock {
 
   resume(): void {
     this.#setRate(this.#runRate);
+  }
+
+  /**
+   * Follow a live speed change. Applied on the container's reply rather than on
+   * the click, for the same reason `resume` is: the container keeps running at
+   * the old rate for a round trip, and a model that changed slope early would
+   * predict ahead of it for good.
+   *
+   * While paused only `#runRate` moves — the cursor stays frozen and picks the
+   * new rate up on resume.
+   */
+  setRunRate(rate: number): void {
+    this.#runRate = rate;
+    if (this.#rate !== 0) this.#setRate(rate);
   }
 
   /** Re-anchor before the slope changes, or the elapsed interval is re-read at a rate that was never in effect for it. */

@@ -36,6 +36,7 @@ describe("command codec", () => {
     { cmd: "pause" },
     { cmd: "resume" },
     { cmd: "step" },
+    { cmd: "setRate", rate: 0.25 },
   ])("round-trips %o", (command) => {
     const encoded = encodeCommand(command);
     expect(encoded.endsWith("\n")).toBe(true);
@@ -50,6 +51,9 @@ describe("command codec", () => {
     ["null", "null"],
     ["object without cmd", '{"foo":1}'],
     ["unknown verb", '{"cmd":"explode"}'],
+    ["setRate without a rate", '{"cmd":"setRate"}'],
+    ["setRate with a non-numeric rate", '{"cmd":"setRate","rate":"fast"}'],
+    ["setRate with a negative rate", '{"cmd":"setRate","rate":-1}'],
   ])("returns null for %s", (_label, line) => {
     expect(decodeCommand(line)).toBeNull();
   });
@@ -120,6 +124,27 @@ describe("applyCommand", () => {
 
     expect(scheduler.mode).toBe("playing");
     expect(clock.rate).toBe(1);
+  });
+
+  it("setRate retunes a running clock and reads it back", () => {
+    const { clock, target } = setup();
+
+    const reply = applyCommand({ cmd: "setRate", rate: 0.25 }, target);
+
+    expect(reply).toMatchObject({ reply: "setRate" });
+    expect(typeof reply.virtualNow).toBe("number");
+    expect(clock.rate).toBe(0.25);
+  });
+
+  it("setRate on a paused program is what resume restores", () => {
+    const { clock, target } = setup();
+    applyCommand({ cmd: "pause" }, target);
+
+    applyCommand({ cmd: "setRate", rate: 0.5 }, target);
+    expect(clock.rate).toBe(0);
+
+    applyCommand({ cmd: "resume" }, target);
+    expect(clock.rate).toBe(0.5);
   });
 
   it("reports the outcome of a step", () => {

@@ -72,13 +72,18 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
    * from a run that is no longer current are dropped.
    */
   const runIdRef = useRef(0);
+  /**
+   * The rate currently in effect. Read by the container's reply handler, which
+   * runs a round trip after the click that changed it.
+   */
+  const rateRef = useRef(1);
   const handlePlay = ({
     onFirstChunk,
     rate,
     startPaused = false,
   }: {
     onFirstChunk: () => void;
-    /** Virtual ms per wall ms. Fixed for the run: see PlaybackControls. */
+    /** Virtual ms per wall ms the run opens at; `handleSetRate` retunes it. */
     rate: number;
     /** Gate the scheduler before the program runs, so its first step is yours. */
     startPaused?: boolean;
@@ -88,6 +93,7 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
 
     clearEvents();
     clearFibers();
+    rateRef.current = rate;
     // The timeline's live cursor advances at this rate; see computeVirtualNow.
     setRate(rate);
 
@@ -110,6 +116,7 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
           // and a model resumed early would run ahead of it for good, since
           // corrections only move the cursor forward.
           if (reply.reply === "resume") mirror.resume();
+          if (reply.reply === "setRate") mirror.setRunRate(rateRef.current);
           controller?.handleReply(reply);
         },
         detach: () => controller?.detach(),
@@ -281,6 +288,21 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
     stepperRef.current?.play();
   };
 
+  /**
+   * Retune a live program. On the container path the mirrored clock follows on
+   * the reply, not here, so the page never predicts ahead of the process it is
+   * modelling.
+   */
+  const handleSetRate = (rate: number) => {
+    rateRef.current = rate;
+    setRate(rate);
+    if (webContainer?.isReady) {
+      containerRef.current?.setRate(rate);
+      return;
+    }
+    stepperRef.current?.setRate(rate);
+  };
+
   const handleStep = async (): Promise<StepOutcome | null> => {
     if (webContainer?.isReady) {
       return (await containerRef.current?.step()) ?? null;
@@ -294,6 +316,7 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
     handlePause,
     handleResume,
     handleStep,
+    handleSetRate,
     selectedProgram,
     setSelectedProgram,
     programs,

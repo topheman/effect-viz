@@ -82,6 +82,45 @@ describe("MirroredClock", () => {
     expect(clock.now()).toBe(3000);
   });
 
+  it("changes slope without moving the cursor", () => {
+    const clock = new MirroredClock(1);
+    clock.sync(1000);
+    elapse(100);
+
+    clock.setRunRate(0.5);
+    expect(clock.now()).toBe(1100);
+
+    elapse(100);
+    expect(clock.now()).toBe(1150);
+  });
+
+  it("does not re-read the elapsed interval at the new rate", () => {
+    const clock = new MirroredClock(0.25);
+    clock.sync(1000);
+    elapse(400);
+
+    // Re-anchoring is what keeps this at 1100: without it the 400ms already
+    // elapsed would be re-read at 1x and the cursor would jump to 1400.
+    clock.setRunRate(1);
+
+    expect(clock.now()).toBe(1100);
+  });
+
+  it("holds a paused cursor still and applies the new rate on resume", () => {
+    const clock = new MirroredClock(1);
+    clock.sync(1000);
+    clock.pause();
+
+    clock.setRunRate(0.5);
+    elapse(1000);
+    expect(clock.rate).toBe(0);
+    expect(clock.now()).toBe(1000);
+
+    clock.resume();
+    elapse(200);
+    expect(clock.now()).toBe(1100);
+  });
+
   it("does not re-read the paused interval at the resumed rate", () => {
     const clock = new MirroredClock(1);
     clock.sync(1000);

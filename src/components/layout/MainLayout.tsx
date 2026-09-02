@@ -60,6 +60,7 @@ export function MainLayout() {
     handlePause,
     handleResume,
     handleStep,
+    handleSetRate,
     handleReset,
     selectedProgram,
     setSelectedProgram,
@@ -292,16 +293,20 @@ export function MainLayout() {
   };
 
   /**
-   * Speed is read once, when a program starts, so changing it on a stopped
-   * program runs it again at the new rate rather than leaving the choice with
-   * nothing to show. A paused program keeps its session: the rate it was given
-   * holds until it is started again. The delay absorbs a keyboard user walking
-   * the options — a closed select fires a change per arrow key — instead of
-   * spawning a run for each one passed through.
+   * A live program — running or paused — is retuned where it stands, so slowing
+   * one down is possible at the moment you realise you cannot see what is
+   * happening. A stopped one has nothing to retune, so it is run again at the
+   * new rate rather than leaving the choice with nothing to show. The delay
+   * absorbs a keyboard user walking the options — a closed select fires a change
+   * per arrow key — instead of spawning a run for each one passed through.
    */
   const onSpeedChange = (next: Speed) => {
     setSpeed(next);
     cancelAutoStart();
+    if (playbackState === "running" || playbackState === "paused") {
+      handleSetRate(next);
+      return;
+    }
     if (playbackState !== "idle" && playbackState !== "finished") return;
     if (isPlayDisabled) return;
     const token = autoStartTokenRef.current;

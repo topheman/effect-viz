@@ -517,7 +517,9 @@ editor flushes) is orthogonal and can coincide with any of them.
 Speed is locked while running because the WebContainer receives the rate as a
 spawn environment variable and cannot be retuned without restarting. That is a
 temporary limitation: pausing the container will require a host→container control
-channel anyway, and once it exists the rate can travel the same way.
+channel anyway, and once it exists the rate can travel the same way. It since
+did — see [phase 11](./phase-11.md), which makes speed live in every state and
+supersedes the Speed column above.
 
 ⏭️ is enabled at `idle` because there is otherwise no way *into* a paused run:
 Play starts a free-running program, and by the time the user pauses it, the
@@ -783,7 +785,8 @@ The protocol could carry a rate, but the fallback path fixes speed for the life
 of a run, and the container reads it once from `VIZ_RATE` at spawn. Putting a live
 rate command on the channel would give one path a capability the other does not
 have, for a control the UI presents as identical on both. It stays a spawn-time
-decision.
+decision. [Phase 11](./phase-11.md) lifts it onto the wire on both paths at once,
+which is what made it fair to do.
 
 #### Step from idle had to learn to flush
 

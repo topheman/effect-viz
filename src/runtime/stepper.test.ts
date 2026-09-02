@@ -217,6 +217,111 @@ describe("Stepper", () => {
     });
   });
 
+  describe("live speed changes", () => {
+    it("changes slope without moving virtual time", async () => {
+      const { stepper, clock, run } = setup();
+      run(Effect.sleep("10 seconds"));
+      await settle();
+      await vi.advanceTimersByTimeAsync(400);
+
+      const atChange = clock.now();
+      stepper.setRate(0.25);
+
+      expect(clock.rate).toBe(0.25);
+      expect(clock.now()).toBeCloseTo(atChange, 0);
+
+      await vi.advanceTimersByTimeAsync(400);
+      expect(clock.now()).toBeCloseTo(atChange + 100, 0);
+    });
+
+    /**
+     * Pause is rate 0, so writing the new rate straight through would restart
+     * virtual time under a scheduler that is still gated: sleeps would come due
+     * and queue work into a gate nothing is going to open.
+     */
+    it("does not start the clock when the rate is set while paused", async () => {
+      const { stepper, clock, run } = setup();
+      run(Effect.sleep("1 second"));
+      await settle();
+      stepper.pause();
+      const atPause = clock.now();
+
+      stepper.setRate(0.25);
+
+      expect(clock.rate).toBe(0);
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(clock.now()).toBe(atPause);
+    });
+
+    it("resumes at a rate chosen while paused", async () => {
+      const { stepper, clock, run } = setup();
+      run(Effect.sleep("10 seconds"));
+      await settle();
+      stepper.pause();
+
+      stepper.setRate(0.5);
+      stepper.play();
+
+      expect(clock.rate).toBe(0.5);
+      const atResume = clock.now();
+      await vi.advanceTimersByTimeAsync(400);
+      expect(clock.now()).toBeCloseTo(atResume + 200, 0);
+    });
+
+    /**
+     * The case the design rests on: a timer is already armed when the rate
+     * changes. `VirtualClock.setRate` re-arms every pending timer against the
+     * new anchor, so the sleep keeps its *virtual* deadline and only the wall
+     * time it takes to get there changes.
+     */
+    it("keeps a sleep in flight on its virtual deadline", async () => {
+      const { stepper, clock, run } = setup();
+      const done: string[] = [];
+      run(
+        Effect.gen(function* () {
+          yield* Effect.sleep("1 second");
+          done.push("woke");
+        }),
+      );
+      await settle();
+      await vi.advanceTimersByTimeAsync(400); // 400ms of the second gone
+
+      stepper.setRate(0.25); // the remaining 600 virtual ms now take 2400 wall
+
+      await vi.advanceTimersByTimeAsync(2399);
+      expect(done).toEqual([]);
+
+      await vi.advanceTimersByTimeAsync(1);
+      expect(done).toEqual(["woke"]);
+      expect(clock.now()).toBeCloseTo(1000, 0);
+    });
+
+    /** The same, for the deadline `Effect.timeout` arms behind the scenes. */
+    it("keeps a timeout in flight on its virtual deadline", async () => {
+      const { stepper, run } = setup();
+      const results: string[] = [];
+      run(
+        Effect.sleep("2 seconds").pipe(
+          Effect.timeout("1 second"),
+          Effect.match({
+            onFailure: () => results.push("timed out"),
+            onSuccess: () => results.push("completed"),
+          }),
+        ),
+      );
+      await settle();
+      await vi.advanceTimersByTimeAsync(400);
+
+      stepper.setRate(0.25);
+
+      await vi.advanceTimersByTimeAsync(2399);
+      expect(results).toEqual([]);
+
+      await vi.advanceTimersByTimeAsync(10);
+      expect(results).toEqual(["timed out"]);
+    });
+  });
+
   describe("rungs in order", () => {
     it("falls through to the clock when the queue holds no visible work", () => {
       const scheduler = new GatedScheduler();
