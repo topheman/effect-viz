@@ -112,9 +112,3 @@ The remaining link, that a `setRate` command actually reaches the container
 process and retunes it, was closed by hand in a real browser: the Basic and
 Timeout examples were both stepped, and both were played at 0.25x and raised to
 1x mid-run, with the timeline picking up the new slope where it stood.
-
-## Out of scope
-
-Step Over — running to the end of the current span rather than stopping at every
-event inside it — remains deferred. It touches the step ladder rather than the
-clock, and bundling it would have doubled the surface of this change.

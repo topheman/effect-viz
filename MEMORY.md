@@ -7,8 +7,6 @@
 
 **Phase 10**: COMPLETE ✅ — slow mode & stepper (issue #13). All steps done: VirtualClock, Effect Clock layer, Date shim, virtual timestamps, GatedScheduler + step ladder, control channel for the WebContainer, speed combo + stepper controls, origin tagging with show-internals toggle, and five new example programs.
 
-**Deferred**: Step Over — running to the end of the current span rather than stopping at every event inside it — is not implemented, and `PlaybackControls` carries no button for it.
-
 **Maintenance**: [#18](https://github.com/topheman/effect-viz/issues/18) — `effect` is on 3.22.1 on both run paths, and the Effect LSP is installed. Only the Timeout example traces differently: the work that overruns the deadline now ends as `fiber:end`, since Effect runs it under `Effect.exit`. See [`workshop/effect-3.22-upgrade.md`](workshop/effect-3.22-upgrade.md).
 
 **Recent**: five new examples teach what no sleep-shaped program could — `Effect.yieldNow` interleaving, bounded concurrency, structured interruption, timeout on the shared clock, and a Deferred deadlock that reaches the stepper's `noProgress`. See [`workshop/phase-10.md`](workshop/phase-10.md).

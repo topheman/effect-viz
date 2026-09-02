@@ -10,7 +10,9 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // public/app is the runtime bundle copy-runtime.mjs lifts out of dist, so it is
+  // build output like dist itself — and only exists on a machine that has built.
+  globalIgnores(['dist', 'public/app']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

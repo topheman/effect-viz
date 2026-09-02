@@ -181,8 +181,9 @@ export function InfoModal({
               to run the program step by step.
             </p>
             <p>
-              You can pick a speed to watch the same program run slower. On a
-              stopped program, picking one runs it.
+              You can pick a speed to watch the same program run slower, and
+              change it while it runs. On a stopped program, picking one runs
+              it.
             </p>
             {!isMobileDevice && (
               <p>
