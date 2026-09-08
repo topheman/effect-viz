@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   Card,
@@ -33,7 +33,9 @@ interface FiberLane {
 // Timeline Logic
 // =============================================================================
 
-const DEFAULT_DURATION_MS = 3000; // Default 3 second view
+// Fallback axis width for a program with no entry in
+// PROGRAM_TIMELINE_DURATION_MS.
+const DEFAULT_DURATION_MS = 3000;
 
 /**
  * Build timeline segments from trace events.
@@ -198,8 +200,29 @@ function getSegmentColor(state: FiberState): string {
 // Components
 // =============================================================================
 
+/** Axis width a single tick label needs before its neighbour starts. */
+const PX_PER_TICK = 64;
+
 function TimeAxis({ duration }: { duration: number }) {
-  const tickInterval = computeTickInterval(duration);
+  // The axis is measured rather than read off a breakpoint: its width comes
+  // from a draggable panel split as much as from the viewport.
+  const [axisWidth, setAxisWidth] = useState(0);
+  const axisRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const axis = axisRef.current;
+    if (!axis) return;
+    const observer = new ResizeObserver(([entry]) => {
+      setAxisWidth(entry.contentRect.width);
+    });
+    observer.observe(axis);
+    return () => observer.disconnect();
+  }, []);
+
+  const tickInterval = computeTickInterval(
+    duration,
+    axisWidth > 0 ? Math.floor(axisWidth / PX_PER_TICK) : undefined,
+  );
   const ticks: number[] = [];
   for (let t = 0; t <= duration; t += tickInterval) {
     ticks.push(t);
@@ -216,20 +239,42 @@ function TimeAxis({ duration }: { duration: number }) {
   return (
     <div className="flex items-start gap-2 pt-1">
       {/* Spacer to align with fiber labels */}
-      <div className="w-24 shrink-0" />
+      <div
+        className={`
+          w-12 shrink-0
+          md:w-24
+        `}
+      />
 
       {/* Time axis bar */}
-      <div className="relative h-6 flex-1 border-t border-border">
-        {ticks.map((t) => {
+      <div ref={axisRef} className="relative h-6 flex-1 border-t border-border">
+        {ticks.map((t, i) => {
           const left = (t / duration) * 100;
+          // Labels are centred on their tick, except at the two ends, where a
+          // centred label would hang half its width outside the plot and widen
+          // the card. There the label is pulled inwards against the tick.
+          const isFirst = i === 0;
+          const isLast = i === ticks.length - 1;
           return (
             <div
               key={t}
-              className="absolute top-0 flex flex-col items-center"
-              style={{ left: `${left}%`, transform: "translateX(-50%)" }}
+              className="absolute top-0 w-px"
+              style={{ left: `${left}%` }}
             >
               <div className="h-2 w-px bg-border" />
-              <span className="text-xs whitespace-nowrap text-muted-foreground">
+              <span
+                className={cn(
+                  `
+                    absolute top-2 text-xs whitespace-nowrap
+                    text-muted-foreground
+                  `,
+                  isFirst
+                    ? "left-0"
+                    : isLast
+                      ? "right-0"
+                      : `left-1/2 -translate-x-1/2`,
+                )}
+              >
                 {formatTime(t)}
               </span>
             </div>
@@ -256,8 +301,9 @@ function FiberLaneRow({
       {/* Fiber label */}
       <div
         className={`
-          w-24 shrink-0 truncate text-right font-mono text-xs
+          w-12 shrink-0 truncate text-right font-mono text-xs
           text-muted-foreground
+          md:w-24
         `}
       >
         {lane.label}
@@ -313,7 +359,12 @@ function FiberLaneRow({
 // Main Component
 // =============================================================================
 
-export function TimelineView() {
+export function TimelineView({
+  defaultDurationMs,
+}: {
+  /** Starting width of the time axis, from PROGRAM_TIMELINE_DURATION_MS. */
+  defaultDurationMs?: number;
+}) {
   const { events, getVirtualNow } = useTraceStore();
   // Virtual, not wall: event timestamps are virtual, so the live cursor has to
   // be measured in the same units or the two disagree by a factor of the speed.
@@ -360,10 +411,16 @@ export function TimelineView() {
     // Auto-scale: use default duration or actual elapsed time (whichever is larger)
     // For ongoing segments, use current time instead of last event
     const currentElapsed = hasOngoingSegments ? now - startTime : elapsed;
-    const duration = Math.max(DEFAULT_DURATION_MS, currentElapsed + 500); // +500ms padding
+    // The program's own width is a floor, not a cap: an edited program that
+    // runs longer still grows the axis. +500ms keeps the last event off the
+    // right edge.
+    const duration = Math.max(
+      defaultDurationMs ?? DEFAULT_DURATION_MS,
+      currentElapsed + 500,
+    );
 
     return { startTime, duration };
-  }, [events, hasOngoingSegments, now]);
+  }, [events, hasOngoingSegments, now, defaultDurationMs]);
 
   const hasData = lanes.length > 0 && timeRange;
 
@@ -398,7 +455,7 @@ export function TimelineView() {
         ) : (
           <div className="flex h-full flex-col">
             {/* Legend */}
-            <div className="mb-2 flex gap-4 text-xs">
+            <div className={`mb-2 flex flex-wrap gap-x-4 gap-y-1 text-xs`}>
               <div className="flex items-center gap-1">
                 <div className="h-2 w-3 rounded bg-green-500" />
                 <span className="text-muted-foreground">Running</span>

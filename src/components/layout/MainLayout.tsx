@@ -32,6 +32,7 @@ import {
   computeProgramSwitch,
   computeResetToTemplate,
 } from "@/lib/programCache";
+import { PROGRAM_TIMELINE_DURATION_MS } from "@/lib/programs";
 import type { ProgramKey } from "@/lib/programs";
 import { cn } from "@/lib/utils";
 
@@ -478,7 +479,11 @@ export function MainLayout() {
           <ResizablePanel defaultSize={60} minSize={30}>
             <div className="flex h-full flex-col">
               <div className="flex-1 overflow-hidden">
-                <VisualizerPanel />
+                <VisualizerPanel
+                  timelineDurationMs={
+                    PROGRAM_TIMELINE_DURATION_MS[selectedProgram]
+                  }
+                />
               </div>
             </div>
           </ResizablePanel>
@@ -566,7 +571,11 @@ export function MainLayout() {
         >
           <div className="flex h-full flex-col">
             <div className="flex-1 overflow-hidden">
-              <VisualizerPanel />
+              <VisualizerPanel
+                timelineDurationMs={
+                  PROGRAM_TIMELINE_DURATION_MS[selectedProgram]
+                }
+              />
             </div>
           </div>
         </div>
