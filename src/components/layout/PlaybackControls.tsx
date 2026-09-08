@@ -147,7 +147,12 @@ export function PlaybackControls({
         </div>
 
         {/* Center: Playback controls */}
-        <div className="flex items-center gap-1">
+        <div
+          className={`
+            flex items-center
+            md:gap-1
+          `}
+        >
           {/* Reset */}
           <Tooltip>
             <TooltipTrigger asChild>
