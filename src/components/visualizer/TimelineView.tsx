@@ -266,7 +266,7 @@ function TimeAxis({ duration }: { duration: number }) {
                 className={cn(
                   `
                     absolute top-2 text-xs whitespace-nowrap
-                    text-muted-foreground
+                    text-muted-foreground select-text
                   `,
                   isFirst
                     ? "left-0"
@@ -302,7 +302,7 @@ function FiberLaneRow({
       <div
         className={`
           w-12 shrink-0 truncate text-right font-mono text-xs
-          text-muted-foreground
+          text-muted-foreground select-text
           md:w-24
         `}
       >
@@ -441,7 +441,7 @@ export function TimelineView({
       </CardHeader>
       <CardContent
         className={`
-          flex min-h-0 flex-1 flex-col overflow-hidden
+          flex min-h-0 flex-1 flex-col overflow-hidden select-none
           ${!hasData ? "items-center justify-center" : ""}
         `}
       >
