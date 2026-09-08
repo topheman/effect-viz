@@ -10,7 +10,7 @@ You can **slow down** a program so that its sleeps stretch out, or **pause** it 
 
 This project is a learning project for me to understand the Effect runtime. My learning journey is documented in the [`workshop/`](./workshop/) folder, with each phase covering different Effect concepts (lazy evaluation, fibers, scheduling, errors, scopes). Check out the [AGENTS.md](./AGENTS.md) file for the AI approach.
 
-https://github.com/user-attachments/assets/45831831-afa8-4eb5-b927-fbfa10011d47
+https://github.com/user-attachments/assets/bb2b7816-4335-4b58-b6a9-87df6e4a7a9d
 
 ## Resources
 
