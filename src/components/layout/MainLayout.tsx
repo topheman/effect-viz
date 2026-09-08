@@ -477,15 +477,6 @@ export function MainLayout() {
 
           <ResizablePanel defaultSize={60} minSize={30}>
             <div className="flex h-full flex-col">
-              <div
-                className={`
-                  shrink-0 border-b border-border bg-muted/50 px-4 py-2
-                `}
-              >
-                <span className="text-sm font-medium text-muted-foreground">
-                  Visualizer
-                </span>
-              </div>
               <div className="flex-1 overflow-hidden">
                 <VisualizerPanel />
               </div>
@@ -574,13 +565,6 @@ export function MainLayout() {
           `}
         >
           <div className="flex h-full flex-col">
-            <div
-              className={`shrink-0 border-b border-border bg-muted/50 px-4 py-2`}
-            >
-              <span className="text-sm font-medium text-muted-foreground">
-                Visualizer
-              </span>
-            </div>
             <div className="flex-1 overflow-hidden">
               <VisualizerPanel />
             </div>

@@ -98,13 +98,17 @@ export function MultiModelEditor({
           ref={tabScrollRef}
           className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden"
         >
-          <TabsList variant="line" className="h-auto w-max justify-start">
-            {tabs.map((tab) => (
-              <TabsTrigger key={tab.id} value={tab.id}>
-                {tab.title}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+          {/* A lone tab has nothing to switch to, so its trigger only misleads.
+              The row stays for `headerExtra`. */}
+          {tabs.length > 1 && (
+            <TabsList variant="line" className="h-auto w-max justify-start">
+              {tabs.map((tab) => (
+                <TabsTrigger key={tab.id} value={tab.id}>
+                  {tab.title}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          )}
         </div>
         {headerExtra && <div className="shrink-0">{headerExtra}</div>}
       </div>
