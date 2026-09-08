@@ -138,6 +138,11 @@ export function MainLayout() {
       setSelectedProgram(programKey);
       setEditorContent(newContent);
       completeOnboardingStep("programSelect");
+      // Whatever the previous program reached — paused, finished, still
+      // running — the new one starts from idle.
+      runIdRef.current++;
+      setPlaybackState("idle");
+      setPauseReason("user");
       handleReset();
       setEditorTabId("program");
       if (webContainer.isReady) {
