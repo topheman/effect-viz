@@ -259,8 +259,8 @@ export function PlaybackControls({
           {/* Status indicator */}
           <div
             className={`
-              ml-4 flex w-24 min-w-24 items-center gap-2 text-sm
-              text-muted-foreground
+              flex w-24 items-center gap-2 text-sm text-muted-foreground
+              md:ml-4 md:min-w-24
             `}
           >
             <div
