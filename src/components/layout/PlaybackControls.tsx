@@ -99,7 +99,7 @@ export function PlaybackControls({
       <div
         className={`
           flex h-12 shrink-0 items-center justify-between border-t border-border
-          bg-card px-4
+          bg-card px-4 select-none
         `}
       >
         {/* Left: Mobile toggle visualizer */}
