@@ -971,3 +971,33 @@ export const requirements = [];
 } as const;
 
 export type ProgramKey = keyof typeof programs;
+
+/**
+ * Starting width of the timeline's time axis, per program, in milliseconds.
+ *
+ * Each value is the program's critical path — the longest chain of sleeps and
+ * delays, since concurrent branches overlap — rounded up for headroom. It is a
+ * floor, not a cap: `TimelineView` still grows the axis past it when an edited
+ * program runs longer. A blanket 3s default made the short programs draw their
+ * whole run inside the first sixth of the axis under a row of crowded ticks.
+ *
+ * Programs whose critical path is ~0 sit at 500ms, which the axis's own 500ms
+ * of trailing padding already covers; they are listed for completeness.
+ */
+export const PROGRAM_TIMELINE_DURATION_MS: Record<ProgramKey, number> = {
+  basic: 2000,
+  multiStep: 2000,
+  nestedForks: 1000,
+  interleaving: 500,
+  racing: 1500,
+  boundedConcurrency: 2000,
+  structuredInterruption: 500,
+  failureAndRecovery: 500,
+  retry: 500,
+  retryExponentialBackoff: 2000,
+  timeout: 2000,
+  basicFinalizers: 500,
+  acquireRelease: 500,
+  loggerWithRequirements: 500,
+  deadlock: 500,
+};

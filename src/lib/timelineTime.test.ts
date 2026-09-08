@@ -60,6 +60,19 @@ describe("computeTickInterval", () => {
     }
   });
 
+  /**
+   * A ~505ms axis at mobile width: eight ticks put "400ms" and "500ms" hard
+   * against each other, so a narrow axis has to ask for fewer.
+   */
+  it("widens the step when the axis has room for fewer ticks", () => {
+    expect(computeTickInterval(505, 3)).toBeGreaterThan(
+      computeTickInterval(505),
+    );
+    expect(
+      Math.floor(505 / computeTickInterval(505, 3)) + 1,
+    ).toBeLessThanOrEqual(4);
+  });
+
   it("never returns a step of zero", () => {
     expect(computeTickInterval(0)).toBeGreaterThan(0);
     expect(computeTickInterval(1)).toBeGreaterThan(0);

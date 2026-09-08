@@ -69,7 +69,12 @@ function MainContent() {
   );
 }
 
-export function VisualizerPanel() {
+export function VisualizerPanel({
+  timelineDurationMs,
+}: {
+  /** Starting width of the timeline's time axis, for the selected program. */
+  timelineDurationMs?: number;
+}) {
   return (
     <ResizablePanelGroup orientation="vertical" className="h-full">
       <ResizablePanel defaultSize={65} minSize={20}>
@@ -83,7 +88,7 @@ export function VisualizerPanel() {
 
       <ResizablePanel defaultSize={35} minSize={15}>
         <div className="h-full overflow-hidden p-2">
-          <TimelineView />
+          <TimelineView defaultDurationMs={timelineDurationMs} />
         </div>
       </ResizablePanel>
     </ResizablePanelGroup>

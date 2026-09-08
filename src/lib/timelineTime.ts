@@ -36,9 +36,16 @@ const TARGET_TICK_COUNT = 8;
  * readable round number at any magnitude and the label count stays bounded. A
  * fixed cap instead crams one label per unit onto a long timeline until they
  * overlap into a smear.
+ *
+ * `targetCount` is how many ticks the axis has room for. The default suits a
+ * desktop-width axis; a narrow one passes a smaller number, since eight labels
+ * that read fine across 700px run into each other across 250px.
  */
-export function computeTickInterval(duration: number): number {
-  const target = Math.max(duration, 1) / TARGET_TICK_COUNT;
+export function computeTickInterval(
+  duration: number,
+  targetCount: number = TARGET_TICK_COUNT,
+): number {
+  const target = Math.max(duration, 1) / Math.max(targetCount, 1);
   const magnitude = 10 ** Math.floor(Math.log10(target));
   for (const multiple of [1, 2, 5]) {
     const step = multiple * magnitude;
