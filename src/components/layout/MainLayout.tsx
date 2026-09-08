@@ -138,10 +138,8 @@ export function MainLayout() {
       setSelectedProgram(programKey);
       setEditorContent(newContent);
       completeOnboardingStep("programSelect");
-      // Put the playback state back along with the panes `handleReset` clears,
-      // so the badge cannot keep the previous program's verdict. A switch
-      // mid-run cancels the run: the bumped run id stops it reporting
-      // "finished" once it settles.
+      // Whatever the previous program reached — paused, finished, still
+      // running — the new one starts from idle.
       runIdRef.current++;
       setPlaybackState("idle");
       setPauseReason("user");
