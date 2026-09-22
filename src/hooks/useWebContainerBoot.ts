@@ -49,7 +49,7 @@ export function useWebContainerBoot() {
       if (!canSupportWebContainer()) {
         addLog(
           "boot",
-          "Mobile or Safari detected, using fallback (no WebContainer) - readonly mode.",
+          "Mobile or Safari detected — no WebContainer here, so the editor can't compile. You can run and watch the examples, but not edit them.",
         );
         addLog(
           "boot",
@@ -58,7 +58,7 @@ export function useWebContainerBoot() {
       } else {
         addLog(
           "boot",
-          "Offline detected, using fallback (no WebContainer) - readonly mode.",
+          "Offline — no WebContainer here, so the editor can't compile. You can run and watch the examples, but not edit them.",
         );
         addLog(
           "boot",

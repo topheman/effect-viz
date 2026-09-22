@@ -33,7 +33,7 @@ describe("InfoModal", () => {
 
     await user.click(screen.getByRole("button"));
 
-    const githubLink = screen.getByRole("link", { name: /visit github repo/i });
+    const githubLink = screen.getByRole("link", { name: /github repo/i });
     expect(githubLink).toBeInTheDocument();
     expect(githubLink).toHaveAttribute(
       "href",
@@ -49,7 +49,7 @@ describe("InfoModal", () => {
     await user.click(screen.getByRole("button"));
 
     const portfolioLink = screen.getByRole("link", {
-      name: /visit portfolio/i,
+      name: /my portfolio/i,
     });
     expect(portfolioLink).toBeInTheDocument();
     expect(portfolioLink).toHaveAttribute(
@@ -94,10 +94,10 @@ describe("InfoModal", () => {
 
     const body = screen.getByTestId("info-modal-body");
     expect(body).not.toContainElement(
-      screen.getByRole("link", { name: /visit github repo/i }),
+      screen.getByRole("link", { name: /github repo/i }),
     );
     expect(body).not.toContainElement(
-      screen.getByRole("link", { name: /visit portfolio/i }),
+      screen.getByRole("link", { name: /my portfolio/i }),
     );
   });
 

@@ -524,6 +524,7 @@ export const rootEffect = Effect.gen(function* () {
   return { result1, result2 };
 });
 
+// Declare the layers your program needs - the visualizer provides them to the Effect runtime.
 export const requirements = [];
 `,
   },
@@ -547,6 +548,7 @@ export const rootEffect = Effect.gen(function* () {
   return yield* Fiber.join(worker);
 });
 
+// Declare the layers your program needs - the visualizer provides them to the Effect runtime.
 export const requirements = [];`,
   },
   nestedForks: {
@@ -586,6 +588,7 @@ export const rootEffect = Effect.gen(function* () {
   return yield* Fiber.join(parent);
 });
 
+// Declare the layers your program needs - the visualizer provides them to the Effect runtime.
 export const requirements = [];
 `,
   },
@@ -617,6 +620,7 @@ export const rootEffect = Effect.gen(function* () {
   return [yield* Fiber.join(a), yield* Fiber.join(b)];
 });
 
+// Declare the layers your program needs - the visualizer provides them to the Effect runtime.
 export const requirements = [];
 `,
   },
@@ -652,6 +656,7 @@ export const rootEffect = Effect.gen(function* () {
   return winner;
 });
 
+// Declare the layers your program needs - the visualizer provides them to the Effect runtime.
 export const requirements = [];
 `,
   },
@@ -679,6 +684,7 @@ export const rootEffect = Effect.gen(function* () {
   });
 });
 
+// Declare the layers your program needs - the visualizer provides them to the Effect runtime.
 export const requirements = [];
 `,
   },
@@ -719,6 +725,7 @@ export const rootEffect = Effect.gen(function* () {
   return "parent and children interrupted";
 });
 
+// Declare the layers your program needs - the visualizer provides them to the Effect runtime.
 export const requirements = [];
 `,
   },
@@ -750,6 +757,7 @@ export const rootEffect = Effect.gen(function* () {
   return recovered;
 });
 
+// Declare the layers your program needs - the visualizer provides them to the Effect runtime.
 export const requirements = [];
 `,
   },
@@ -780,6 +788,7 @@ export const rootEffect = Effect.gen(function* () {
   return yield* retry(flakyEffect, Schedule.recurs(3), "flaky-task");
 });
 
+// Declare the layers your program needs - the visualizer provides them to the Effect runtime.
 export const requirements = [];
 `,
   },
@@ -814,6 +823,7 @@ export const rootEffect = Effect.gen(function* () {
   return yield* retry(flakyEffect, schedule, "flaky-task");
 });
 
+// Declare the layers your program needs - the visualizer provides them to the Effect runtime.
 export const requirements = [];
 `,
   },
@@ -840,6 +850,7 @@ export const rootEffect = Effect.gen(function* () {
   return { quick, slow };
 });
 
+// Declare the layers your program needs - the visualizer provides them to the Effect runtime.
 export const requirements = [];
 `,
   },
@@ -867,6 +878,7 @@ export const rootEffect = Effect.scoped(
   })
 );
 
+// Declare the layers your program needs - the visualizer provides them to the Effect runtime.
 export const requirements = [];
 `,
   },
@@ -897,6 +909,7 @@ export const rootEffect = Effect.scoped(
   })
 );
 
+// Declare the layers your program needs - the visualizer provides them to the Effect runtime.
 export const requirements = [];
 `,
   },
@@ -928,6 +941,7 @@ export const rootEffect = Effect.gen(function* () {
   return "Logged via requirements";
 });
 
+// Declare the layers your program needs - the visualizer provides them to the Effect runtime.
 export const requirements = [loggerLayer];
 `,
   },
@@ -965,6 +979,7 @@ export const rootEffect = Effect.gen(function* () {
   return yield* Deferred.await(first);
 });
 
+// Declare the layers your program needs - the visualizer provides them to the Effect runtime.
 export const requirements = [];
 `,
   },

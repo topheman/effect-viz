@@ -61,7 +61,7 @@ function formatEvent(
       const forkEvent = events.find(
         (e) => e.type === "fiber:fork" && e.fiberId === event.fiberId,
       ) as FiberForkEvent | undefined;
-      return `fiber:ended ${event.fiberId}${forkEvent?.parentId ? ` (parent ${forkEvent.parentId})` : ""}`;
+      return `fiber:ended ${event.fiberId}${forkEvent?.parentId ? ` (parent ${forkEvent.parentId})` : " (root)"}`;
     }
     case "fiber:interrupt":
       return `fiber:interrupted ${event.fiberId}`;
