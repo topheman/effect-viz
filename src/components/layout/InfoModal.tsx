@@ -316,11 +316,11 @@ export function InfoModal({
             title="Visit the GitHub repo"
             rel="noopener noreferrer"
             className={`
-              text-sm text-primary underline-offset-4 transition-colors
-              hover:underline
+              text-sm text-primary underline underline-offset-4
+              transition-colors
             `}
           >
-            Visit GitHub repo
+            GitHub Repo
           </a>
           {" - "}
           {/* Portfolio Link */}
@@ -330,11 +330,11 @@ export function InfoModal({
             title="Visit my portfolio"
             rel="noopener noreferrer"
             className={`
-              text-sm text-primary underline-offset-4 transition-colors
-              hover:underline
+              text-sm text-primary underline underline-offset-4
+              transition-colors
             `}
           >
-            Visit portfolio
+            My Portfolio
           </a>
         </p>
       </DialogContent>
