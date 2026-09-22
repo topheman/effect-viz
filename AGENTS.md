@@ -73,6 +73,10 @@ When completing a phase, create a phase document in `workshop/`:
 - `workshop/phase-N.md` - Document concepts, implementation, and learning outcomes
 - See `workshop/README.md` for the documentation structure
 - Update `workshop/README.md` to mark the phase as complete
+- Update the "Current Phase" section of `MEMORY.md`
+
+All four land in the same commit as the phase itself. A phase is not done until
+its write-up is in the diff.
 
 ## Tech stack
 
