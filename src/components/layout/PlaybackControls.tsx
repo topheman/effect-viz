@@ -301,8 +301,9 @@ export function PlaybackControls({
               <Select
                 aria-label="Playback speed"
                 data-onboarding-step="speed"
+                wrapperClassName="w-[4.5rem]"
                 className={cn(
-                  "h-8 w-[4.5rem] px-2",
+                  "h-8 pl-1.5",
                   onboardingStep === "speed" &&
                     canChangeSpeed &&
                     "animate-onboarding-glow",

@@ -208,8 +208,9 @@ export function MainLayout() {
           data-onboarding-step="programSelect"
           value={selectedProgram}
           onChange={(e) => handleProgramChange(e.target.value as ProgramKey)}
+          wrapperClassName="w-full"
           className={cn(
-            "h-7 w-full text-xs",
+            "h-7 text-xs",
             onboardingStep === "programSelect" && "animate-onboarding-glow",
           )}
         >
