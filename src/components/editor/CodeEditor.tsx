@@ -123,6 +123,23 @@ function registerPlaybackActions(
   });
 }
 
+/**
+ * Shows the type card for the word a finger taps. Touch has no hover, and on
+ * mobile the editor is read-only, so a tap has no other job than placing the
+ * cursor. Only pointer-driven cursor moves count (a tap reports `"mouse"`), and
+ * only with an empty selection: scrolling never moves the cursor, and a
+ * long-press selects. Monaco already hides the previous card on the tap's
+ * pointer-down. `showHover` counts as a keyboard hover, which stays open while
+ * the pointer moves.
+ */
+function registerTapToHover(editor: MonacoTypes.editor.IStandaloneCodeEditor) {
+  if (!matchMedia("(pointer: coarse)").matches) return;
+  editor.onDidChangeCursorSelection((e) => {
+    if (e.source !== "mouse" || !e.selection.isEmpty()) return;
+    editor.getAction("editor.action.showHover")?.run();
+  });
+}
+
 interface CodeEditorProps extends PlaybackShortcutHandlers {
   value?: string;
   onChange?: (value: string | undefined) => void;
@@ -183,6 +200,7 @@ export function CodeEditor({
         onMount={(editor, monaco) => {
           monacoRef.current = monaco;
           registerPlaybackActions(editor, monaco, shortcutsRef);
+          registerTapToHover(editor);
           if (typesReady) {
             revalidateModels(monaco);
           }
