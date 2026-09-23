@@ -23,12 +23,16 @@ export function fiberDepths(
 
 /**
  * Depth to draw an event at: the fiber it ran on. A fork names the child but is
- * the parent's action, and the child only runs from its first resume.
+ * the action of the fiber that ran it, and the child only runs from its first
+ * resume.
  */
 export function eventDepth(
   event: TraceEvent,
   depths: ReadonlyMap<string, number>,
 ): number {
-  const fiberId = event.type === "fiber:fork" ? event.parentId : event.fiberId;
+  const fiberId =
+    event.type === "fiber:fork"
+      ? (event.forkedBy ?? event.parentId)
+      : event.fiberId;
   return fiberId === undefined ? 0 : (depths.get(fiberId) ?? 0);
 }

@@ -56,10 +56,16 @@ class VizSupervisor extends Supervisor.AbstractSupervisor<void> {
       onSome: (p) => FiberId.threadName(p.id()),
     });
     const fiberId = FiberId.threadName(fiber.id());
+    // onStart runs synchronously on the fiber executing the fork.
+    const forkedBy = Option.match(Fiber.getCurrentFiber(), {
+      onNone: () => undefined,
+      onSome: (f) => FiberId.threadName(f.id()),
+    });
     this.onEmit({
       type: "fiber:fork",
       fiberId,
       parentId,
+      forkedBy,
       label: fiberId,
       timestamp: this.now(),
     });

@@ -14,7 +14,16 @@ const events: TraceEvent[] = [
     type: "fiber:fork",
     fiberId: "#1",
     parentId: "#0",
+    forkedBy: "#0",
     label: "#1",
+    timestamp: 0,
+  },
+  {
+    type: "fiber:fork",
+    fiberId: "#2",
+    parentId: "#0",
+    forkedBy: "#1",
+    label: "#2",
     timestamp: 0,
   },
   {
@@ -56,5 +65,18 @@ describe("ExecutionLog", () => {
 
     expect(indentOf("fiber:forked #0 (root)")).toBe("0px");
     expect(indentOf("effect:started on-child")).toBe("16px");
+  });
+
+  it("names the forking fiber when it is not the parent", () => {
+    render(
+      <TraceStoreProvider>
+        <Seed />
+        <ExecutionLog />
+      </TraceStoreProvider>,
+    );
+    expect(screen.getByText("fiber:forked #1 (parent #0)")).toBeInTheDocument();
+    expect(
+      screen.getByText("fiber:forked #2 (parent #0, by #1)"),
+    ).toBeInTheDocument();
   });
 });

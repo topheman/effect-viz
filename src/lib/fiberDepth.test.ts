@@ -4,10 +4,15 @@ import type { TraceEvent } from "@/types/trace";
 
 import { eventDepth, fiberDepths } from "./fiberDepth";
 
-const fork = (fiberId: string, parentId?: string): TraceEvent => ({
+const fork = (
+  fiberId: string,
+  parentId?: string,
+  forkedBy?: string,
+): TraceEvent => ({
   type: "fiber:fork",
   fiberId,
   parentId,
+  forkedBy,
   label: fiberId,
   timestamp: 0,
 });
@@ -39,6 +44,17 @@ describe("eventDepth", () => {
   it("draws a fork on the parent that performed it", () => {
     expect(eventDepth(fork("#0"), depths)).toBe(0);
     expect(eventDepth(fork("#1", "#0"), depths)).toBe(0);
+  });
+
+  it("draws a fork on the fiber that ran it when that is not the parent", () => {
+    const workers = [
+      fork("#0"),
+      fork("#1", "#0", "#0"),
+      fork("#2", "#0", "#1"),
+    ];
+    const depths = fiberDepths(workers);
+    expect(depths.get("#2")).toBe(1);
+    expect(eventDepth(workers[2], depths)).toBe(1);
   });
 
   it("draws other events on their own fiber", () => {
