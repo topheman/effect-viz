@@ -112,7 +112,9 @@ describe("ExecutionLog hints", () => {
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Drawn on the forking fiber", { exact: false }),
+      screen.getByText("Indented with the fiber that forked it", {
+        exact: false,
+      }),
     ).toBeInTheDocument();
   });
 });

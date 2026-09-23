@@ -154,7 +154,7 @@ function addIndentHints(
   if (childFork !== -1) {
     add(
       childFork,
-      "Drawn on the forking fiber: forking is its action, and the child's rows start at its first resume.",
+      "Indented with the fiber that forked it: forking is that fiber's action, and the child's rows start at its first resume.",
     );
   }
 
@@ -175,7 +175,7 @@ function addIndentHints(
     ) {
       add(
         i,
-        `Drawn on ${event.forkedBy}, which ran the fork; ${event.fiberId}'s depth follows ${event.parentId}, whose context it inherits.`,
+        `Indented with ${event.forkedBy}, which ran the fork; ${event.fiberId} itself sits under ${event.parentId}, whose context it inherits.`,
       );
     }
   });
@@ -186,6 +186,6 @@ function addIndentHints(
       (depths.get(e.fiberId) ?? 0) > 0,
   );
   if (childEnd !== -1) {
-    add(childEnd, "Drawn on the child: ending is its own last action.");
+    add(childEnd, "Indented with the child: ending is its own last action.");
   }
 }

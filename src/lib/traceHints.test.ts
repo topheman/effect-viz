@@ -174,13 +174,13 @@ describe("traceHints", () => {
     it("adds the placement hints on their first occurrence", () => {
       const hints = hintsOf(basic, true);
       expect(hints[1]).toBe(
-        "Drawn on the forking fiber: forking is its action, and the child's rows start at its first resume.",
+        "Indented with the fiber that forked it: forking is that fiber's action, and the child's rows start at its first resume.",
       );
       expect(hints[3]).toBe(
         "Forking only queues #8; it first runs here, once #0 yields. Indent is fiber depth, not identity: sibling fibers share a column.",
       );
       expect(hints[6]).toBe(
-        "Drawn on the child: ending is its own last action.",
+        "Indented with the child: ending is its own last action.",
       );
       expect(hints[9]).toBeUndefined();
     });
@@ -191,7 +191,7 @@ describe("traceHints", () => {
         true,
       );
       expect(hints[2]).toContain(
-        "Drawn on #95, which ran the fork; #96's depth follows #87, whose context it inherits.",
+        "Indented with #95, which ran the fork; #96 itself sits under #87, whose context it inherits.",
       );
     });
 
