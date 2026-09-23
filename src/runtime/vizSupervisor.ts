@@ -56,10 +56,19 @@ class VizSupervisor extends Supervisor.AbstractSupervisor<void> {
       onSome: (p) => FiberId.threadName(p.id()),
     });
     const fiberId = FiberId.threadName(fiber.id());
+    // Effect calls onStart synchronously on the forking fiber, before the child
+    // runs, so the current fiber is the one that ran the fork. It can differ
+    // from `parent`: forEach's coordinator forks workers under the caller.
+    // https://github.com/topheman/effect-viz/pull/49
+    const forkedBy = Option.match(Fiber.getCurrentFiber(), {
+      onNone: () => undefined,
+      onSome: (f) => FiberId.threadName(f.id()),
+    });
     this.onEmit({
       type: "fiber:fork",
       fiberId,
       parentId,
+      forkedBy,
       label: fiberId,
       timestamp: this.now(),
     });

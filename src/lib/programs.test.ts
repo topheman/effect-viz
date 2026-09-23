@@ -93,6 +93,30 @@ describe("example programs", () => {
     expect(at).toEqual([500, 500, 1000, 1000, 1500]);
   });
 
+  it("boundedConcurrency: a coordinator forks the workers, which inherit the caller's context", async () => {
+    const { events, fiber } = start(boundedConcurrencyExample);
+    await settle(fiber);
+
+    const forks = events.filter((e) => e.type === "fiber:fork");
+    const workers = forks.filter((f) => f.forkedBy !== f.parentId);
+    // One worker per concurrency slot; each pulls the next task when free.
+    expect(workers).toHaveLength(2);
+    const [coordinator, ...others] = new Set(workers.map((w) => w.forkedBy));
+    expect(others).toEqual([]);
+    const caller = forks.find((f) => f.fiberId === coordinator)?.parentId;
+    expect(caller).toBeDefined();
+    expect(workers.every((w) => w.parentId === caller)).toBe(true);
+  });
+
+  it("interleaving: every fork is run by the fiber the child inherits from", async () => {
+    const { events, fiber } = start(interleavingExample);
+    await settle(fiber);
+
+    const forks = events.filter((e) => e.type === "fiber:fork");
+    expect(forks.length).toBeGreaterThan(0);
+    expect(forks.every((f) => f.forkedBy === f.parentId)).toBe(true);
+  });
+
   it("structuredInterruption: children and their finalizers unwind with the parent", async () => {
     const { events, fiber } = start(structuredInterruptionExample);
     await expect(settle(fiber)).resolves.toBe(

@@ -56,8 +56,14 @@ function formatEvent(
       ) as EffectStartEvent | undefined;
       return `effect:ended ${startEffect?.label ?? event.id}`;
     }
-    case "fiber:fork":
-      return `fiber:forked ${event.fiberId}${event.parentId ? ` (parent ${event.parentId})` : " (root)"}`;
+    case "fiber:fork": {
+      if (!event.parentId) return `fiber:forked ${event.fiberId} (root)`;
+      const by =
+        event.forkedBy && event.forkedBy !== event.parentId
+          ? `, by ${event.forkedBy}`
+          : "";
+      return `fiber:forked ${event.fiberId} (parent ${event.parentId}${by})`;
+    }
     case "fiber:end": {
       const forkEvent = events.find(
         (e) => e.type === "fiber:fork" && e.fiberId === event.fiberId,
