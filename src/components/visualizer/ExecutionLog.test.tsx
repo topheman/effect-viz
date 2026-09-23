@@ -50,21 +50,19 @@ describe("ExecutionLog", () => {
     Element.prototype.scrollTo ??= () => {};
   });
 
-  it("indents each event by its fiber's depth on request", async () => {
+  it("indents each event by its fiber's depth until flattened", async () => {
     render(
       <TraceStoreProvider>
         <Seed />
         <ExecutionLog />
       </TraceStoreProvider>,
     );
-    expect(indentOf("effect:started on-child")).toBe("0px");
-
-    await userEvent.click(
-      screen.getByRole("button", { name: "indent by fiber" }),
-    );
-
     expect(indentOf("fiber:forked #0 (root)")).toBe("0px");
     expect(indentOf("effect:started on-child")).toBe("16px");
+
+    await userEvent.click(screen.getByRole("button", { name: "flat log" }));
+
+    expect(indentOf("effect:started on-child")).toBe("0px");
   });
 
   it("names the forking fiber when it is not the parent", () => {
@@ -86,21 +84,13 @@ describe("ExecutionLog hints", () => {
     Element.prototype.scrollTo ??= () => {};
   });
 
-  it("expands a hint under its row once explaining is on", async () => {
+  it("expands a hint under its row", async () => {
     render(
       <TraceStoreProvider>
         <Seed />
         <ExecutionLog />
       </TraceStoreProvider>,
     );
-    expect(
-      screen.queryByRole("button", { name: "Explain this event" }),
-    ).not.toBeInTheDocument();
-
-    await userEvent.click(
-      screen.getByRole("button", { name: "indent by fiber" }),
-    );
-    await userEvent.click(screen.getByRole("button", { name: "explain" }));
     await userEvent.click(
       screen.getAllByRole("button", { name: "Explain this event" })[0],
     );
@@ -116,5 +106,19 @@ describe("ExecutionLog hints", () => {
         exact: false,
       }),
     ).toBeInTheDocument();
+  });
+
+  it("hides every hint icon once hints are turned off", async () => {
+    render(
+      <TraceStoreProvider>
+        <Seed />
+        <ExecutionLog />
+      </TraceStoreProvider>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "hide hints" }));
+
+    expect(
+      screen.queryByRole("button", { name: "Explain this event" }),
+    ).not.toBeInTheDocument();
   });
 });

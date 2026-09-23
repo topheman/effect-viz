@@ -167,8 +167,8 @@ function getEventColor(event: TraceEvent): string {
 export function ExecutionLog() {
   const { events } = useTraceStore();
   const [showInternals, setShowInternals] = useShowInternals();
-  const [indentByFiber, setIndentByFiber] = useState(false);
-  const [explain, setExplain] = useState(false);
+  const [indentByFiber, setIndentByFiber] = useState(true);
+  const [explain, setExplain] = useState(true);
   // Keyed by the run's first event: row indices mean nothing in the next run.
   const [open, setOpen] = useState<{
     run: TraceEvent | undefined;
