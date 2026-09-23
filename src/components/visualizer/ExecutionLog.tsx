@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   Card,
@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useShowInternals } from "@/hooks/useShowInternals";
+import { eventDepth, fiberDepths } from "@/lib/fiberDepth";
 import { cn } from "@/lib/utils";
 import { isToolEvent } from "@/runtime/traceOrigin";
 import { useTraceStore } from "@/stores/traceStore";
@@ -158,6 +159,7 @@ function getEventColor(event: TraceEvent): string {
 export function ExecutionLog() {
   const { events } = useTraceStore();
   const [showInternals, setShowInternals] = useShowInternals();
+  const [indentByFiber, setIndentByFiber] = useState(false);
   const cardContentRef = useRef<HTMLDivElement>(null);
 
   const toolEventCount = events.filter(isToolEvent).length;
@@ -166,6 +168,8 @@ export function ExecutionLog() {
   const visible = events
     .map((event, index) => ({ event, index }))
     .filter(({ event }) => showInternals || !isToolEvent(event));
+  const depths = indentByFiber ? fiberDepths(events) : null;
+  const indexWidth = `${String(visible.length).length + 2}ch`;
 
   useEffect(() => {
     const ref = cardContentRef.current;
@@ -187,21 +191,36 @@ export function ExecutionLog() {
       >
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-base">Execution Log</CardTitle>
-          {toolEventCount > 0 && (
-            <button
-              type="button"
-              onClick={() => setShowInternals(!showInternals)}
-              className={`
-                shrink-0 cursor-pointer text-xs text-muted-foreground
-                transition-colors
-                hover:text-foreground
-              `}
-            >
-              {showInternals
-                ? "hide visualizer events"
-                : `show ${toolEventCount} visualizer event${toolEventCount > 1 ? "s" : ""}`}
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {events.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setIndentByFiber(!indentByFiber)}
+                className={`
+                  shrink-0 cursor-pointer text-xs text-muted-foreground
+                  transition-colors
+                  hover:text-foreground
+                `}
+              >
+                {indentByFiber ? "flat log" : "indent by fiber"}
+              </button>
+            )}
+            {toolEventCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowInternals(!showInternals)}
+                className={`
+                  shrink-0 cursor-pointer text-xs text-muted-foreground
+                  transition-colors
+                  hover:text-foreground
+                `}
+              >
+                {showInternals
+                  ? "hide visualizer events"
+                  : `show ${toolEventCount} visualizer event${toolEventCount > 1 ? "s" : ""}`}
+              </button>
+            )}
+          </div>
         </div>
         <CardDescription
           className={cn(events.length > 0 ? "hidden" : "block", "md:block")}
@@ -242,20 +261,36 @@ export function ExecutionLog() {
                     // Dimmed rather than styled apart: it is a real event that
                     // really happened, just not one the program asked for.
                     isToolEvent(event) && "opacity-60",
+                    // Flex so a wrapped line keeps the indent too.
+                    depths && "flex gap-[1ch]",
                   )}
                 >
-                  <span className="text-muted-foreground">
+                  <span
+                    className={cn(
+                      "text-muted-foreground",
+                      depths && "shrink-0",
+                    )}
+                    // As wide as the longest label, so equal depths line up and
+                    // depth 0 starts where the flat log does.
+                    style={depths ? { minWidth: indexWidth } : undefined}
+                  >
                     [{position + 1}]
                   </span>{" "}
                   <span
-                    role="img"
-                    aria-label={emojiInfo.label}
-                    className="me-1.5 inline-block"
+                    style={{
+                      paddingInlineStart: `${(depths ? eventDepth(event, depths) : 0) * 16}px`,
+                    }}
                   >
-                    {emojiInfo.emoji}
-                  </span>
-                  <span className={getEventColor(event)}>
-                    {formatEvent(event, events, index)}
+                    <span
+                      role="img"
+                      aria-label={emojiInfo.label}
+                      className="me-1.5 inline-block"
+                    >
+                      {emojiInfo.emoji}
+                    </span>
+                    <span className={getEventColor(event)}>
+                      {formatEvent(event, events, index)}
+                    </span>
                   </span>
                 </div>
               );

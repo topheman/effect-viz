@@ -1,0 +1,60 @@
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { useEffect } from "react";
+import { beforeAll, describe, expect, it } from "vitest";
+
+import { TraceStoreProvider, useTraceStore } from "@/stores/traceStore";
+import type { TraceEvent } from "@/types/trace";
+
+import { ExecutionLog } from "./ExecutionLog";
+
+const events: TraceEvent[] = [
+  { type: "fiber:fork", fiberId: "#0", label: "#0", timestamp: 0 },
+  {
+    type: "fiber:fork",
+    fiberId: "#1",
+    parentId: "#0",
+    label: "#1",
+    timestamp: 0,
+  },
+  {
+    type: "effect:start",
+    id: "a",
+    fiberId: "#1",
+    label: "on-child",
+    timestamp: 0,
+  },
+];
+
+function Seed() {
+  const { addEvent } = useTraceStore();
+  useEffect(() => events.forEach(addEvent), [addEvent]);
+  return null;
+}
+
+function indentOf(text: string) {
+  return screen.getByText(text).parentElement?.style.paddingInlineStart;
+}
+
+describe("ExecutionLog", () => {
+  beforeAll(() => {
+    Element.prototype.scrollTo ??= () => {};
+  });
+
+  it("indents each event by its fiber's depth on request", async () => {
+    render(
+      <TraceStoreProvider>
+        <Seed />
+        <ExecutionLog />
+      </TraceStoreProvider>,
+    );
+    expect(indentOf("effect:started on-child")).toBe("0px");
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "indent by fiber" }),
+    );
+
+    expect(indentOf("fiber:forked #0 (root)")).toBe("0px");
+    expect(indentOf("effect:started on-child")).toBe("16px");
+  });
+});

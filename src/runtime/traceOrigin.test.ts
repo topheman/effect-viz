@@ -29,6 +29,7 @@ const forkChild = (fiberId: string, parentId: string): TraceEvent => ({
 const effectStart = (label: string): TraceEvent => ({
   type: "effect:start",
   id: label,
+  fiberId: "#2",
   label,
   timestamp: 0,
 });

@@ -1,4 +1,4 @@
-import { Tracer, Exit, Cause, Option, Context } from "effect";
+import { Tracer, Exit, Cause, Option, Context, Fiber, FiberId } from "effect";
 import type { RuntimeFiber } from "effect/Fiber";
 
 import { randomUUID } from "@/lib/crypto";
@@ -38,10 +38,20 @@ export function makeVizTracer(onEmit: (event: TraceEvent) => void, now: Now) {
       options?: Tracer.SpanOptions,
     ): Tracer.Span {
       const id = randomUUID();
+      // The runtime calls `span` synchronously from the fiber entering the span,
+      // so the current fiber is the one doing the work. The end event reuses it,
+      // keeping a span's start and end on the same lane.
+      const fiberId = FiberId.threadName(
+        Option.match(Fiber.getCurrentFiber(), {
+          onNone: () => FiberId.none,
+          onSome: (fiber) => fiber.id(),
+        }),
+      );
       onEmit({
         type: "effect:start",
         label,
         id,
+        fiberId,
         timestamp: toMillis(startTime, now),
       });
       return {
@@ -69,6 +79,7 @@ export function makeVizTracer(onEmit: (event: TraceEvent) => void, now: Now) {
           onEmit({
             type: "effect:end",
             id,
+            fiberId,
             result,
             value,
             error,
