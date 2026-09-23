@@ -345,8 +345,12 @@ export function ExecutionLog() {
             </div>
           </div>
         ) : (
+          // Rows wrap, so nothing needs a horizontal scroll; hidden stops an
+          // icon's widened hit area near the edge from creating one.
           <div
-            className="h-full overflow-y-auto font-mono text-sm"
+            className={`
+              h-full overflow-x-hidden overflow-y-auto font-mono text-sm
+            `}
             ref={cardContentRef}
           >
             {visible.map(({ event, index }, position) => {
@@ -366,6 +370,20 @@ export function ExecutionLog() {
                     // really happened, just not one the program asked for.
                     isToolEvent(event) && "opacity-60",
                   )}
+                  // On touch devices a tap anywhere on the row toggles its hint:
+                  // the icon is too small a target for a finger. The browser
+                  // sends no click once a touch turns into a scroll. With a
+                  // mouse only the icon does, so selecting text in a row by
+                  // dragging does not toggle it.
+                  onClick={
+                    hint
+                      ? (e) => {
+                          if (!matchMedia("(pointer: coarse)").matches) return;
+                          if ((e.target as Element).closest("button")) return;
+                          toggleHint(index);
+                        }
+                      : undefined
+                  }
                 >
                   {/* Flex so a wrapped line keeps the indent too. */}
                   <div className={cn(depths && "flex gap-[1ch]")}>
@@ -395,14 +413,23 @@ export function ExecutionLog() {
                         <button
                           type="button"
                           aria-label="Explain this event"
+                          title={
+                            expanded.has(index)
+                              ? "Hide explanation"
+                              : "Explain this event"
+                          }
                           aria-expanded={expanded.has(index)}
                           aria-controls={
                             expanded.has(index) ? hintId : undefined
                           }
                           onClick={() => toggleHint(index)}
+                          // The ::after layer widens the hit area around the icon
+                          // without moving it.
                           className={`
-                            ms-1.5 inline-flex cursor-pointer align-middle
-                            text-muted-foreground transition-colors
+                            relative ms-1.5 inline-flex cursor-pointer
+                            align-middle text-muted-foreground transition-colors
+                            after:absolute after:-inset-x-3 after:-inset-y-1.5
+                            after:content-['']
                             hover:text-foreground
                           `}
                         >

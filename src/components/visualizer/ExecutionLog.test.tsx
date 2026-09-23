@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useEffect } from "react";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { resetLogView } from "@/hooks/useLogView";
 import { TraceStoreProvider, useTraceStore } from "@/stores/traceStore";
@@ -54,7 +54,20 @@ async function toggleOption(name: string) {
   await userEvent.keyboard("{Escape}");
 }
 
-beforeEach(() => resetLogView());
+function primaryPointer(pointer: "fine" | "coarse") {
+  vi.mocked(window.matchMedia).mockImplementation(
+    (query: string) =>
+      ({
+        matches: query === `(pointer: ${pointer})`,
+        media: query,
+      }) as MediaQueryList,
+  );
+}
+
+beforeEach(() => {
+  resetLogView();
+  primaryPointer("fine");
+});
 
 describe("ExecutionLog", () => {
   beforeAll(() => {
@@ -102,19 +115,42 @@ describe("ExecutionLog hints", () => {
         <ExecutionLog />
       </TraceStoreProvider>,
     );
-    await userEvent.click(
-      screen.getAllByRole("button", { name: "Explain this event" })[0],
-    );
+    const icon = screen.getAllByRole("button", {
+      name: "Explain this event",
+    })[0];
+    expect(icon).toHaveAttribute("title", "Explain this event");
 
+    await userEvent.click(icon);
+
+    expect(icon).toHaveAttribute("aria-expanded", "true");
+    expect(icon).toHaveAttribute("title", "Hide explanation");
+    expect(
+      screen.getByText("Indented with the fiber that forked it", {
+        exact: false,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("toggles a hint by tapping its row on touch devices only", async () => {
+    render(
+      <TraceStoreProvider>
+        <Seed />
+        <ExecutionLog />
+      </TraceStoreProvider>,
+    );
+    const row = screen.getByText("fiber:forked #1 (parent #0)");
+
+    await userEvent.click(row);
+    expect(
+      screen.queryByRole("button", { expanded: true }),
+    ).not.toBeInTheDocument();
+
+    primaryPointer("coarse");
+    await userEvent.click(row);
     expect(
       screen.getByRole("button", {
         name: "Explain this event",
         expanded: true,
-      }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("Indented with the fiber that forked it", {
-        exact: false,
       }),
     ).toBeInTheDocument();
   });
