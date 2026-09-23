@@ -1,3 +1,4 @@
+import { Info } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import {
@@ -9,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { useShowInternals } from "@/hooks/useShowInternals";
 import { eventDepth, fiberDepths } from "@/lib/fiberDepth";
+import { traceHints } from "@/lib/traceHints";
 import { cn } from "@/lib/utils";
 import { isToolEvent } from "@/runtime/traceOrigin";
 import { useTraceStore } from "@/stores/traceStore";
@@ -166,6 +168,13 @@ export function ExecutionLog() {
   const { events } = useTraceStore();
   const [showInternals, setShowInternals] = useShowInternals();
   const [indentByFiber, setIndentByFiber] = useState(false);
+  const [explain, setExplain] = useState(false);
+  // Keyed by the run's first event: row indices mean nothing in the next run.
+  const [open, setOpen] = useState<{
+    run: TraceEvent | undefined;
+    rows: ReadonlySet<number>;
+  }>({ run: undefined, rows: new Set() });
+  const expanded = open.run === events[0] ? open.rows : new Set<number>();
   const cardContentRef = useRef<HTMLDivElement>(null);
 
   const toolEventCount = events.filter(isToolEvent).length;
@@ -175,6 +184,14 @@ export function ExecutionLog() {
     .map((event, index) => ({ event, index }))
     .filter(({ event }) => showInternals || !isToolEvent(event));
   const depths = indentByFiber ? fiberDepths(events) : null;
+  // Detected on the full trace, so hiding rows never changes which hints fire.
+  const hints = explain ? traceHints(events, { indentByFiber }) : null;
+
+  const toggleHint = (index: number) => {
+    const next = new Set(expanded);
+    if (!next.delete(index)) next.add(index);
+    setOpen({ run: events[0], rows: next });
+  };
   const indexWidth = `${String(visible.length).length + 2}ch`;
 
   useEffect(() => {
@@ -198,6 +215,19 @@ export function ExecutionLog() {
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-base">Execution Log</CardTitle>
           <div className="flex items-center gap-3">
+            {events.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setExplain(!explain)}
+                className={`
+                  shrink-0 cursor-pointer text-xs text-muted-foreground
+                  transition-colors
+                  hover:text-foreground
+                `}
+              >
+                {explain ? "hide hints" : "explain"}
+              </button>
+            )}
             {events.length > 0 && (
               <button
                 type="button"
@@ -256,6 +286,9 @@ export function ExecutionLog() {
           >
             {visible.map(({ event, index }, position) => {
               const emojiInfo = getEventEmoji(event);
+              const depth = depths ? eventDepth(event, depths) : 0;
+              const hint = hints?.get(index);
+              const hintId = `execution-log-hint-${index}`;
               return (
                 <div
                   key={`${event.type}-${event.timestamp}-${index}`}
@@ -267,37 +300,63 @@ export function ExecutionLog() {
                     // Dimmed rather than styled apart: it is a real event that
                     // really happened, just not one the program asked for.
                     isToolEvent(event) && "opacity-60",
-                    // Flex so a wrapped line keeps the indent too.
-                    depths && "flex gap-[1ch]",
                   )}
                 >
-                  <span
-                    className={cn(
-                      "text-muted-foreground",
-                      depths && "shrink-0",
-                    )}
-                    // As wide as the longest label, so equal depths line up and
-                    // depth 0 starts where the flat log does.
-                    style={depths ? { minWidth: indexWidth } : undefined}
-                  >
-                    [{position + 1}]
-                  </span>{" "}
-                  <span
-                    style={{
-                      paddingInlineStart: `${(depths ? eventDepth(event, depths) : 0) * 16}px`,
-                    }}
-                  >
+                  {/* Flex so a wrapped line keeps the indent too. */}
+                  <div className={cn(depths && "flex gap-[1ch]")}>
                     <span
-                      role="img"
-                      aria-label={emojiInfo.label}
-                      className="me-1.5 inline-block"
+                      className={cn(
+                        "text-muted-foreground",
+                        depths && "shrink-0",
+                      )}
+                      // As wide as the longest label, so equal depths line up
+                      // and depth 0 starts where the flat log does.
+                      style={depths ? { minWidth: indexWidth } : undefined}
                     >
-                      {emojiInfo.emoji}
+                      [{position + 1}]
+                    </span>{" "}
+                    <span style={{ paddingInlineStart: `${depth * 16}px` }}>
+                      <span
+                        role="img"
+                        aria-label={emojiInfo.label}
+                        className="me-1.5 inline-block"
+                      >
+                        {emojiInfo.emoji}
+                      </span>
+                      <span className={getEventColor(event)}>
+                        {formatEvent(event, events, index)}
+                      </span>
+                      {hint && (
+                        <button
+                          type="button"
+                          aria-label="Explain this event"
+                          aria-expanded={expanded.has(index)}
+                          aria-controls={
+                            expanded.has(index) ? hintId : undefined
+                          }
+                          onClick={() => toggleHint(index)}
+                          className={`
+                            ms-1.5 inline-flex cursor-pointer align-middle
+                            text-muted-foreground transition-colors
+                            hover:text-foreground
+                          `}
+                        >
+                          <Info className="size-3.5" aria-hidden />
+                        </button>
+                      )}
                     </span>
-                    <span className={getEventColor(event)}>
-                      {formatEvent(event, events, index)}
-                    </span>
-                  </span>
+                  </div>
+                  {hint && expanded.has(index) && (
+                    <p
+                      id={hintId}
+                      className="mt-0.5 font-sans text-xs text-muted-foreground"
+                      style={{
+                        paddingInlineStart: `calc(${indexWidth} + 1ch + ${depth * 16}px)`,
+                      }}
+                    >
+                      {hint}
+                    </p>
+                  )}
                 </div>
               );
             })}

@@ -80,3 +80,39 @@ describe("ExecutionLog", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("ExecutionLog hints", () => {
+  beforeAll(() => {
+    Element.prototype.scrollTo ??= () => {};
+  });
+
+  it("expands a hint under its row once explaining is on", async () => {
+    render(
+      <TraceStoreProvider>
+        <Seed />
+        <ExecutionLog />
+      </TraceStoreProvider>,
+    );
+    expect(
+      screen.queryByRole("button", { name: "Explain this event" }),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "indent by fiber" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "explain" }));
+    await userEvent.click(
+      screen.getAllByRole("button", { name: "Explain this event" })[0],
+    );
+
+    expect(
+      screen.getByRole("button", {
+        name: "Explain this event",
+        expanded: true,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Drawn on the forking fiber", { exact: false }),
+    ).toBeInTheDocument();
+  });
+});
