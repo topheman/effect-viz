@@ -1,8 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useEffect } from "react";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import { resetLogView } from "@/hooks/useLogView";
 import { TraceStoreProvider, useTraceStore } from "@/stores/traceStore";
 import type { TraceEvent } from "@/types/trace";
 
@@ -45,6 +46,16 @@ function indentOf(text: string) {
   return screen.getByText(text).parentElement?.style.paddingInlineStart;
 }
 
+async function toggleOption(name: string) {
+  await userEvent.click(
+    screen.getAllByRole("button", { name: /Log options/ })[0],
+  );
+  await userEvent.click(screen.getByRole("checkbox", { name }));
+  await userEvent.keyboard("{Escape}");
+}
+
+beforeEach(() => resetLogView());
+
 describe("ExecutionLog", () => {
   beforeAll(() => {
     Element.prototype.scrollTo ??= () => {};
@@ -60,7 +71,7 @@ describe("ExecutionLog", () => {
     expect(indentOf("fiber:forked #0 (root)")).toBe("0px");
     expect(indentOf("effect:started on-child")).toBe("16px");
 
-    await userEvent.click(screen.getByRole("button", { name: "flat log" }));
+    await toggleOption("Indent by fiber");
 
     expect(indentOf("effect:started on-child")).toBe("0px");
   });
@@ -115,10 +126,47 @@ describe("ExecutionLog hints", () => {
         <ExecutionLog />
       </TraceStoreProvider>,
     );
-    await userEvent.click(screen.getByRole("button", { name: "hide hints" }));
+    await toggleOption("Explain events");
 
     expect(
       screen.queryByRole("button", { name: "Explain this event" }),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("ExecutionLog filters", () => {
+  beforeAll(() => {
+    Element.prototype.scrollTo ??= () => {};
+  });
+
+  it("hides a group's rows and says how many are hidden", async () => {
+    render(
+      <TraceStoreProvider>
+        <Seed />
+        <ExecutionLog />
+      </TraceStoreProvider>,
+    );
+    await toggleOption("Fiber lifecycle 3");
+
+    expect(
+      screen.queryByText("fiber:forked #0 (root)"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("effect:started on-child")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Log options, 3 hidden" }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps both layouts' logs on the same view", async () => {
+    render(
+      <TraceStoreProvider>
+        <Seed />
+        <ExecutionLog />
+        <ExecutionLog />
+      </TraceStoreProvider>,
+    );
+    await toggleOption("Spans 1");
+
+    expect(screen.queryAllByText("effect:started on-child")).toHaveLength(0);
   });
 });

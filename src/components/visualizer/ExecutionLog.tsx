@@ -1,4 +1,4 @@
-import { Info } from "lucide-react";
+import { Info, SlidersHorizontal } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import {
@@ -8,7 +8,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { useLogView } from "@/hooks/useLogView";
 import { useShowInternals } from "@/hooks/useShowInternals";
+import { EVENT_GROUPS, type EventGroup, eventGroup } from "@/lib/eventGroups";
 import { eventDepth, fiberDepths } from "@/lib/fiberDepth";
 import { traceHints } from "@/lib/traceHints";
 import { cn } from "@/lib/utils";
@@ -164,11 +171,45 @@ function getEventColor(event: TraceEvent): string {
   }
 }
 
+function OptionRow({
+  label,
+  count,
+  checked,
+  onChange,
+}: {
+  label: string;
+  count?: number;
+  checked: boolean;
+  onChange: () => void;
+}) {
+  return (
+    // Tall enough on touch to hit reliably; the whole row is the target.
+    <label
+      className={`
+        flex min-h-10 cursor-pointer items-center gap-2
+        md:min-h-7
+      `}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onChange}
+        className="size-4 accent-primary"
+      />
+      <span className="flex-1">{label}</span>{" "}
+      {count !== undefined && (
+        <span className="text-xs text-muted-foreground tabular-nums">
+          {count}
+        </span>
+      )}
+    </label>
+  );
+}
+
 export function ExecutionLog() {
   const { events } = useTraceStore();
   const [showInternals, setShowInternals] = useShowInternals();
-  const [indentByFiber, setIndentByFiber] = useState(true);
-  const [explain, setExplain] = useState(true);
+  const [{ indentByFiber, explain, hidden }, updateView] = useLogView();
   // Keyed by the run's first event: row indices mean nothing in the next run.
   const [open, setOpen] = useState<{
     run: TraceEvent | undefined;
@@ -182,7 +223,20 @@ export function ExecutionLog() {
   // start, and a duration measured against a filtered list would be wrong.
   const visible = events
     .map((event, index) => ({ event, index }))
-    .filter(({ event }) => showInternals || !isToolEvent(event));
+    .filter(({ event }) => showInternals || !isToolEvent(event))
+    .filter(({ event }) => !hidden.has(eventGroup(event)));
+  const hiddenCount = events.length - visible.length;
+  const groupCounts = new Map<EventGroup, number>();
+  for (const event of events) {
+    if (!showInternals && isToolEvent(event)) continue;
+    const group = eventGroup(event);
+    groupCounts.set(group, (groupCounts.get(group) ?? 0) + 1);
+  }
+  const toggleGroup = (group: EventGroup) => {
+    const next = new Set(hidden);
+    if (!next.delete(group)) next.add(group);
+    updateView({ hidden: next });
+  };
   const depths = indentByFiber ? fiberDepths(events) : null;
   // Detected on the full trace, so hiding rows never changes which hints fire.
   const hints = explain ? traceHints(events, { indentByFiber }) : null;
@@ -214,49 +268,60 @@ export function ExecutionLog() {
       >
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-base">Execution Log</CardTitle>
-          <div className="flex items-center gap-3">
-            {events.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setExplain(!explain)}
-                className={`
-                  shrink-0 cursor-pointer text-xs text-muted-foreground
-                  transition-colors
-                  hover:text-foreground
-                `}
-              >
-                {explain ? "hide hints" : "explain"}
-              </button>
-            )}
-            {events.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setIndentByFiber(!indentByFiber)}
-                className={`
-                  shrink-0 cursor-pointer text-xs text-muted-foreground
-                  transition-colors
-                  hover:text-foreground
-                `}
-              >
-                {indentByFiber ? "flat log" : "indent by fiber"}
-              </button>
-            )}
-            {toolEventCount > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowInternals(!showInternals)}
-                className={`
-                  shrink-0 cursor-pointer text-xs text-muted-foreground
-                  transition-colors
-                  hover:text-foreground
-                `}
-              >
-                {showInternals
-                  ? "hide visualizer events"
-                  : `show ${toolEventCount} visualizer event${toolEventCount > 1 ? "s" : ""}`}
-              </button>
-            )}
-          </div>
+          <Popover>
+            <PopoverTrigger
+              aria-label={
+                hiddenCount > 0
+                  ? `Log options, ${hiddenCount} hidden`
+                  : "Log options"
+              }
+              className={`
+                -m-1.5 inline-flex shrink-0 cursor-pointer items-center gap-1.5
+                p-1.5 text-xs text-muted-foreground transition-colors
+                hover:text-foreground
+              `}
+            >
+              {hiddenCount > 0 && <span aria-hidden>{hiddenCount} hidden</span>}
+              <SlidersHorizontal className="size-4" aria-hidden />
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-60 space-y-3 text-sm">
+              <fieldset>
+                <legend className="mb-1 text-xs text-muted-foreground">
+                  View
+                </legend>
+                <OptionRow
+                  label="Indent by fiber"
+                  checked={indentByFiber}
+                  onChange={() => updateView({ indentByFiber: !indentByFiber })}
+                />
+                <OptionRow
+                  label="Explain events"
+                  checked={explain}
+                  onChange={() => updateView({ explain: !explain })}
+                />
+              </fieldset>
+              <fieldset>
+                <legend className="mb-1 text-xs text-muted-foreground">
+                  Show
+                </legend>
+                {EVENT_GROUPS.map(({ group, label }) => (
+                  <OptionRow
+                    key={group}
+                    label={label}
+                    count={groupCounts.get(group) ?? 0}
+                    checked={!hidden.has(group)}
+                    onChange={() => toggleGroup(group)}
+                  />
+                ))}
+                <OptionRow
+                  label="Visualizer events"
+                  count={toolEventCount}
+                  checked={showInternals}
+                  onChange={() => setShowInternals(!showInternals)}
+                />
+              </fieldset>
+            </PopoverContent>
+          </Popover>
         </div>
         <CardDescription
           className={cn(events.length > 0 ? "hidden" : "block", "md:block")}
