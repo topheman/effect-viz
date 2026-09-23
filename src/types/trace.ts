@@ -7,6 +7,8 @@
 export interface EffectStartEvent {
   type: "effect:start";
   id: string;
+  /** Fiber the event was emitted on, as `FiberId.threadName` prints it */
+  fiberId: string;
   label: string;
   timestamp: number;
 }
@@ -16,6 +18,7 @@ export type EffectEndEvent =
   | {
       type: "effect:end";
       id: string;
+      fiberId: string;
       result: "success";
       timestamp: number;
       value: unknown;
@@ -23,6 +26,7 @@ export type EffectEndEvent =
   | {
       type: "effect:end";
       id: string;
+      fiberId: string;
       result: "failure";
       timestamp: number;
       error: unknown;
@@ -31,6 +35,7 @@ export type EffectEndEvent =
 export interface RetryAttemptEvent {
   type: "retry:attempt";
   id: string;
+  fiberId: string;
   label: string;
   attempt: number;
   lastError: unknown;
@@ -76,6 +81,7 @@ export interface FiberResumeEvent {
 export interface FinalizerEvent {
   type: "finalizer";
   id: string;
+  fiberId: string;
   label: string;
   timestamp: number;
 }
@@ -89,6 +95,7 @@ type AcquireEvent =
       type: "acquire";
       result: "success";
       id: string;
+      fiberId: string;
       label: string;
       timestamp: number;
     }
@@ -96,6 +103,7 @@ type AcquireEvent =
       type: "acquire";
       result: "failure";
       id: string;
+      fiberId: string;
       label: string;
       error: unknown;
       timestamp: number;

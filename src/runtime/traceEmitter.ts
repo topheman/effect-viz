@@ -1,4 +1,4 @@
-import { Clock, Context, Effect } from "effect";
+import { Clock, Context, Effect, FiberId } from "effect";
 
 import type { TraceEvent } from "@/types/trace";
 
@@ -18,6 +18,9 @@ export class TraceEmitter extends Context.Tag("TraceEmitter")<
   }
 >() {}
 
+/** The fiber running the emitter, so the event lands on the lane that did the work. */
+const currentFiberId = Effect.map(Effect.fiberId, FiberId.threadName);
+
 export const emitStart = (
   id: string,
   label: string,
@@ -27,6 +30,7 @@ export const emitStart = (
     yield* emit({
       type: "effect:start",
       id,
+      fiberId: yield* currentFiberId,
       label,
       timestamp: yield* Clock.currentTimeMillis,
     });
@@ -44,6 +48,7 @@ export const emitEnd = (
     yield* emit({
       type: "effect:end",
       id,
+      fiberId: yield* currentFiberId,
       result,
       value,
       error,
@@ -63,6 +68,7 @@ export const emitRetry = (
     yield* emit({
       type: "retry:attempt",
       id,
+      fiberId: yield* currentFiberId,
       label,
       attempt,
       lastError,
@@ -80,6 +86,7 @@ export const emitFinalizer = (
     yield* emit({
       type: "finalizer",
       id,
+      fiberId: yield* currentFiberId,
       label,
       timestamp: yield* Clock.currentTimeMillis,
     });
@@ -97,6 +104,7 @@ export const emitAcquire = (
     yield* emit({
       type: "acquire",
       id,
+      fiberId: yield* currentFiberId,
       label,
       result,
       error,
