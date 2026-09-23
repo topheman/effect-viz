@@ -14,6 +14,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useLogView } from "@/hooks/useLogView";
+import { useOnboarding } from "@/hooks/useOnboarding";
 import { useShowInternals } from "@/hooks/useShowInternals";
 import { EVENT_GROUPS, type EventGroup, eventGroup } from "@/lib/eventGroups";
 import { eventDepth, fiberDepths } from "@/lib/fiberDepth";
@@ -210,6 +211,7 @@ export function ExecutionLog() {
   const { events } = useTraceStore();
   const [showInternals, setShowInternals] = useShowInternals();
   const [{ indentByFiber, explain, hidden }, updateView] = useLogView();
+  const { currentStep: onboardingStep, completeStep } = useOnboarding();
   // Keyed by the run's first event: row indices mean nothing in the next run.
   const [open, setOpen] = useState<{
     run: TraceEvent | undefined;
@@ -268,18 +270,27 @@ export function ExecutionLog() {
       >
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-base">Execution Log</CardTitle>
-          <Popover>
+          <Popover
+            onOpenChange={(isOpen) => {
+              if (isOpen) completeStep("logOptions");
+            }}
+          >
             <PopoverTrigger
+              data-onboarding-step="logOptions"
               aria-label={
                 hiddenCount > 0
                   ? `Log options, ${hiddenCount} hidden`
                   : "Log options"
               }
-              className={`
-                -m-1.5 inline-flex shrink-0 cursor-pointer items-center gap-1.5
-                p-1.5 text-xs text-muted-foreground transition-colors
-                hover:text-foreground
-              `}
+              className={cn(
+                `
+                  -m-1.5 inline-flex shrink-0 cursor-pointer items-center
+                  gap-1.5 rounded-md p-1.5 text-xs text-muted-foreground
+                  transition-colors
+                  hover:text-foreground
+                `,
+                onboardingStep === "logOptions" && "animate-onboarding-glow",
+              )}
             >
               {hiddenCount > 0 && <span aria-hidden>{hiddenCount} hidden</span>}
               <SlidersHorizontal className="size-4" aria-hidden />
