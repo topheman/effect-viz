@@ -47,6 +47,12 @@ describe("useOnboarding", () => {
       result.current.completeStep("speed");
     });
 
+    expect(result.current.currentStep).toBe("logOptions");
+
+    act(() => {
+      result.current.completeStep("logOptions");
+    });
+
     expect(result.current.currentStep).toBe("programSelect");
 
     act(() => {
@@ -74,7 +80,7 @@ describe("useOnboarding", () => {
     expect(raw).not.toBeNull();
     const stored = JSON.parse(raw!) as { completed: string; version: number };
     expect(stored.completed).toBe("play");
-    expect(stored.version).toBe(3);
+    expect(stored.version).toBe(4);
   });
 
   it("resumes from next step after reload (simulated)", () => {
@@ -100,6 +106,7 @@ describe("useOnboarding", () => {
       result1.current.completeStep("showVisualizer");
       result1.current.completeStep("step");
       result1.current.completeStep("speed");
+      result1.current.completeStep("logOptions");
       result1.current.completeStep("programSelect");
       result1.current.completeStep("info");
     });
@@ -143,6 +150,12 @@ describe("useOnboarding", () => {
       result.current.completeStep("speed");
     });
 
+    expect(result.current.currentStep).toBe("logOptions");
+
+    act(() => {
+      result.current.completeStep("logOptions");
+    });
+
     expect(result.current.currentStep).toBe(null);
   });
 
@@ -170,7 +183,34 @@ describe("useOnboarding", () => {
       result.current.completeStep("speed");
     });
 
+    expect(result.current.currentStep).toBe("logOptions");
+
+    act(() => {
+      result.current.completeStep("logOptions");
+    });
+
     expect(result.current.currentStep).toBe("info");
+  });
+
+  it("shows only the log options step to a visitor who finished version 3", () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        completed: "info",
+        version: 3,
+        date: new Date().toISOString(),
+      }),
+    );
+
+    const { result } = renderHook(() => useOnboarding());
+
+    expect(result.current.currentStep).toBe("logOptions");
+
+    act(() => {
+      result.current.completeStep("logOptions");
+    });
+
+    expect(result.current.currentStep).toBe(null);
   });
 
   it("does not go back when completing an earlier step", () => {
@@ -199,6 +239,7 @@ describe("useOnboarding", () => {
       result.current.completeStep("showVisualizer");
       result.current.completeStep("step");
       result.current.completeStep("speed");
+      result.current.completeStep("logOptions");
       result.current.completeStep("programSelect");
       result.current.completeStep("info");
     });

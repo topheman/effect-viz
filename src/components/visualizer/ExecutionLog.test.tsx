@@ -206,3 +206,32 @@ describe("ExecutionLog filters", () => {
     expect(screen.queryAllByText("effect:started on-child")).toHaveLength(0);
   });
 });
+
+describe("ExecutionLog onboarding", () => {
+  beforeAll(() => {
+    Element.prototype.scrollTo ??= () => {};
+  });
+
+  it("retires the log options step when the options open", async () => {
+    localStorage.setItem(
+      "effect-flow-onboarding",
+      JSON.stringify({
+        completed: "speed",
+        version: 4,
+        date: new Date().toISOString(),
+      }),
+    );
+    render(
+      <TraceStoreProvider>
+        <ExecutionLog />
+      </TraceStoreProvider>,
+    );
+    const trigger = screen.getByRole("button", { name: "Log options" });
+    expect(trigger).toHaveClass("animate-onboarding-glow");
+
+    await userEvent.click(trigger);
+
+    expect(trigger).not.toHaveClass("animate-onboarding-glow");
+    localStorage.removeItem("effect-flow-onboarding");
+  });
+});

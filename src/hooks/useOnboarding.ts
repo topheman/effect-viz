@@ -11,6 +11,7 @@ const OnboardingStep = Schema.Literal(
   "info",
   "step",
   "speed",
+  "logOptions",
 );
 type OnboardingStep = Schema.Schema.Type<typeof OnboardingStep>;
 
@@ -33,6 +34,7 @@ const STEPS: readonly { id: OnboardingStep; since: number }[] = [
   { id: "showVisualizer", since: 1 },
   { id: "step", since: 2 },
   { id: "speed", since: 3 },
+  { id: "logOptions", since: 4 },
   { id: "programSelect", since: 1 },
   { id: "info", since: 1 },
 ];
