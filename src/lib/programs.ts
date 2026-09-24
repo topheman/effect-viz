@@ -491,7 +491,7 @@ export const programs = {
     description: "Sequential + concurrent execution with fiber joins",
     rootEffect: basicExample,
     requirements: [] as const,
-    source: `import { Effect, Fiber } from "effect";
+    source: `import { Effect, Fiber, Layer } from "effect";
 
 export const rootEffect = Effect.gen(function* () {
   // Step 1: Sequential initialization
@@ -525,7 +525,7 @@ export const rootEffect = Effect.gen(function* () {
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements = [];
+export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
 `,
   },
   multiStep: {
@@ -533,7 +533,7 @@ export const requirements = [];
     description: "A fiber performing multiple sequential steps",
     rootEffect: multiStepExample,
     requirements: [] as const,
-    source: `import { Effect, Fiber } from "effect";
+    source: `import { Effect, Fiber, Layer } from "effect";
 
 export const rootEffect = Effect.gen(function* () {
   const worker = yield* Effect.fork(
@@ -549,14 +549,14 @@ export const rootEffect = Effect.gen(function* () {
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements = [];`,
+export const requirements: ReadonlyArray<Layer.Layer.Any> = [];`,
   },
   nestedForks: {
     name: "Nested Forks",
     description: "Parent -> child -> grandchild fiber hierarchy",
     rootEffect: nestedForksExample,
     requirements: [] as const,
-    source: `import { Effect, Fiber } from "effect";
+    source: `import { Effect, Fiber, Layer } from "effect";
 
 export const rootEffect = Effect.gen(function* () {
   const parent = yield* Effect.fork(
@@ -589,7 +589,7 @@ export const rootEffect = Effect.gen(function* () {
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements = [];
+export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
 `,
   },
   interleaving: {
@@ -597,7 +597,7 @@ export const requirements = [];
     description: "Two fibers taking turns at yield points",
     rootEffect: interleavingExample,
     requirements: [] as const,
-    source: `import { Effect, Fiber } from "effect";
+    source: `import { Effect, Fiber, Layer } from "effect";
 
 export const rootEffect = Effect.gen(function* () {
   const worker = (label: string) =>
@@ -621,7 +621,7 @@ export const rootEffect = Effect.gen(function* () {
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements = [];
+export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
 `,
   },
   racing: {
@@ -630,7 +630,7 @@ export const requirements = [];
       "Two fibers racing - first to complete wins, loser interrupted",
     rootEffect: racingExample,
     requirements: [] as const,
-    source: `import { Effect, Fiber } from "effect";
+    source: `import { Effect, Fiber, Layer } from "effect";
 
 export const rootEffect = Effect.gen(function* () {
   yield* Effect.withSpan("race-start")(Effect.succeed("starting race"));
@@ -657,7 +657,7 @@ export const rootEffect = Effect.gen(function* () {
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements = [];
+export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
 `,
   },
   boundedConcurrency: {
@@ -665,7 +665,7 @@ export const requirements = [];
     description: "Effect.all running five tasks two at a time",
     rootEffect: boundedConcurrencyExample,
     requirements: [] as const,
-    source: `import { Effect } from "effect";
+    source: `import { Effect, Layer } from "effect";
 
 export const rootEffect = Effect.gen(function* () {
   const task = (id: number) =>
@@ -685,7 +685,7 @@ export const rootEffect = Effect.gen(function* () {
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements = [];
+export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
 `,
   },
   structuredInterruption: {
@@ -693,7 +693,7 @@ export const requirements = [];
     description: "Interrupt a parent, children and finalizers unwind",
     rootEffect: structuredInterruptionExample,
     requirements: [] as const,
-    source: `import { Effect, Fiber } from "effect";
+    source: `import { Effect, Fiber, Layer } from "effect";
 // Use @/runtime (not Effect.addFinalizer) so the visualizer can trace finalizers
 import { addFinalizer } from "@/runtime";
 
@@ -726,7 +726,7 @@ export const rootEffect = Effect.gen(function* () {
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements = [];
+export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
 `,
   },
   failureAndRecovery: {
@@ -734,7 +734,7 @@ export const requirements = [];
     description: "A step fails, then we recover and continue",
     rootEffect: failureExample,
     requirements: [] as const,
-    source: `import { Effect } from "effect";
+    source: `import { Effect, Layer } from "effect";
 
 export const rootEffect = Effect.gen(function* () {
   // Step 1: Setup succeeds
@@ -758,7 +758,7 @@ export const rootEffect = Effect.gen(function* () {
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements = [];
+export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
 `,
   },
   retry: {
@@ -767,7 +767,7 @@ export const requirements = [];
       "Effect fails twice then succeeds; retry retries until success",
     rootEffect: retryExample,
     requirements: [] as const,
-    source: `import { Effect, Ref, Schedule } from "effect";
+    source: `import { Effect, Layer, Ref, Schedule } from "effect";
 // Use @/runtime (not Effect.retry) so the visualizer can trace retries
 import { retry } from "@/runtime";
 
@@ -789,7 +789,7 @@ export const rootEffect = Effect.gen(function* () {
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements = [];
+export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
 `,
   },
   retryExponentialBackoff: {
@@ -798,7 +798,7 @@ export const requirements = [];
       "Same as Retry but with exponential backoff: 100ms, 200ms, 400ms, ... between attempts",
     rootEffect: retryExponentialBackoffExample,
     requirements: [] as const,
-    source: `import { Effect, Ref, Schedule } from "effect";
+    source: `import { Effect, Layer, Ref, Schedule } from "effect";
 // Use @/runtime (not Effect.retry) so the visualizer can trace retries
 import { retry } from "@/runtime";
 
@@ -824,7 +824,7 @@ export const rootEffect = Effect.gen(function* () {
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements = [];
+export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
 `,
   },
   timeout: {
@@ -832,7 +832,7 @@ export const requirements = [];
     description: "A deadline that interrupts work taking too long",
     rootEffect: timeoutExample,
     requirements: [] as const,
-    source: `import { Duration, Effect } from "effect";
+    source: `import { Duration, Effect, Layer } from "effect";
 
 export const rootEffect = Effect.gen(function* () {
   const withDeadline = (label: string, work: Duration.DurationInput) =>
@@ -851,7 +851,7 @@ export const rootEffect = Effect.gen(function* () {
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements = [];
+export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
 `,
   },
   basicFinalizers: {
@@ -860,7 +860,7 @@ export const requirements = [];
       "Register 3 finalizers; they run in LIFO order when the scope closes",
     rootEffect: basicFinalizersExample,
     requirements: [] as const,
-    source: `import { Effect } from "effect";
+    source: `import { Effect, Layer } from "effect";
 // Use @/runtime (not Effect.addFinalizer) so the visualizer can trace finalizers
 import { addFinalizer } from "@/runtime";
 
@@ -879,7 +879,7 @@ export const rootEffect = Effect.scoped(
 );
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements = [];
+export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
 `,
   },
   acquireRelease: {
@@ -888,7 +888,7 @@ export const requirements = [];
       "acquireRelease: acquire a resource, use it, release on scope exit",
     rootEffect: acquireReleaseExample,
     requirements: [] as const,
-    source: `import { Effect } from "effect";
+    source: `import { Effect, Layer } from "effect";
 // Use @/runtime (not Effect.acquireRelease) so the visualizer can trace acquire/release
 import { acquireRelease } from "@/runtime";
 
@@ -910,7 +910,7 @@ export const rootEffect = Effect.scoped(
 );
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements = [];
+export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
 `,
   },
   loggerWithRequirements: {
@@ -942,7 +942,7 @@ export const rootEffect = Effect.gen(function* () {
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements = [loggerLayer];
+export const requirements: ReadonlyArray<Layer.Layer.Any> = [loggerLayer];
 `,
   },
   deadlock: {
@@ -950,7 +950,7 @@ export const requirements = [loggerLayer];
     description: "Two fibers each waiting on the other, forever",
     rootEffect: deadlockExample,
     requirements: [] as const,
-    source: `import { Deferred, Effect } from "effect";
+    source: `import { Deferred, Effect, Layer } from "effect";
 
 // A Deferred is a value a fiber can wait for, completed by another fiber. Each fiber here waits for the one the other would complete, so no fiber can ever run again.
 // Step reports that nothing can run; Reset stops the program.
@@ -980,7 +980,7 @@ export const rootEffect = Effect.gen(function* () {
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements = [];
+export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
 `,
   },
 } as const;
