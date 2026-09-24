@@ -3,6 +3,9 @@
  * These demonstrate different Effect patterns with tracing.
  */
 
+// The examples fail with a plain Error to keep them short.
+// @effect-diagnostics effect/globalErrorInEffectFailure:off
+
 import {
   Context,
   Deferred,

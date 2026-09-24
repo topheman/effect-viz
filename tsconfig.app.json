@@ -34,7 +34,12 @@
        Requires the editor to use the workspace TypeScript (see .vscode/settings.json). */
     "plugins": [
       {
-        "name": "@effect/language-service"
+        "name": "@effect/language-service",
+        "diagnosticSeverity": {
+          "globalErrorInEffectCatch": "error",
+          "globalErrorInEffectFailure": "error",
+          "unnecessaryEffectGen": "error"
+        }
       }
     ],
     /* Import alias */

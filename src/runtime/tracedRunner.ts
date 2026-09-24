@@ -98,15 +98,13 @@ export function addFinalizerWithTrace<R>(
   ) => Effect.Effect<void, never, R>,
   label: string,
 ): Effect.Effect<void, never, TraceEmitter | Scope.Scope | R> {
-  return Effect.gen(function* () {
-    return yield* Effect.addFinalizer((exit) =>
-      Effect.gen(function* () {
-        const id = randomUUID();
-        yield* emitFinalizer(id, label);
-        yield* finalizer(exit);
-      }),
-    );
-  });
+  return Effect.addFinalizer((exit) =>
+    Effect.gen(function* () {
+      const id = randomUUID();
+      yield* emitFinalizer(id, label);
+      yield* finalizer(exit);
+    }),
+  );
 }
 
 /**

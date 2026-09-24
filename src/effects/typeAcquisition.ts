@@ -6,6 +6,7 @@
  * then adds them to Monaco.
  */
 import { loader } from "@monaco-editor/react";
+import * as Data from "effect/Data";
 import * as Effect from "effect/Effect";
 
 import type { WebContainerHandle } from "@/services/webcontainer";
@@ -18,6 +19,11 @@ import { WebContainer } from "@/services/webcontainer";
  * The files are served from public/app/ and added to Monaco for @/ paths resolution.
  */
 import APP_LIB_URLS from "./app-lib-dts-urls.json";
+
+/** Monaco or the type declarations it needs could not be loaded. */
+export class TypeAcquisitionError extends Data.TaggedError(
+  "TypeAcquisitionError",
+)<{ readonly message: string; readonly cause: unknown }> {}
 
 function addExtraLib(
   content: string,
@@ -66,7 +72,11 @@ function acquireAppLibs(
     for (const { url, path } of APP_LIB_URLS) {
       yield* Effect.tryPromise({
         try: () => fetch(url).then((r) => r.text()),
-        catch: (e) => new Error(`Failed to fetch ${url}: ${e}`),
+        catch: (cause) =>
+          new TypeAcquisitionError({
+            message: `Failed to fetch ${url}: ${cause}`,
+            cause,
+          }),
       }).pipe(
         Effect.flatMap((content) =>
           Effect.sync(() => addExtraLib(content, path, monaco)),
@@ -106,7 +116,11 @@ function configureMonacoPaths(
  */
 const initMonaco = Effect.tryPromise({
   try: () => loader.init(),
-  catch: (cause) => new Error("Monaco failed to load from the CDN", { cause }),
+  catch: (cause) =>
+    new TypeAcquisitionError({
+      message: "Monaco failed to load from the CDN",
+      cause,
+    }),
 });
 
 /** The paths under which Monaco finds effect's declarations, on both paths. */
@@ -120,29 +134,35 @@ const EFFECT_PATHS = {
  * Fetches effect's real declarations, extracted at build time by
  * `scripts/extract-effect-dts.mjs`, and app libs from public/app/.
  */
-export const acquireMonacoTypesFallback: Effect.Effect<void, Error> =
-  Effect.gen(function* () {
-    const monaco = yield* initMonaco;
-    configureMonacoPaths(monaco, EFFECT_PATHS);
+export const acquireMonacoTypesFallback: Effect.Effect<
+  void,
+  TypeAcquisitionError
+> = Effect.gen(function* () {
+  const monaco = yield* initMonaco;
+  configureMonacoPaths(monaco, EFFECT_PATHS);
 
-    const { files } = yield* Effect.tryPromise({
-      try: () =>
-        fetch("/effect-types.json").then(
-          (r) =>
-            r.json() as Promise<{
-              files: { path: string; content: string }[];
-            }>,
-        ),
-      catch: (e) => new Error(`Failed to fetch effect-types.json: ${e}`),
-    });
-    // Monaco syncs extra libs to its worker on the next tick, so adding them in
-    // one synchronous loop costs a single sync.
-    yield* Effect.sync(() => {
-      for (const { path, content } of files) addExtraLib(content, path, monaco);
-    });
-
-    yield* acquireAppLibs(monaco);
+  const { files } = yield* Effect.tryPromise({
+    try: () =>
+      fetch("/effect-types.json").then(
+        (r) =>
+          r.json() as Promise<{
+            files: { path: string; content: string }[];
+          }>,
+      ),
+    catch: (cause) =>
+      new TypeAcquisitionError({
+        message: `Failed to fetch effect-types.json: ${cause}`,
+        cause,
+      }),
   });
+  // Monaco syncs extra libs to its worker on the next tick, so adding them in
+  // one synchronous loop costs a single sync.
+  yield* Effect.sync(() => {
+    for (const { path, content } of files) addExtraLib(content, path, monaco);
+  });
+
+  yield* acquireAppLibs(monaco);
+});
 
 /**
  * Acquire all types for Monaco: Effect from container, app libs from public.
@@ -150,7 +170,7 @@ export const acquireMonacoTypesFallback: Effect.Effect<void, Error> =
  */
 export const acquireMonacoTypes: Effect.Effect<
   void,
-  Error,
+  TypeAcquisitionError,
   WebContainerHandle
 > = Effect.gen(function* () {
   const handle = yield* WebContainer;
