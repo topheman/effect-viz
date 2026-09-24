@@ -58,7 +58,14 @@ export default defineConfig({
         // Service worker will NOT call skipWaiting; updates will only activate when all tabs are closed.
         // This provides "prompt-only" updates, requiring a full reload (see snackbar notification).
         skipWaiting: false,
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        // Editor types for the fallback path, which is also the offline path.
+        globPatterns: [
+          "**/*.{js,css,html,ico,png,svg,woff2}",
+          "effect-types.json",
+          "app/**/*.d.ts",
+        ],
+        // effect-types.json is ~4.2 MB, over the 2 MiB default.
+        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         runtimeCaching: [
           {
             // Note: jsdelivr serves versioned paths like monaco-editor@0.55.1/...

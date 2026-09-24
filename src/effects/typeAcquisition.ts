@@ -1,10 +1,9 @@
 /**
  * Type acquisition for Monaco editor.
  *
- * Acquires Effect types from WebContainer's node_modules/effect and app lib types
- * (tracedRunner, trace, traceEmitter, crypto) from public, then adds them to Monaco.
- *
- * Must run after npm install in the boot Effect. Requires WebContainer.
+ * Acquires Effect types (from WebContainer's node_modules/effect, or from
+ * public/effect-types.json on the fallback path) and app lib types from public,
+ * then adds them to Monaco.
  */
 import { loader } from "@monaco-editor/react";
 import * as Effect from "effect/Effect";
@@ -13,8 +12,8 @@ import type { WebContainerHandle } from "@/services/webcontainer";
 import { WebContainer } from "@/services/webcontainer";
 
 /**
- * App lib types emitted by `npm run build:tracedrunner` (tsc -p tsconfig.tracedrunner.json).
- * `scripts/extract-dts-from-tracedrunner.mjs` extracts the .d.ts files into this JSON file.
+ * App lib types emitted by `npm run build:runtime` (tsc -p tsconfig.runtime.json).
+ * `scripts/extract-dts-from-runtime.mjs` extracts the .d.ts files into this JSON file.
  *
  * The files are served from public/app/ and added to Monaco for @/ paths resolution.
  */
@@ -110,20 +109,37 @@ const initMonaco = Effect.tryPromise({
   catch: (cause) => new Error("Monaco failed to load from the CDN", { cause }),
 });
 
+/** The paths under which Monaco finds effect's declarations, on both paths. */
+const EFFECT_PATHS = {
+  effect: ["node_modules/effect/dist/dts/index.d.ts"],
+  "effect/*": ["node_modules/effect/dist/dts/*"],
+};
+
 /**
- * Acquire Monaco types for mobile fallback (no WebContainer).
- * Fetches fallback-types.d.ts (Effect stubs) and app libs from public/app/.
+ * Acquire Monaco types for the fallback path (no WebContainer).
+ * Fetches effect's real declarations, extracted at build time by
+ * `scripts/extract-effect-dts.mjs`, and app libs from public/app/.
  */
 export const acquireMonacoTypesFallback: Effect.Effect<void, Error> =
   Effect.gen(function* () {
     const monaco = yield* initMonaco;
-    configureMonacoPaths(monaco);
+    configureMonacoPaths(monaco, EFFECT_PATHS);
 
-    const fallbackContent = yield* Effect.tryPromise({
-      try: () => fetch("/fallback-types.d.ts").then((r) => r.text()),
-      catch: (e) => new Error(`Failed to fetch fallback-types.d.ts: ${e}`),
+    const { files } = yield* Effect.tryPromise({
+      try: () =>
+        fetch("/effect-types.json").then(
+          (r) =>
+            r.json() as Promise<{
+              files: { path: string; content: string }[];
+            }>,
+        ),
+      catch: (e) => new Error(`Failed to fetch effect-types.json: ${e}`),
     });
-    addExtraLib(fallbackContent, "file:///fallback-types.d.ts", monaco);
+    // Monaco syncs extra libs to its worker on the next tick, so adding them in
+    // one synchronous loop costs a single sync.
+    yield* Effect.sync(() => {
+      for (const { path, content } of files) addExtraLib(content, path, monaco);
+    });
 
     yield* acquireAppLibs(monaco);
   });
@@ -139,10 +155,7 @@ export const acquireMonacoTypes: Effect.Effect<
 > = Effect.gen(function* () {
   const handle = yield* WebContainer;
   const monaco = yield* initMonaco;
-  configureMonacoPaths(monaco, {
-    effect: ["node_modules/effect/dist/dts/index.d.ts"],
-    "effect/*": ["node_modules/effect/dist/dts/*"],
-  });
+  configureMonacoPaths(monaco, EFFECT_PATHS);
   const added = new Set<string>();
   yield* acquireNodeModulesTypes(handle, "node_modules/effect", monaco, added);
   yield* acquireAppLibs(monaco);
