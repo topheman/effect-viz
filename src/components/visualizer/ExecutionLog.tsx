@@ -261,15 +261,32 @@ export function ExecutionLog() {
   }, [events]);
 
   return (
-    <Card className="flex h-full flex-col">
+    <Card
+      className={`
+        relative flex h-full flex-col
+        max-md:short:py-1
+      `}
+    >
+      {/* In the landscape tabs the options button floats over the rows; the
+          header's inline-size container would otherwise size it to zero. */}
       <CardHeader
         className={`
           shrink-0 pb-0
           md:pb-3
+          max-md:short:[container-type:normal] max-md:short:absolute
+          max-md:short:top-2.5 max-md:short:right-2.5 max-md:short:z-10
+          max-md:short:px-0
         `}
       >
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-base">Execution Log</CardTitle>
+          <CardTitle
+            className={`
+              text-base
+              max-md:short:hidden
+            `}
+          >
+            Execution Log
+          </CardTitle>
           <Popover
             onOpenChange={(isOpen) => {
               if (isOpen) completeStep("logOptions");
@@ -288,6 +305,7 @@ export function ExecutionLog() {
                   gap-1.5 rounded-md p-1.5 text-xs text-muted-foreground
                   transition-colors
                   hover:text-foreground
+                  max-md:short:bg-card
                 `,
                 onboardingStep === "logOptions" && "animate-onboarding-glow",
               )}
@@ -335,7 +353,13 @@ export function ExecutionLog() {
           </Popover>
         </div>
         <CardDescription
-          className={cn(events.length > 0 ? "hidden" : "block", "md:block")}
+          className={cn(
+            events.length > 0 ? "hidden" : "block",
+            `
+              md:block
+              max-md:short:hidden
+            `,
+          )}
         >
           Step-by-step execution events
         </CardDescription>

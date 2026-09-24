@@ -2,6 +2,8 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+/* A phone in landscape; useLogsPanelOpen repeats the query. */
+@custom-variant short (@media (max-height: 500px));
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);

@@ -81,6 +81,7 @@ export function FiberTreeView() {
         className={`
           shrink-0 pb-0
           md:pb-3
+          max-md:short:hidden
         `}
       >
         <CardTitle className="text-base">Fiber Tree</CardTitle>

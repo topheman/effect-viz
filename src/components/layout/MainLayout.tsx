@@ -19,6 +19,7 @@ import {
 import { VisualizerPanel } from "@/components/visualizer/VisualizerPanel";
 import { useEventHandlers } from "@/hooks/useEventHandlers";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useLogsPanelOpen } from "@/hooks/useLogsPanelOpen";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { type Speed, useSpeed } from "@/hooks/useSpeed";
 import { useWebContainerBoot } from "@/hooks/useWebContainerBoot";
@@ -121,7 +122,7 @@ export function MainLayout() {
     canSupportWebContainer &&
     (webContainer.status === "booting" || webContainer.isSyncing);
   const [showVisualizer, setShowVisualizer] = useState(false);
-  const [showLogsPanel, setShowLogsPanel] = useState(true);
+  const [showLogsPanel, setShowLogsPanel] = useLogsPanelOpen();
   const [editorTabId, setEditorTabId] = useState("program");
 
   const handleResetToTemplate = useCallback(() => {
