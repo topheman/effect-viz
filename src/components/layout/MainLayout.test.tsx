@@ -1,11 +1,17 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
 import { type ProgramKey, programs } from "@/lib/programs";
 
-import { MainLayout } from "./MainLayout";
+import { AUTO_START_DELAY_MS, MainLayout } from "./MainLayout";
 
 /** The run in flight: `handlePlay` returns a promise the test settles itself. */
 let currentRun: {
@@ -162,13 +168,21 @@ describe("MainLayout program switching", () => {
   });
 
   it("runs only the last program when several are passed through quickly", async () => {
-    const user = userEvent.setup();
-    render(<MainLayout />);
+    // Fake timers, so a slow runner cannot let the first switch settle. fireEvent
+    // rather than user-event: RTL's async wrapper awaits a timer vitest has faked.
+    vi.useFakeTimers();
+    try {
+      render(<MainLayout />);
 
-    await user.selectOptions(programSelect(), "multiStep");
-    await user.selectOptions(programSelect(), "basic");
+      fireEvent.change(programSelect(), { target: { value: "multiStep" } });
+      fireEvent.change(programSelect(), { target: { value: "basic" } });
+      expect(playedPrograms).toEqual([]);
 
-    await waitFor(() => expect(status()).toBe("running"));
-    expect(playedPrograms).toEqual(["basic"]);
+      await act(() => vi.advanceTimersByTimeAsync(AUTO_START_DELAY_MS));
+      expect(status()).toBe("running");
+      expect(playedPrograms).toEqual(["basic"]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
