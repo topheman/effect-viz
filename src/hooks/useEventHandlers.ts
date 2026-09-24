@@ -38,6 +38,7 @@ export interface WebContainerBridge {
   }) => Promise<{
     success: boolean;
     exitCode?: number;
+    interrupted?: boolean;
   }>;
   interruptPlay: () => void;
   isReady: boolean;
@@ -148,7 +149,7 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
           control,
         })
         .then((result) => {
-          if (!result.success) {
+          if (!result.success && !result.interrupted) {
             console.error("Play failed:", result);
           }
           return result;

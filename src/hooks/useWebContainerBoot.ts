@@ -2,7 +2,7 @@
  * Boots the WebContainer on mount and keeps it alive.
  * Exposes status, runPlay, and syncToContainer (debounced for edits).
  */
-import { Effect, Fiber, Layer } from "effect";
+import { Cause, Effect, Fiber, Layer } from "effect";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
@@ -27,6 +27,13 @@ import { makeWebContainerLogsLayer } from "@/services/webContainerLogs";
 import { useWebContainerLogsStore } from "@/stores/webContainerLogsStore";
 
 export type BootStatus = "idle" | "booting" | "ready" | "fallback" | "error";
+
+type PlayResult = {
+  success: boolean;
+  exitCode?: number;
+  interrupted?: boolean;
+  error?: string;
+};
 
 export function useWebContainerBoot() {
   const { addLog } = useWebContainerLogsStore();
@@ -158,7 +165,7 @@ export function useWebContainerBoot() {
       rate: number;
       startPaused?: boolean;
       control?: ControlSink;
-    }): Promise<{ success: boolean; exitCode?: number }> => {
+    }): Promise<PlayResult> => {
       const handle = handleRef.current;
       if (!handle || status !== "ready") {
         return Promise.resolve({ success: false });
@@ -188,13 +195,14 @@ export function useWebContainerBoot() {
             playFiberRef.current = null;
             return { success: exitCode === 0, exitCode };
           }),
-          Effect.catchAllCause((cause) => {
+          Effect.catchAllCause((cause): Effect.Effect<PlayResult> => {
             playFiberRef.current = null;
+            // Reset and switching programs interrupt the run on purpose.
+            if (Cause.isInterruptedOnly(cause)) {
+              return Effect.succeed({ success: false, interrupted: true });
+            }
             const msg = String(cause);
-            console.error(
-              "[useWebContainerBoot] Play failed (interrupt/error):",
-              msg,
-            );
+            console.error("[useWebContainerBoot] Play failed:", msg);
             return Effect.succeed({
               success: false,
               error: msg,
