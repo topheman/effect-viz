@@ -81,12 +81,15 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
     onFirstChunk,
     rate,
     startPaused = false,
+    programKey = selectedProgram,
   }: {
     onFirstChunk: () => void;
     /** Virtual ms per wall ms the run opens at; `handleSetRate` retunes it. */
     rate: number;
     /** Gate the scheduler before the program runs, so its first step is yours. */
     startPaused?: boolean;
+    /** Defaults to the selected program; a switch passes the one it selected before re-rendering. */
+    programKey?: ProgramKey;
   }) => {
     const runId = ++runIdRef.current;
     const isCurrentRun = () => runIdRef.current === runId;
@@ -152,7 +155,13 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
         });
     }
 
-    return runFallbackPlay({ onFirstChunk, rate, isCurrentRun, startPaused });
+    return runFallbackPlay({
+      onFirstChunk,
+      rate,
+      isCurrentRun,
+      startPaused,
+      programKey,
+    });
   };
 
   function runFallbackPlay({
@@ -160,13 +169,15 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
     rate,
     isCurrentRun,
     startPaused,
+    programKey,
   }: {
     onFirstChunk: () => void;
     rate: number;
     isCurrentRun: () => boolean;
     startPaused: boolean;
+    programKey: ProgramKey;
   }) {
-    const { rootEffect, requirements } = programs[selectedProgram];
+    const { rootEffect, requirements } = programs[programKey];
     // `Effect.runFork` runs a fiber synchronously until its first yield, and the
     // scheduler only governs resumption. Yielding first therefore hands the very
     // first operation to the gate, so a paused start can be stepped from event
