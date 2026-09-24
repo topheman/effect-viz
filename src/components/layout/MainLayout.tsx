@@ -40,10 +40,11 @@ import { Header } from "./Header";
 import { PlaybackControls } from "./PlaybackControls";
 
 /**
- * How long a speed change waits before it starts the program, so that walking
- * the select with the keyboard settles on one run rather than one per option.
+ * How long a speed or program change waits before it starts the program, so
+ * that walking a select with the keyboard settles on one run rather than one
+ * per option.
  */
-const SPEED_AUTO_START_DELAY_MS = 250;
+const AUTO_START_DELAY_MS = 100;
 
 export function MainLayout() {
   const canSupportWebContainer = useCanSupportWebContainer();
@@ -122,44 +123,6 @@ export function MainLayout() {
   const [showVisualizer, setShowVisualizer] = useState(false);
   const [showLogsPanel, setShowLogsPanel] = useState(true);
   const [editorTabId, setEditorTabId] = useState("program");
-
-  const handleProgramChange = useCallback(
-    (programKey: ProgramKey) => {
-      cancelAutoStart();
-      const { newContent, updatedCache } = computeProgramSwitch(
-        selectedProgram,
-        programKey,
-        editorContent,
-        editorCacheRef.current,
-        programs,
-      );
-      editorCacheRef.current = updatedCache;
-
-      setSelectedProgram(programKey);
-      setEditorContent(newContent);
-      completeOnboardingStep("programSelect");
-      // Whatever the previous program reached — paused, finished, still
-      // running — the new one starts from idle.
-      runIdRef.current++;
-      setPlaybackState("idle");
-      setPauseReason("user");
-      handleReset();
-      setEditorTabId("program");
-      if (webContainer.isReady) {
-        webContainer.syncToContainer(newContent);
-      }
-    },
-    [
-      selectedProgram,
-      editorContent,
-      programs,
-      setSelectedProgram,
-      completeOnboardingStep,
-      handleReset,
-      webContainer,
-      cancelAutoStart,
-    ],
-  );
 
   const handleResetToTemplate = useCallback(() => {
     cancelAutoStart();
@@ -246,9 +209,11 @@ export function MainLayout() {
   const startRun = ({
     startPaused,
     rate = speed,
+    programKey,
   }: {
     startPaused: boolean;
     rate?: Speed;
+    programKey?: ProgramKey;
   }) => {
     const runId = ++runIdRef.current;
     const isCurrentRun = () => runIdRef.current === runId;
@@ -261,6 +226,7 @@ export function MainLayout() {
       },
       rate,
       startPaused,
+      programKey,
     })
       .then(() => {
         if (isCurrentRun()) setPlaybackState("finished");
@@ -270,19 +236,73 @@ export function MainLayout() {
       });
   };
 
+  /**
+   * `program` is for callers whose closure predates the render that selected
+   * it: a program switch starts the new program from a timer set in the old one.
+   */
   const startFromStopped = async (
     rate: Speed,
     isStillWanted: () => boolean = () => true,
+    program: { key: ProgramKey; content: string } = {
+      key: selectedProgram,
+      content: editorContent,
+    },
   ) => {
     setShowVisualizer(true);
     if (webContainer.isReady) {
-      await webContainer.flushSync(editorContent);
+      await webContainer.flushSync(program.content);
     }
     // Whoever pressed a control during that flush wins: starting here too would
     // leave their run racing a second one the Reset button cannot reach.
     if (!isStillWanted()) return;
     setPlaybackState("starting");
-    startRun({ startPaused: false, rate });
+    startRun({ startPaused: false, rate, programKey: program.key });
+  };
+
+  /** Start a stopped program once the debounce settles; see AUTO_START_DELAY_MS. */
+  const scheduleAutoStart = (
+    rate: Speed,
+    program?: { key: ProgramKey; content: string },
+  ) => {
+    cancelAutoStart();
+    if (isPlayDisabled) return;
+    const token = autoStartTokenRef.current;
+    autoStartTimerRef.current = setTimeout(() => {
+      autoStartTimerRef.current = null;
+      void startFromStopped(
+        rate,
+        () => autoStartTokenRef.current === token,
+        program,
+      );
+    }, AUTO_START_DELAY_MS);
+  };
+
+  /** The previous program is torn down and the new one runs on its own. */
+  const handleProgramChange = (programKey: ProgramKey) => {
+    cancelAutoStart();
+    const { newContent, updatedCache } = computeProgramSwitch(
+      selectedProgram,
+      programKey,
+      editorContent,
+      editorCacheRef.current,
+      programs,
+    );
+    editorCacheRef.current = updatedCache;
+
+    setSelectedProgram(programKey);
+    setEditorContent(newContent);
+    completeOnboardingStep("programSelect");
+    // Whatever the previous program reached — paused, finished, still
+    // running — the new one starts from idle.
+    runIdRef.current++;
+    setPlaybackState("idle");
+    setPauseReason("user");
+    handleReset();
+    setEditorTabId("program");
+    if (webContainer.isReady) {
+      webContainer.syncToContainer(newContent);
+    }
+    scheduleAutoStart(speed, { key: programKey, content: newContent });
   };
 
   const onPlay = async () => {
@@ -315,12 +335,7 @@ export function MainLayout() {
       return;
     }
     if (playbackState !== "idle" && playbackState !== "finished") return;
-    if (isPlayDisabled) return;
-    const token = autoStartTokenRef.current;
-    autoStartTimerRef.current = setTimeout(() => {
-      autoStartTimerRef.current = null;
-      void startFromStopped(next, () => autoStartTokenRef.current === token);
-    }, SPEED_AUTO_START_DELAY_MS);
+    scheduleAutoStart(next);
   };
 
   const onPause = () => {

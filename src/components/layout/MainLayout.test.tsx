@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -13,12 +13,21 @@ let currentRun: {
   reject: (error: unknown) => void;
 } | null = null;
 const handleReset = vi.fn();
+/** The program each run was started with, as passed to `handlePlay`. */
+const playedPrograms: (ProgramKey | undefined)[] = [];
 
 vi.mock("@/hooks/useEventHandlers", () => ({
   useEventHandlers: () => {
     const [selectedProgram, setSelectedProgram] = useState<ProgramKey>("basic");
     return {
-      handlePlay: ({ onFirstChunk }: { onFirstChunk: () => void }) => {
+      handlePlay: ({
+        onFirstChunk,
+        programKey,
+      }: {
+        onFirstChunk: () => void;
+        programKey?: ProgramKey;
+      }) => {
+        playedPrograms.push(programKey);
         onFirstChunk();
         return new Promise<void>((resolve, reject) => {
           currentRun = { resolve: () => resolve(), reject };
@@ -85,6 +94,7 @@ function programSelect() {
 describe("MainLayout program switching", () => {
   beforeEach(() => {
     currentRun = null;
+    playedPrograms.length = 0;
     handleReset.mockClear();
     localStorage.clear();
   });
@@ -138,5 +148,27 @@ describe("MainLayout program switching", () => {
       currentRun?.resolve();
     });
     expect(status()).toBe("idle");
+  });
+
+  it("runs the new program once the switch settles", async () => {
+    const user = userEvent.setup();
+    render(<MainLayout />);
+
+    await user.selectOptions(programSelect(), "multiStep");
+    expect(status()).toBe("idle");
+
+    await waitFor(() => expect(status()).toBe("running"));
+    expect(playedPrograms).toEqual(["multiStep"]);
+  });
+
+  it("runs only the last program when several are passed through quickly", async () => {
+    const user = userEvent.setup();
+    render(<MainLayout />);
+
+    await user.selectOptions(programSelect(), "multiStep");
+    await user.selectOptions(programSelect(), "basic");
+
+    await waitFor(() => expect(status()).toBe("running"));
+    expect(playedPrograms).toEqual(["basic"]);
   });
 });
