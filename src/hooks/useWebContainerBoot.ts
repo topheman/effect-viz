@@ -114,7 +114,7 @@ export function useWebContainerBoot() {
           }),
         ),
       );
-      yield* Effect.never;
+      return yield* Effect.never;
     }).pipe(
       Effect.provide(Layer.provide(WebContainerLive, webContainerLogsLayer)),
       Effect.scoped,

@@ -7,7 +7,7 @@
  * Requires: npm install @webcontainer/api
  */
 import { WebContainer as WC, type FileSystemTree } from "@webcontainer/api";
-import { Context, Effect, GlobalValue, Layer } from "effect";
+import { Context, Data, Effect, GlobalValue, Layer } from "effect";
 
 import {
   initEsbuildWasm,
@@ -177,17 +177,37 @@ const semaphore = GlobalValue.globalValue("app/WebContainer/semaphore", () =>
 );
 
 // ---
+// Errors
+// ---
+
+/** Booting the container failed: runtime.js could not be fetched or pnpm install failed. */
+export class WebContainerBootError extends Data.TaggedError(
+  "WebContainerBootError",
+)<{ readonly message: string; readonly cause?: unknown }> {}
+
+/** A read on the container's file system failed. */
+export class WebContainerFsError extends Data.TaggedError(
+  "WebContainerFsError",
+)<{
+  readonly message: string;
+  readonly path: string;
+  readonly cause: unknown;
+}> {}
+
+// ---
 // Service definition
 // ---
 
 export interface WebContainerHandle {
   readonly writeFile: (path: string, content: string) => Effect.Effect<void>;
-  readonly readFile: (path: string) => Effect.Effect<Uint8Array, Error>;
+  readonly readFile: (
+    path: string,
+  ) => Effect.Effect<Uint8Array, WebContainerFsError>;
   readonly readDirectory: (
     path: string,
   ) => Effect.Effect<
     Array<{ name: string; isDirectory: () => boolean }>,
-    Error
+    WebContainerFsError
   >;
   readonly spawn: (
     command: string,
@@ -244,7 +264,11 @@ export const WebContainerLive = Layer.scoped(
     yield* logs.log("boot", "3/6 Fetching runtime.js...");
     const runtimeJs = yield* Effect.tryPromise({
       try: () => fetch("/app/runtime.js").then((r) => r.text()),
-      catch: (e) => new Error(`Failed to fetch runtime.js: ${e}`),
+      catch: (cause) =>
+        new WebContainerBootError({
+          message: `Failed to fetch runtime.js: ${cause}`,
+          cause,
+        }),
     });
     yield* logs.log(
       "boot",
@@ -286,9 +310,9 @@ export const WebContainerLive = Layer.scoped(
         "boot",
         `5/6 pnpm install FAILED ${JSON.stringify({ exitCode })}`,
       );
-      return yield* Effect.fail(
-        new Error(`pnpm install failed with exit code ${exitCode}`),
-      );
+      return yield* new WebContainerBootError({
+        message: `pnpm install failed with exit code ${exitCode}`,
+      });
     }
 
     yield* logs.log("boot", "6/6 Boot complete, returning handle");
@@ -311,7 +335,12 @@ export const WebContainerLive = Layer.scoped(
       readFile: (path) =>
         Effect.tryPromise({
           try: () => container.fs.readFile(path),
-          catch: (e) => new Error(`Failed to read ${path}: ${e}`),
+          catch: (cause) =>
+            new WebContainerFsError({
+              message: `Failed to read ${path}: ${cause}`,
+              path,
+              cause,
+            }),
         }),
       readDirectory: (path) =>
         Effect.tryPromise({
@@ -324,7 +353,12 @@ export const WebContainerLive = Layer.scoped(
                   isDirectory: () => e.isDirectory(),
                 })),
               ),
-          catch: (e) => new Error(`Failed to readdir ${path}: ${e}`),
+          catch: (cause) =>
+            new WebContainerFsError({
+              message: `Failed to readdir ${path}: ${cause}`,
+              path,
+              cause,
+            }),
         }),
       spawn: (command, args, options) =>
         Effect.promise(() => container.spawn(command, args, options ?? {})),

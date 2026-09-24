@@ -399,9 +399,10 @@ describe("Stepper", () => {
     it("reaches finished for a program that fails", async () => {
       const { stepper, run } = setup();
       run(
-        Effect.gen(function* () {
-          yield* Effect.withSpan("doomed")(Effect.fail("boom"));
-        }).pipe(Effect.catchAll(() => Effect.void)),
+        Effect.fail("boom").pipe(
+          Effect.withSpan("doomed"),
+          Effect.catchAll(() => Effect.void),
+        ),
       );
       stepper.pause();
       await settle();
