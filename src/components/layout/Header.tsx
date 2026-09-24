@@ -11,6 +11,7 @@ export function Header({
     <header
       className={`
         flex h-12 shrink-0 items-center border-b border-border bg-card px-4
+        short:hidden
       `}
     >
       <h1 className="text-lg font-semibold text-foreground">{title}</h1>
