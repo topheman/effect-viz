@@ -98,8 +98,9 @@ export function PlaybackControls({
     <TooltipProvider delayDuration={300}>
       <div
         className={`
-          flex h-12 shrink-0 items-center justify-between border-t border-border
-          bg-card px-4 select-none
+          @container flex h-12 shrink-0 items-center justify-between border-t
+          border-border bg-card px-2 select-none
+          md:px-4
         `}
       >
         {/* Left: Mobile toggle visualizer */}
@@ -146,10 +147,12 @@ export function PlaybackControls({
           </Tooltip>
         </div>
 
-        {/* Center: Playback controls */}
+        {/* Center: Playback controls. The status is the only part that shrinks,
+            and below 20rem only its dot shows, so the bar still fits a phone at
+            raised page zoom. */}
         <div
           className={`
-            flex items-center
+            flex min-w-0 items-center
             md:gap-1
           `}
         >
@@ -264,7 +267,8 @@ export function PlaybackControls({
           {/* Status indicator */}
           <div
             className={`
-              flex w-24 items-center gap-2 text-sm text-muted-foreground
+              flex w-24 min-w-0 shrink items-center gap-2 text-sm
+              text-muted-foreground
               md:ml-4 md:min-w-24
             `}
           >
@@ -286,7 +290,13 @@ export function PlaybackControls({
                 }
               `}
             />
-            <span data-testid="playback-status" className="capitalize">
+            <span
+              data-testid="playback-status"
+              className={`
+                truncate capitalize
+                @max-[20rem]:sr-only
+              `}
+            >
               {isSyncing
                 ? "Syncing..."
                 : state === "starting"
@@ -301,7 +311,7 @@ export function PlaybackControls({
               <Select
                 aria-label="Playback speed"
                 data-onboarding-step="speed"
-                wrapperClassName="w-[4.5rem]"
+                wrapperClassName="w-[4.5rem] shrink-0"
                 className={cn(
                   "h-8 pl-1.5",
                   onboardingStep === "speed" &&
