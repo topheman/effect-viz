@@ -12,6 +12,7 @@ dist
 dist-ssr
 public/app
 public/esbuild.wasm
+public/effect-types.json
 *.local
 .local
 

@@ -12,17 +12,19 @@ The same fallback is also used when offline. WebContainer boots via a cross-orig
 | ---------------- | ------------------------------------ | ------------------------------------------ |
 | Editor           | Editable                             | Readonly                                   |
 | Execution        | WebContainer (`pnpm run`, etc.)      | In-browser Effect (`runFallbackPlay`)      |
-| Monaco types     | From `node_modules/effect` + app libs | From `fallback-types.d.ts` + `public/app/` |
+| Monaco types     | From `node_modules/effect` + app libs | From `effect-types.json` + `public/app/` |
 | Sync to container | Yes                                 | No                                         |
 
 ## Type Split
 
 Types for the Monaco editor are split as follows:
 
-- **`public/fallback-types.d.ts`**: Effect module stubs only (Effect, Fiber, Exit, Context, etc.). Used for the `effect` import when WebContainer is not available.
-- **`public/app/`**: tracedRunner, trace, traceEmitter, crypto — emitted by `npm run build:tracedrunner`. These stay in sync with the source.
+- **`public/effect-types.json`**: the installed `effect` package's own declarations, one entry per module at its `node_modules/effect/dist/dts/` path. `npm run build:effect-types` (`scripts/extract-effect-dts.mjs`) writes it on every `dev` and `build`, so it follows the version in `package.json`. The service worker precaches it along with `public/app/`, so the types are there offline too. Monaco resolves `effect` through the same paths as on the WebContainer path, so both editors see the same types.
+- **`public/app/`**: the `@/runtime` and trace types, emitted by `npm run build:runtime`.
 
-This split ensures tracedRunner-related types remain up to date via the build pipeline, while Effect stubs are maintained manually in `fallback-types.d.ts` since they are minimal and stable.
+The declarations stay one file per module instead of being bundled. effect makes `Option`, `Either` and `Context` tags yieldable in `Effect.gen` through `declare module "./Effect.js"` augmentations, and a single-file bundle cannot keep them: rollup-plugin-dts leaves them pointing at modules that no longer exist, dts-bundle-generator and api-extractor reject effect's `export * as` namespaces outright.
+
+The types are fetched after the boot has already set the status to `fallback`, so Play is available while they load; a failed fetch only costs the editor its types.
 
 ## WebContainer Support Detection
 

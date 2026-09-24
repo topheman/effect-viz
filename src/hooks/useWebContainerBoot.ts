@@ -44,7 +44,9 @@ export function useWebContainerBoot() {
   // offline fine, so this only needs to catch starting cold while offline.
   useEffect(() => {
     if (shouldUseFallback()) {
-      setStatus("booting");
+      // Fallback runs the programs in-browser and needs nothing booted, so Play is
+      // available straight away; the types load behind it.
+      setStatus("fallback");
       setError(null);
       if (!canSupportWebContainer()) {
         addLog(
@@ -65,18 +67,17 @@ export function useWebContainerBoot() {
           "WebContainer needs a live connection to StackBlitz's servers to boot; reconnect to edit and run arbitrary code.",
         );
       }
+      addLog("boot", "Acquiring fallback types...");
       Effect.runPromise(acquireMonacoTypesFallback)
         .then(() => {
           setTypesReady(true);
-          setStatus("fallback");
           addLog("boot", "Fallback types acquired");
         })
         .catch((err) => {
-          // Stay in fallback rather than erroring out: types are an editor nicety,
-          // and the visualizer still runs the example programs in-browser without them.
+          // Types are an editor nicety: the visualizer runs the example programs
+          // in-browser without them.
           const msg = err instanceof Error ? err.message : String(err);
           addLog("boot", `Fallback types failed: ${msg}`);
-          setStatus("fallback");
         });
       return () => {};
     }
