@@ -1,7 +1,7 @@
 # Demo recording
 
 Replays a scripted tour of the app in a real browser and records it as an mp4
-for the README.
+for the README: a desktop take, then a phone take, joined with a crossfade.
 
 ```sh
 npm run demo:prepare               # once per machine
@@ -17,20 +17,22 @@ kept out of `postinstall` on purpose: nothing but this script needs a browser,
 least of all CI. Encoding needs `ffmpeg` on the `PATH` as well; without it the
 raw `.webm` is kept instead of an mp4.
 
-Record against a build rather than the dev server: a built app gives the
-WebContainer less to do before it is ready, and that boot is dead time at the
-head of the video. The dev server works too, via `--url=http://localhost:5173`.
-Both send the `Cross-Origin-Embedder-Policy` and `Cross-Origin-Opener-Policy`
-headers the WebContainer needs, because Vite applies the `server.headers` from
-`vite.config.ts` to the preview server as well.
+Record against a build, never the dev server. In development `StrictMode`
+runs every effect twice, which can put things on screen that no user sees. A
+built app also gives the WebContainer less to do before it is ready, and that
+boot is dead time at the head of the video. The preview server sends the
+`Cross-Origin-Embedder-Policy` and `Cross-Origin-Opener-Policy` headers the
+WebContainer needs, because Vite applies the `server.headers` from
+`vite.config.ts` to it too.
 
 ## Files
 
-| File          | Role                                            |
-| ------------- | ----------------------------------------------- |
-| `scenario.ts` | What the video shows. This is the file to edit. |
-| `cursor.ts`   | The visible pointer and its easing.             |
-| `record.ts`   | Browser setup, video capture, ffmpeg encode.    |
+| File          | Role                                             |
+| ------------- | ------------------------------------------------ |
+| `scenario.ts` | What the video shows. This is the file to edit.  |
+| `cursor.ts`   | The visible pointer and its easing.              |
+| `phone.ts`    | The phone stage, its rotation and the fingertip. |
+| `record.ts`   | Browser setup, video capture, ffmpeg encode.     |
 
 ## The pointer
 
@@ -44,6 +46,18 @@ and click targeting behave exactly as they do for a person.
 Movement is tweened over wall-clock time along a slight arc. A counted loop
 would be at the mercy of CDP round-trip latency and the pacing would drift
 between takes.
+
+## The phone
+
+A recording has one frame size for its whole length, so a viewport turned from
+portrait to landscape would be squashed into the same box rather than turned.
+The phone take records a stage the size of the desktop video instead, with the
+app in an iframe drawn as a phone. Rotating turns the phone with a CSS
+transform, then swaps the iframe's width and height, which the app sees as a
+real resize: its landscape layout comes in exactly as it does on a device. The
+context has a phone user agent, which gives the app its read-only mobile
+editor, and touch, which turns on its `(pointer: coarse)` affordances. Taps
+are real touch events, shown by a fingertip drawn on the stage.
 
 ## Flags
 
