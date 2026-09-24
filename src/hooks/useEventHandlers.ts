@@ -5,6 +5,7 @@ import type {
   ControlSink,
   SpawnAndParseCallbacks,
 } from "@/effects/spawnAndParse";
+import type { PlayResult } from "@/hooks/useWebContainerBoot";
 import { ContainerController } from "@/lib/containerController";
 import { MirroredClock } from "@/lib/mirroredClock";
 import { type ProgramKey, makeLoggerLayer, programs } from "@/lib/programs";
@@ -35,10 +36,7 @@ export interface WebContainerBridge {
     rate: number;
     startPaused?: boolean;
     control?: ControlSink;
-  }) => Promise<{
-    success: boolean;
-    exitCode?: number;
-  }>;
+  }) => Promise<PlayResult>;
   interruptPlay: () => void;
   isReady: boolean;
 }
@@ -148,8 +146,10 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
           control,
         })
         .then((result) => {
-          if (!result.success) {
-            console.error("Play failed:", result);
+          if (result.outcome === "failed") {
+            console.error("Play failed:", result.error);
+          } else if (result.outcome === "exited" && result.exitCode !== 0) {
+            console.error("Play exited with code", result.exitCode);
           }
           return result;
         });

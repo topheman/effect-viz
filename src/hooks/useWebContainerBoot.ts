@@ -2,7 +2,7 @@
  * Boots the WebContainer on mount and keeps it alive.
  * Exposes status, runPlay, and syncToContainer (debounced for edits).
  */
-import { Effect, Fiber, Layer } from "effect";
+import { Cause, Effect, Fiber, Layer } from "effect";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
@@ -27,6 +27,12 @@ import { makeWebContainerLogsLayer } from "@/services/webContainerLogs";
 import { useWebContainerLogsStore } from "@/stores/webContainerLogsStore";
 
 export type BootStatus = "idle" | "booting" | "ready" | "fallback" | "error";
+
+/** How a run in the container ended. Interrupted means Reset or a program switch. */
+export type PlayResult =
+  | { outcome: "exited"; exitCode: number }
+  | { outcome: "interrupted" }
+  | { outcome: "failed"; error: string };
 
 export function useWebContainerBoot() {
   const { addLog } = useWebContainerLogsStore();
@@ -158,10 +164,13 @@ export function useWebContainerBoot() {
       rate: number;
       startPaused?: boolean;
       control?: ControlSink;
-    }): Promise<{ success: boolean; exitCode?: number }> => {
+    }): Promise<PlayResult> => {
       const handle = handleRef.current;
       if (!handle || status !== "ready") {
-        return Promise.resolve({ success: false });
+        return Promise.resolve({
+          outcome: "failed",
+          error: "WebContainer is not ready",
+        });
       }
 
       // Provide the existing handle so spawnAndParseTraceEvents gets WebContainer without booting again
@@ -181,32 +190,31 @@ export function useWebContainerBoot() {
       // immediately when fork returns, which interrupts the play fiber.
       const playFiber = Effect.runFork(program);
       playFiberRef.current = playFiber;
+      const releaseFiber = () => {
+        if (playFiberRef.current === playFiber) playFiberRef.current = null;
+      };
 
       return Effect.runPromise(
         Fiber.join(playFiber).pipe(
-          Effect.map((exitCode) => {
-            playFiberRef.current = null;
-            return { success: exitCode === 0, exitCode };
+          Effect.matchCause({
+            onSuccess: (exitCode): PlayResult => ({
+              outcome: "exited",
+              exitCode,
+            }),
+            onFailure: (cause): PlayResult =>
+              Cause.isInterruptedOnly(cause)
+                ? { outcome: "interrupted" }
+                : { outcome: "failed", error: Cause.pretty(cause) },
           }),
-          Effect.catchAllCause((cause) => {
-            playFiberRef.current = null;
-            const msg = String(cause);
-            console.error(
-              "[useWebContainerBoot] Play failed (interrupt/error):",
-              msg,
-            );
-            return Effect.succeed({
-              success: false,
-              error: msg,
-            });
-          }),
+          // A program switch starts the next run before this one has wound
+          // down, so only clear the ref while it still holds this run.
+          Effect.ensuring(Effect.sync(releaseFiber)),
         ),
-      ).catch((err) => {
-        // Safety net: runPromise may reject on interrupt before Effect.catchAllCause runs
-        playFiberRef.current = null;
+      ).catch((err): PlayResult => {
+        // Safety net: runPromise may reject on interrupt before matchCause runs
+        releaseFiber();
         const msg = err instanceof Error ? err.message : String(err);
-        console.error("[useWebContainerBoot] Play promise rejected:", msg);
-        return { success: false, error: msg };
+        return { outcome: "failed", error: msg };
       });
     },
     [status, addLog],
