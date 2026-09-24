@@ -148,10 +148,15 @@ export function spawnAndParseTraceEvents({
 
     const firstChunkSeenRef = yield* Ref.make(false);
     const t2Ref = yield* Ref.make<number | null>(null);
-    const rawStream = Stream.fromReadableStream(
-      () => proc.output,
-      (err) => err as Error,
-    ).pipe(
+    // Release the reader rather than cancel it. By default an interrupted
+    // stream calls `reader.cancel()`, which errors WebContainer's own output
+    // stream, and the `kill()` that follows makes it close that errored stream:
+    // an uncaught TypeError on every Reset or program switch mid-run.
+    const rawStream = Stream.fromReadableStream({
+      evaluate: () => proc.output,
+      onError: (err) => err as Error,
+      releaseLockOnEnd: true,
+    }).pipe(
       // performance timings
       Stream.tap(() =>
         Ref.getAndSet(firstChunkSeenRef, true).pipe(
