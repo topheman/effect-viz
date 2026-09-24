@@ -73,9 +73,9 @@ export function useCanSupportWebContainer(): boolean {
  * attempt, not tear down a working session.
  */
 export function shouldUseFallback(): boolean {
-  if (!canSupportWebContainer()) return true;
-  if (typeof navigator !== "undefined" && navigator.onLine === false) {
-    return true;
-  }
-  return false;
+  return !canSupportWebContainer() || isOffline();
+}
+
+export function isOffline(): boolean {
+  return typeof navigator !== "undefined" && navigator.onLine === false;
 }

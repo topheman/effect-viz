@@ -16,6 +16,7 @@ import {
 } from "@/effects/typeAcquisition";
 import {
   canSupportWebContainer,
+  isOffline,
   shouldUseFallback,
 } from "@/lib/mobileDetection";
 import { transformImportsForContainer } from "@/lib/transformForContainer";
@@ -48,25 +49,24 @@ export function useWebContainerBoot() {
       // available straight away; the types load behind it.
       setStatus("fallback");
       setError(null);
-      if (!canSupportWebContainer()) {
-        addLog(
-          "boot",
-          "Mobile or Safari detected — no WebContainer here, so the editor can't compile. You can run and watch the examples, but not edit them.",
-        );
-        addLog(
-          "boot",
-          "To edit the example programs, you need a Desktop Chrome / Firefox browser.",
-        );
-      } else {
+      // Offline wins: it's why this session can't compile, even on mobile or Safari.
+      if (isOffline()) {
         addLog(
           "boot",
           "Offline — no WebContainer here, so the editor can't compile. You can run and watch the examples, but not edit them.",
         );
+      } else {
         addLog(
           "boot",
-          "WebContainer needs a live connection to StackBlitz's servers to boot; reconnect to edit and run arbitrary code.",
+          "Mobile or Safari detected — no WebContainer here, so the editor can't compile. You can run and watch the examples, but not edit them.",
         );
       }
+      addLog(
+        "boot",
+        canSupportWebContainer()
+          ? "WebContainer needs a live connection to StackBlitz's servers to boot; reconnect to edit and run arbitrary code."
+          : "To edit the example programs, you need a Desktop Chrome / Firefox browser.",
+      );
       addLog("boot", "Acquiring fallback types...");
       Effect.runPromise(acquireMonacoTypesFallback)
         .then(() => {
