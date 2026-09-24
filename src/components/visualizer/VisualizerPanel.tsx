@@ -90,7 +90,7 @@ function TabbedViews({ timelineDurationMs }: { timelineDurationMs?: number }) {
     <Tabs
       value={view}
       onValueChange={(value) => setView(value as View)}
-      className="h-full gap-0 p-2 pt-1"
+      className="h-full gap-0 px-2 pb-1"
     >
       <TabsList variant="line" className="h-8 w-full shrink-0 gap-1">
         {VIEWS.map(({ value, label }) => (
