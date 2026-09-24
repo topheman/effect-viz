@@ -45,7 +45,7 @@ import { PlaybackControls } from "./PlaybackControls";
  * that walking a select with the keyboard settles on one run rather than one
  * per option.
  */
-const AUTO_START_DELAY_MS = 100;
+export const AUTO_START_DELAY_MS = 100;
 
 export function MainLayout() {
   const canSupportWebContainer = useCanSupportWebContainer();
