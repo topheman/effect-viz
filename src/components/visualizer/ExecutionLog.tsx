@@ -269,7 +269,14 @@ export function ExecutionLog() {
         `}
       >
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-base">Execution Log</CardTitle>
+          <CardTitle
+            className={`
+              text-base
+              max-md:short:invisible
+            `}
+          >
+            Execution Log
+          </CardTitle>
           <Popover
             onOpenChange={(isOpen) => {
               if (isOpen) completeStep("logOptions");

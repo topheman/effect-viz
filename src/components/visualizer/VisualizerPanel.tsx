@@ -1,10 +1,12 @@
 import { GripHorizontal } from "lucide-react";
+import { useState } from "react";
 
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { ExecutionLog } from "./ExecutionLog";
 import { FiberTreeView } from "./FiberTreeView";
@@ -69,12 +71,76 @@ function MainContent() {
   );
 }
 
+const VIEWS = [
+  { value: "fibers", label: "Fiber Tree" },
+  { value: "log", label: "Execution Log" },
+  { value: "timeline", label: "Timeline" },
+] as const;
+
+type View = (typeof VIEWS)[number]["value"];
+
+/**
+ * One view at a time, for a phone in landscape: stacked, each view would get
+ * about 45px, which is its own title.
+ */
+function TabbedViews({ timelineDurationMs }: { timelineDurationMs?: number }) {
+  const [view, setView] = useState<View>("log");
+
+  return (
+    <Tabs
+      value={view}
+      onValueChange={(value) => setView(value as View)}
+      className="h-full gap-0 p-2 pt-1"
+    >
+      <TabsList variant="line" className="h-8 w-full shrink-0 gap-1">
+        {VIEWS.map(({ value, label }) => (
+          <TabsTrigger key={value} value={value} className="text-xs">
+            {label}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+      <TabsContent value="fibers" className="mt-1 min-h-0">
+        <FiberTreeView />
+      </TabsContent>
+      <TabsContent value="log" className="mt-1 min-h-0">
+        <ExecutionLog />
+      </TabsContent>
+      <TabsContent value="timeline" className="mt-1 min-h-0">
+        <TimelineView defaultDurationMs={timelineDurationMs} />
+      </TabsContent>
+    </Tabs>
+  );
+}
+
 export function VisualizerPanel({
   timelineDurationMs,
 }: {
   /** Starting width of the timeline's time axis, for the selected program. */
   timelineDurationMs?: number;
 }) {
+  return (
+    <>
+      <div
+        className={`
+          hidden h-full
+          max-md:short:block
+        `}
+      >
+        <TabbedViews timelineDurationMs={timelineDurationMs} />
+      </div>
+      <div
+        className={`
+          h-full
+          max-md:short:hidden
+        `}
+      >
+        <StackedViews timelineDurationMs={timelineDurationMs} />
+      </div>
+    </>
+  );
+}
+
+function StackedViews({ timelineDurationMs }: { timelineDurationMs?: number }) {
   return (
     <ResizablePanelGroup orientation="vertical" className="h-full">
       <ResizablePanel defaultSize={65} minSize={20}>
