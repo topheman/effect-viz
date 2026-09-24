@@ -193,6 +193,24 @@ describe("ExecutionLog filters", () => {
     ).toBeInTheDocument();
   });
 
+  it("opens the options beside the trigger on a phone in landscape", async () => {
+    vi.mocked(window.matchMedia).mockImplementation(
+      (query: string) =>
+        ({
+          matches: query.includes("max-height"),
+          media: query,
+        }) as MediaQueryList,
+    );
+    render(
+      <TraceStoreProvider>
+        <ExecutionLog />
+      </TraceStoreProvider>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /Log options/ }));
+
+    expect(screen.getByRole("dialog")).toHaveAttribute("data-side", "left");
+  });
+
   it("keeps both layouts' logs on the same view", async () => {
     render(
       <TraceStoreProvider>

@@ -207,6 +207,9 @@ function OptionRow({
   );
 }
 
+/** A phone in landscape: the options popover gets too little height above or below its trigger. */
+const PHONE_LANDSCAPE_QUERY = "(max-width: 767px) and (max-height: 500px)";
+
 export function ExecutionLog() {
   const { events } = useTraceStore();
   const [showInternals, setShowInternals] = useShowInternals();
@@ -219,6 +222,9 @@ export function ExecutionLog() {
   }>({ run: undefined, rows: new Set() });
   const expanded = open.run === events[0] ? open.rows : new Set<number>();
   const cardContentRef = useRef<HTMLDivElement>(null);
+  // Read on open: the trigger sits in the card's top-right corner, so opening to
+  // its left gives the popover the full viewport height.
+  const [optionsSide, setOptionsSide] = useState<"bottom" | "left">("bottom");
 
   const toolEventCount = events.filter(isToolEvent).length;
   // Positions in the full list are kept: formatEvent pairs an event with its
@@ -289,7 +295,11 @@ export function ExecutionLog() {
           </CardTitle>
           <Popover
             onOpenChange={(isOpen) => {
-              if (isOpen) completeStep("logOptions");
+              if (!isOpen) return;
+              completeStep("logOptions");
+              setOptionsSide(
+                matchMedia(PHONE_LANDSCAPE_QUERY).matches ? "left" : "bottom",
+              );
             }}
           >
             <PopoverTrigger
@@ -313,7 +323,17 @@ export function ExecutionLog() {
               {hiddenCount > 0 && <span aria-hidden>{hiddenCount} hidden</span>}
               <SlidersHorizontal className="size-4" aria-hidden />
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-60 space-y-3 text-sm">
+            <PopoverContent
+              side={optionsSide}
+              align={optionsSide === "left" ? "start" : "end"}
+              className={`
+                w-60 space-y-3 text-sm
+                max-md:short:grid max-md:short:w-auto
+                max-md:short:grid-cols-[repeat(2,12rem)]
+                max-md:short:items-start max-md:short:space-y-0
+                max-md:short:gap-x-6
+              `}
+            >
               <fieldset>
                 <legend className="mb-1 text-xs text-muted-foreground">
                   View
