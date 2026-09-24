@@ -400,7 +400,7 @@ describe("Stepper", () => {
       const { stepper, run } = setup();
       run(
         Effect.gen(function* () {
-          yield* Effect.withSpan("doomed")(Effect.fail("boom"));
+          return yield* Effect.withSpan("doomed")(Effect.fail("boom"));
         }).pipe(Effect.catchAll(() => Effect.void)),
       );
       stepper.pause();
