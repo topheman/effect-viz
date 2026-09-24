@@ -27,8 +27,19 @@ function ResizablePanelGroup({
   );
 }
 
-function ResizablePanel({ ...props }: React.ComponentProps<typeof Panel>) {
-  return <Panel data-slot="resizable-panel" {...props} />;
+// `className` lands on the library's inner flex item, which otherwise keeps
+// `min-width: auto` and never shrinks below content Monaco sized in pixels.
+function ResizablePanel({
+  className,
+  ...props
+}: React.ComponentProps<typeof Panel>) {
+  return (
+    <Panel
+      data-slot="resizable-panel"
+      className={cn("min-w-0", className)}
+      {...props}
+    />
+  );
 }
 
 function ResizableHandle({
