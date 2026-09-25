@@ -1,6 +1,11 @@
 import { readFile } from "node:fs/promises";
 
-import { expect, type Page, test as base } from "@playwright/test";
+import {
+  expect,
+  type Locator,
+  type Page,
+  test as base,
+} from "@playwright/test";
 
 /**
  * The onboarding version the app is built with, read from the same `.env` the
@@ -13,8 +18,11 @@ async function onboardingVersion(): Promise<number> {
   return match ? Number(match[1]) : 1;
 }
 
-/** Playwright's `test`, with the onboarding tour marked as done before any page loads. */
-export const test = base.extend({
+/**
+ * Playwright's `test`, with the onboarding tour marked as done before any page
+ * loads, and failing any test during which the app logs an error or throws.
+ */
+export const test = base.extend<{ appErrors: void }>({
   context: async ({ baseURL, context }, use) => {
     await context.addInitScript(
       ({ origin, version }: { origin: string; version: number }) => {
@@ -38,6 +46,26 @@ export const test = base.extend({
     );
     await use(context);
   },
+
+  appErrors: [
+    async ({ baseURL, page }, use) => {
+      const origin = new URL(baseURL ?? "").origin;
+      const errors: string[] = [];
+      page.on("console", (message) => {
+        // The WebContainer's StackBlitz frames log their own errors.
+        if (
+          message.type() === "error" &&
+          message.location().url.startsWith(origin)
+        ) {
+          errors.push(message.text());
+        }
+      });
+      page.on("pageerror", (error) => errors.push(error.message));
+      await use();
+      expect(errors, "errors from the app").toEqual([]);
+    },
+    { auto: true },
+  ],
 });
 
 export { expect };
@@ -51,13 +79,36 @@ export const pauseButton = (page: Page) =>
 export const stepButton = (page: Page) =>
   page.getByRole("button", { name: "Step", exact: true });
 
-// The status and the picker are rendered twice, for the desktop and mobile
-// layouts; `first()` is the one the desktop viewport shows.
+export const resetButton = (page: Page) =>
+  page.getByRole("button", { name: "Reset", exact: true });
+
+/**
+ * The desktop and mobile layouts are both rendered, and only one is on screen.
+ * Role locators skip the hidden copy by themselves; these need telling.
+ */
+const onScreen = (locator: Locator) =>
+  locator.filter({ visible: true }).first();
+
 export const playbackStatus = (page: Page) =>
-  page.getByTestId("playback-status").first();
+  onScreen(page.getByTestId("playback-status"));
 
 export const programSelect = (page: Page) =>
-  page.locator('select[data-onboarding-step="programSelect"]').first();
+  onScreen(page.locator('select[data-onboarding-step="programSelect"]'));
+
+export const speedSelect = (page: Page) =>
+  onScreen(page.getByLabel("Playback speed"));
+
+export const logOptions = (page: Page) =>
+  onScreen(page.locator('[data-onboarding-step="logOptions"]'));
+
+/** Opens the explanation on the first log row that reads `text` and returns it. */
+export async function explainRow(page: Page, text: string) {
+  const button = onScreen(page.getByText(text, { exact: true })).locator(
+    "xpath=following-sibling::button",
+  );
+  await button.click();
+  return page.locator(`#${await button.getAttribute("aria-controls")}`);
+}
 
 /**
  * Starts a program from a freshly opened app. Picking a program runs it; the
