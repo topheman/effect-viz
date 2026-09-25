@@ -45,8 +45,7 @@
     "typecheck:e2e": "tsc --noEmit -p ./tsconfig.e2e.json",
     "typecheck:effect": "effect-language-service diagnostics --project tsconfig.app.json --strict",
     "typecheck": "npm run typecheck:app && npm run typecheck:node && npm run typecheck:demo && npm run typecheck:e2e && npm run typecheck:effect",
-    "prepare": "husky",
-    "bootstrap": "./scripts/bootstrap.ts"
+    "prepare": "husky"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
