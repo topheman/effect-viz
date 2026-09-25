@@ -27,18 +27,22 @@ WebContainer needs, because Vite applies the `server.headers` from
 
 ## Files
 
-| File          | Role                                             |
-| ------------- | ------------------------------------------------ |
-| `scenario.ts` | What the video shows. This is the file to edit.  |
-| `cursor.ts`   | The visible pointer and its easing.              |
-| `phone.ts`    | The phone stage, its rotation and the fingertip. |
-| `record.ts`   | Browser setup, video capture, ffmpeg encode.     |
+| File            | Role                                                  |
+| --------------- | ----------------------------------------------------- |
+| `scenario.ts`   | What the video shows. This is the file to edit.       |
+| `record.ts`     | The two takes, the flags and the onboarding seed.     |
+| `kit/cursor.ts` | The visible pointer and its easing.                   |
+| `kit/phone.ts`  | The phone stage, its rotation and the fingertip.      |
+| `kit/takes.ts`  | Video capture per take, trimming and the ffmpeg join. |
+
+Nothing in `kit/` knows about this app: the app's URL, its phone screen size and
+anything to seed before loading are passed in by `record.ts`.
 
 ## The pointer
 
 Playwright sends input through the Chrome DevTools Protocol, which never moves
 the operating system pointer, so a capture would otherwise show clicks landing
-with nothing on screen to explain them. `cursor.ts` injects an SVG arrow into
+with nothing on screen to explain them. `kit/cursor.ts` injects an SVG arrow into
 the page and slaves it to `mousemove`, which puts the pointer inside the
 recorded frame. The Playwright mouse still drives everything, so hover, focus
 and click targeting behave exactly as they do for a person.
