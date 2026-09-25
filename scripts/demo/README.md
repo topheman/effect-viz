@@ -56,9 +56,10 @@ between takes.
 A recording has one frame size for its whole length, so a viewport turned from
 portrait to landscape would be squashed into the same box rather than turned.
 The phone take records a stage the size of the desktop video instead, with the
-app in an iframe drawn as a phone. Rotating turns the phone with a CSS
-transform, then swaps the iframe's width and height, which the app sees as a
-real resize: its landscape layout comes in exactly as it does on a device. The
+app in an iframe drawn as a phone. Rotating swaps the iframe's width and
+height, which the app sees as a real resize: its landscape layout comes in
+exactly as it does on a device. A still of the old screen covers the swap, then
+turns with the phone and fades out over the new layout on the way. The
 context has a phone user agent, which gives the app its read-only mobile
 editor, and touch, which turns on its `(pointer: coarse)` affordances. Taps
 are real touch events, shown by a fingertip drawn on the stage.
