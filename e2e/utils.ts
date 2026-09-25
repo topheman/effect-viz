@@ -15,9 +15,13 @@ async function onboardingVersion(): Promise<number> {
 
 /** Playwright's `test`, with the onboarding tour marked as done before any page loads. */
 export const test = base.extend({
-  context: async ({ context }, use) => {
+  context: async ({ baseURL, context }, use) => {
     await context.addInitScript(
-      (version: number) => {
+      ({ origin, version }: { origin: string; version: number }) => {
+        // Init scripts run in every frame, including the page's initial
+        // about:blank, whose opaque origin throws on any localStorage access,
+        // and the WebContainer's StackBlitz iframes.
+        if (location.origin !== origin) return;
         localStorage.setItem(
           "effect-viz-onboarding",
           JSON.stringify({
@@ -27,7 +31,10 @@ export const test = base.extend({
           }),
         );
       },
-      await onboardingVersion(),
+      {
+        origin: new URL(baseURL ?? "").origin,
+        version: await onboardingVersion(),
+      },
     );
     await use(context);
   },
