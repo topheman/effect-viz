@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   CONTROL_REPLY_PREFIX,
@@ -106,6 +106,16 @@ describe("reply codec", () => {
 });
 
 describe("applyCommand", () => {
+  // Freezes the Date.now() that fakeHost reads, so virtual time moves only when
+  // a command moves it. A step fires due timers synchronously: nothing to advance.
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("pause freezes the clock and gates the scheduler", () => {
     const { scheduler, clock, target } = setup();
 
