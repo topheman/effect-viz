@@ -12,6 +12,8 @@ This project is a learning project for me to understand the Effect runtime. My l
 
 https://github.com/user-attachments/assets/480f30e8-8a39-4ca1-bf87-84a6b8a177b5
 
+To run it locally, see [CONTRIBUTING.md](./CONTRIBUTING.md).
+
 ## Resources
 
 - This project is based on the [topheman/vite-react-ts-template](https://github.com/topheman/vite-react-ts-template) template.
