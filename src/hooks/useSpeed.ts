@@ -13,7 +13,7 @@ export type Speed = (typeof SPEED_OPTIONS)[number];
 
 export const DEFAULT_SPEED: Speed = 1;
 
-const STORAGE_KEY = "effect-flow-speed";
+const STORAGE_KEY = "effect-viz-speed";
 
 function isSpeed(value: unknown): value is Speed {
   return SPEED_OPTIONS.some((option) => option === value);

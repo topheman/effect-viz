@@ -2,7 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 
 import { useOnboarding } from "./useOnboarding";
 
-const STORAGE_KEY = "effect-flow-onboarding";
+const STORAGE_KEY = "effect-viz-onboarding";
 
 function clearOnboardingStorage(): void {
   localStorage.removeItem(STORAGE_KEY);

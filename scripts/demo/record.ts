@@ -71,7 +71,7 @@ async function skipOnboarding(context: BrowserContext) {
   await context.addInitScript(
     (version: number) => {
       localStorage.setItem(
-        "effect-flow-onboarding",
+        "effect-viz-onboarding",
         JSON.stringify({
           completed: "info",
           version,

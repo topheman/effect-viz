@@ -232,7 +232,7 @@ describe("ExecutionLog onboarding", () => {
 
   it("retires the log options step when the options open", async () => {
     localStorage.setItem(
-      "effect-flow-onboarding",
+      "effect-viz-onboarding",
       JSON.stringify({
         completed: "speed",
         version: 4,
@@ -250,6 +250,6 @@ describe("ExecutionLog onboarding", () => {
     await userEvent.click(trigger);
 
     expect(trigger).not.toHaveClass("animate-onboarding-glow");
-    localStorage.removeItem("effect-flow-onboarding");
+    localStorage.removeItem("effect-viz-onboarding");
   });
 });

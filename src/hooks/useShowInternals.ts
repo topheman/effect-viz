@@ -15,7 +15,7 @@
  */
 import { useSyncExternalStore } from "react";
 
-const STORAGE_KEY = "effect-flow-show-internals";
+const STORAGE_KEY = "effect-viz-show-internals";
 
 function readStored(): boolean {
   try {

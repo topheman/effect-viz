@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 import { useCallback, useSyncExternalStore } from "react";
 
-const ONBOARDING_STORAGE_KEY = "effect-flow-onboarding";
+const ONBOARDING_STORAGE_KEY = "effect-viz-onboarding";
 const ONBOARDING_VERSION = Number(import.meta.env.VITE_ONBOARDING_VERSION) || 1;
 
 const OnboardingStep = Schema.Literal(
