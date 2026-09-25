@@ -102,12 +102,12 @@ async function main() {
   await mkdir(OUT_DIR, { recursive: true });
 
   // `npm install` fetches the Playwright package but not the browser it drives,
-  // deliberately: only this script needs it, and CI never does.
+  // deliberately: only this script and the e2e tests need it, and CI never does.
   const browser = await chromium
     .launch({ headless: !headed })
     .catch((cause) => {
       throw new Error(
-        "Cannot launch Chromium. Run `npm run demo:prepare` once to download it.",
+        "Cannot launch Chromium. Run `npm run playwright:install` once to download it.",
         { cause },
       );
     });

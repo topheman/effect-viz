@@ -72,8 +72,9 @@ export default defineConfig([
   },
   {
     // Playwright locators (`page.getByRole`, ...) read like Testing Library
-    // queries destructured from `render`, which those rules flag.
-    files: ['scripts/demo/**/*.ts'],
+    // queries destructured from `render`, which those rules flag, and a
+    // Playwright fixture's `use` callback reads like React's `use` hook.
+    files: ['scripts/demo/**/*.ts', 'e2e/**/*.ts', 'playwright.config.ts'],
     languageOptions: {
       globals: globals.node,
     },
@@ -83,6 +84,7 @@ export default defineConfig([
           (rule) => [rule, 'off']
         )
       ),
+      "react-hooks/rules-of-hooks": "off",
     }
   },
   {
