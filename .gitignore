@@ -39,3 +39,7 @@ src/types/editor-bundled-definitions.d.ts
 
 # Demo recordings produced by `npm run demo:record`
 recordings
+
+# Playwright output from `npm run e2e`
+test-results
+playwright-report

@@ -4,7 +4,7 @@ Replays a scripted tour of the app in a real browser and records it as an mp4
 for the README: a desktop take, then a phone take, joined with a crossfade.
 
 ```sh
-npm run demo:prepare               # once per machine
+npm run playwright:install         # once per machine
 npm run build && npm run preview   # in one terminal
 npm run demo:record
 ```
@@ -12,9 +12,9 @@ npm run demo:record
 The result lands in `recordings/demo.mp4` (gitignored).
 
 `npm install` brings in the Playwright package but not the browser it drives,
-which is a separate few hundred megabytes. `demo:prepare` downloads it, and is
-kept out of `postinstall` on purpose: nothing but this script needs a browser,
-least of all CI. Encoding needs `ffmpeg` on the `PATH` as well; without it the
+which is a separate few hundred megabytes. `playwright:install` downloads it,
+and is kept out of `postinstall` on purpose: only this script and the e2e tests
+need a browser, and CI needs neither. Encoding needs `ffmpeg` on the `PATH` as well; without it the
 raw `.webm` is kept instead of an mp4.
 
 Record against a build, never the dev server. In development `StrictMode`
