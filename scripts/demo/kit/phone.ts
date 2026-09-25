@@ -5,9 +5,9 @@
  * the viewport from portrait to landscape would squash the page into the same
  * box rather than turn it. Instead the recorded page is a stage the size of the
  * desktop video, and the app runs in an iframe drawn as a phone screen in the
- * middle of it. Rotating means turning the phone with a CSS transform and then
- * swapping the iframe's width and height, which the app sees as a real resize:
- * its landscape layout comes in exactly as it does on a device.
+ * middle of it. Rotating swaps the iframe's width and height, which the app
+ * sees as a real resize, so its landscape layout comes in exactly as it does on
+ * a device; a CSS transform turns the phone around it.
  *
  * Touch taps come from Playwright's touchscreen, and a fingertip drawn on the
  * stage shows where they land, because the arrow in `cursor.ts` would be drawn
@@ -35,6 +35,8 @@ export const STAGE_PATH = "/__demo-phone";
 
 const BEZEL = 12;
 const ROTATE_MS = 650;
+/** How long the app gets to lay out its new shape before the turn starts. */
+const RELAYOUT_MS = 250;
 
 function stageHtml(appUrl: string, screen: Screen): string {
   return `<!doctype html>
@@ -55,7 +57,14 @@ function stageHtml(appUrl: string, screen: Screen): string {
   #screen {
     width: 100%; height: 100%; border: 0; display: block;
     border-radius: 32px; background: #09090b;
-    transition: opacity 180ms;
+  }
+  #still {
+    position: fixed; border-radius: 32px; pointer-events: none; z-index: 5;
+  }
+  #still.turning {
+    transition:
+      transform ${ROTATE_MS}ms cubic-bezier(.45,0,.25,1),
+      opacity ${ROTATE_MS * 0.6}ms linear ${ROTATE_MS * 0.2}ms;
   }
   /* The outer element only moves and the inner one only presses: the
      standalone scale property composes after transform, so pressing the
@@ -213,42 +222,60 @@ export class Finger {
 /**
  * Turns the phone a quarter turn and hands the app the new screen size.
  *
- * The turn itself is a transform on the portrait-shaped phone; only when it has
- * finished are the iframe's dimensions swapped and the transform dropped,
- * which leaves the phone exactly where the turn put it. The screen dims for
- * that swap, the way a device hides the frame in which it relayouts.
+ * Done the way a device does it: a still of the screen covers the iframe while
+ * the iframe takes its new size, counter-rotated so the phone keeps its old
+ * outline and the app can relayout unseen. Then both turn together, and the
+ * still fades out over the new layout on the way.
  */
 export async function rotate(
   page: Page,
   to: "landscape" | "portrait",
 ): Promise<void> {
+  const still = (await page.locator("#screen").screenshot()).toString("base64");
   await page.evaluate(
-    async ({ to, ms }) => {
+    async ({ to, still, ms, relayoutMs }) => {
       const phone = document.getElementById("phone")!;
-      const frame = document.getElementById("screen")!;
+      const screen = document.getElementById("screen")!;
       const landscape = to === "landscape";
+      // Landscape turns the phone to the left, portrait back from it.
+      const angle = landscape ? -90 : 90;
       const { width, height } = getComputedStyle(phone);
       const long = Math.max(parseFloat(width), parseFloat(height));
       const short = Math.min(parseFloat(width), parseFloat(height));
-      const nextFrame = () =>
-        new Promise((resolve) => requestAnimationFrame(resolve));
+      const wait = (t: number) =>
+        new Promise((resolve) => setTimeout(resolve, t));
 
-      phone.classList.add("turning");
-      // Landscape turns the phone to the left, portrait back from it.
-      phone.style.transform = `rotate(${landscape ? -90 : 90}deg)`;
-      await new Promise((resolve) => setTimeout(resolve, ms));
+      const box = screen.getBoundingClientRect();
+      const img = document.createElement("img");
+      img.id = "still";
+      img.src = `data:image/png;base64,${still}`;
+      Object.assign(img.style, {
+        left: `${box.left}px`,
+        top: `${box.top}px`,
+        width: `${box.width}px`,
+        height: `${box.height}px`,
+      });
+      document.body.append(img);
+      await img.decode();
 
-      frame.style.opacity = "0";
-      phone.classList.remove("turning");
-      phone.style.transform = "none";
+      // The phone stays centred on the stage, so turning the new shape back
+      // by the same quarter lays it exactly over the old one.
       phone.style.width = `${landscape ? long : short}px`;
       phone.style.height = `${landscape ? short : long}px`;
-      await nextFrame();
-      await new Promise((resolve) => setTimeout(resolve, 120));
-      frame.style.opacity = "1";
+      phone.style.transform = `rotate(${-angle}deg)`;
+      await wait(relayoutMs);
+
+      phone.classList.add("turning");
+      img.classList.add("turning");
+      phone.style.transform = "none";
+      img.style.transform = `rotate(${angle}deg)`;
+      img.style.opacity = "0";
+      await wait(ms);
+
+      phone.classList.remove("turning");
+      img.remove();
     },
-    { to, ms: ROTATE_MS },
+    { to, still, ms: ROTATE_MS, relayoutMs: RELAYOUT_MS },
   );
-  // Long enough for the fade back in to land and the layout to settle.
-  await page.waitForTimeout(350);
+  await page.waitForTimeout(200);
 }
