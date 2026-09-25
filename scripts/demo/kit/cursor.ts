@@ -276,9 +276,9 @@ const paceFor = (distance: number) =>
  * `mouse.down()` fires wherever the pointer happens to be and runs none of the
  * checks `locator.click()` does. That is deliberate — the play button animates
  * on mount, and Playwright refuses to click an element it considers unstable —
- * but it means nothing notices a press that lands on a disabled control. Run is
- * disabled while an edit syncs into the WebContainer, and a press swallowed
- * there would leave every beat after it describing a run that never started.
+ * but it means nothing notices a press that lands on a disabled control. A
+ * press swallowed there would leave every beat after it describing an action
+ * that never happened.
  */
 async function untilEnabled(target: Locator, timeout = 15_000): Promise<void> {
   const deadline = Date.now() + timeout;
@@ -380,8 +380,8 @@ export class Cursor {
    * position would either be ignored or snap without any visible motion.
    *
    * A bare point is accepted as well as a locator, because not every drag
-   * target is an element Playwright will call visible — see the Timeline
-   * separator in `scenario.ts`.
+   * target is an element Playwright will call visible: a resize separator is
+   * often zero-sized.
    */
   async drag(
     target: Locator | Point,

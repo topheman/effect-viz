@@ -7,7 +7,7 @@
  * desktop video, and the app runs in an iframe drawn as a phone screen in the
  * middle of it. Rotating means turning the phone with a CSS transform and then
  * swapping the iframe's width and height, which the app sees as a real resize:
- * its `short:` layout and landscape tabs come in exactly as they do on a device.
+ * its landscape layout comes in exactly as it does on a device.
  *
  * Touch taps come from Playwright's touchscreen, and a fingertip drawn on the
  * stage shows where they land, because the arrow in `cursor.ts` would be drawn
@@ -24,20 +24,19 @@ import type {
 
 import type { Point } from "./cursor.ts";
 
-/**
- * The screen in portrait. Landscape swaps the two, which keeps the height under
- * the 500px `short:` breakpoint and the width under `md`, so the app lays out
- * as it does on a phone turned sideways.
- */
-export const SCREEN = { width: 375, height: 700 };
+/** The phone's screen in portrait. Landscape swaps the two. */
+export interface Screen {
+  width: number;
+  height: number;
+}
 
-/** Where the stage is served, on the app's own origin. */
+/** Where the stage is served by default, on the app's own origin. */
 export const STAGE_PATH = "/__demo-phone";
 
 const BEZEL = 12;
 const ROTATE_MS = 650;
 
-function stageHtml(appUrl: string): string {
+function stageHtml(appUrl: string, screen: Screen): string {
   return `<!doctype html>
 <html>
 <head>
@@ -47,7 +46,7 @@ function stageHtml(appUrl: string): string {
   body { display: grid; place-items: center; }
   #phone {
     box-sizing: content-box;
-    width: ${SCREEN.width}px; height: ${SCREEN.height}px;
+    width: ${screen.width}px; height: ${screen.height}px;
     padding: ${BEZEL}px; border-radius: 44px;
     background: #1c1f26;
     box-shadow: 0 0 0 1.5px #3a3f4b, 0 30px 80px rgba(0,0,0,.6);
@@ -85,20 +84,27 @@ function stageHtml(appUrl: string): string {
 }
 
 /**
- * Serves the stage from the app's origin.
+ * Serves the stage from the app's origin, at `path`.
  *
- * Same-origin matters: the app sends `Cross-Origin-Embedder-Policy`, and a page
- * framing it from another origin, or from `about:blank`, would have it refused.
+ * Same-origin matters: an app that sends `Cross-Origin-Embedder-Policy` is
+ * refused by a page framing it from another origin, or from `about:blank`.
  */
-export async function installStage(context: BrowserContext, origin: string) {
-  await context.route(`${origin}${STAGE_PATH}`, (route) =>
+export async function installStage(
+  context: BrowserContext,
+  {
+    origin,
+    screen,
+    path = STAGE_PATH,
+  }: { origin: string; screen: Screen; path?: string },
+): Promise<void> {
+  await context.route(`${origin}${path}`, (route) =>
     route.fulfill({
       contentType: "text/html",
       headers: {
         "Cross-Origin-Embedder-Policy": "require-corp",
         "Cross-Origin-Opener-Policy": "same-origin",
       },
-      body: stageHtml(`${origin}/`),
+      body: stageHtml(`${origin}/`, screen),
     }),
   );
 }
@@ -217,10 +223,13 @@ export async function rotate(
   to: "landscape" | "portrait",
 ): Promise<void> {
   await page.evaluate(
-    async ({ to, screen, ms }) => {
+    async ({ to, ms }) => {
       const phone = document.getElementById("phone")!;
       const frame = document.getElementById("screen")!;
       const landscape = to === "landscape";
+      const { width, height } = getComputedStyle(phone);
+      const long = Math.max(parseFloat(width), parseFloat(height));
+      const short = Math.min(parseFloat(width), parseFloat(height));
       const nextFrame = () =>
         new Promise((resolve) => requestAnimationFrame(resolve));
 
@@ -232,13 +241,13 @@ export async function rotate(
       frame.style.opacity = "0";
       phone.classList.remove("turning");
       phone.style.transform = "none";
-      phone.style.width = `${landscape ? screen.height : screen.width}px`;
-      phone.style.height = `${landscape ? screen.width : screen.height}px`;
+      phone.style.width = `${landscape ? long : short}px`;
+      phone.style.height = `${landscape ? short : long}px`;
       await nextFrame();
       await new Promise((resolve) => setTimeout(resolve, 120));
       frame.style.opacity = "1";
     },
-    { to, screen: SCREEN, ms: ROTATE_MS },
+    { to, ms: ROTATE_MS },
   );
   // Long enough for the fade back in to land and the layout to settle.
   await page.waitForTimeout(350);

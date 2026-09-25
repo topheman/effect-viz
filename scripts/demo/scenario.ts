@@ -12,8 +12,8 @@
 
 import type { Frame, Locator, Page } from "playwright";
 
-import type { Cursor, Point } from "./cursor.ts";
-import { appFrame, type Finger, rotate } from "./phone.ts";
+import type { Cursor, Point } from "./kit/cursor.ts";
+import { appFrame, type Finger, rotate } from "./kit/phone.ts";
 
 export const VIEWPORT = { width: 1440, height: 810 };
 
