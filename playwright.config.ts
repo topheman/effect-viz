@@ -13,6 +13,9 @@ export default defineConfig({
   testDir: "e2e",
   fullyParallel: true,
   forbidOnly: true,
+  // A retry in CI absorbs a slow StackBlitz boot; the report still marks the
+  // test as flaky.
+  retries: process.env.CI ? 1 : 0,
   reporter: "list",
   // Each test boots its own WebContainer, which takes 5 to 15 seconds before
   // the program even starts.
