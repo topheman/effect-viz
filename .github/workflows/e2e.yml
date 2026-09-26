@@ -49,9 +49,10 @@ jobs:
         env:
           E2E_BASE_URL: https://effect-viz.vercel.app
 
-      - name: Upload traces
-        if: failure()
+      # Kept on green runs too: it holds the traces of flaky tests.
+      - name: Upload report
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
-          name: test-results
-          path: test-results/
+          name: playwright-report
+          path: playwright-report/

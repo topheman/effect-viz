@@ -16,7 +16,10 @@ export default defineConfig({
   // A retry in CI absorbs a slow StackBlitz boot; the report still marks the
   // test as flaky.
   retries: process.env.CI ? 1 : 0,
-  reporter: "list",
+  // CI adds annotations on the run and an HTML report, uploaded as an artifact.
+  reporter: process.env.CI
+    ? [["list"], ["github"], ["html", { open: "never" }]]
+    : "list",
   // Each test boots its own WebContainer, which takes 5 to 15 seconds before
   // the program even starts.
   timeout: 120_000,

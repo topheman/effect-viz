@@ -21,7 +21,7 @@ Each test boots its own WebContainer, which takes 5 to 15 seconds and needs netw
 - a manual run from the Actions tab, or `gh workflow run e2e.yml --ref <branch>`;
 - each successful production deployment on Vercel, against `https://effect-viz.vercel.app`.
 
-When a run fails, its traces are attached to the run as the `test-results` artifact: `gh run download <run-id>`, then `npx playwright show-trace <path/to/trace.zip>`.
+Failed and flaky tests show up as annotations on the run. Every run also uploads the HTML report, with the traces of those tests, as the `playwright-report` artifact: `gh run download <run-id> -n playwright-report -D playwright-report`, then `npx playwright show-report`.
 
 Tests assert on what a user sees: the playback status, log rows, fiber lanes. They never reach into runtime internals, so they keep passing across a runtime upgrade that preserves behaviour.
 
