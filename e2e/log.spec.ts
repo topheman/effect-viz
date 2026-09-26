@@ -40,3 +40,10 @@ test("filters hide their group of events", async ({ page }) => {
   expect(rows.filter((row) => row.startsWith("effect:"))).toEqual([]);
   expect(rows.filter((row) => row.startsWith("fiber:forked "))).toHaveLength(4);
 });
+
+test("explains a span that interruption ended", async ({ page }) => {
+  await runToEnd(page, "structuredInterruption");
+  await expect(await explainRow(page, "effect:ended child-1")).toHaveText(
+    "Interruption ends the open span as a failure.",
+  );
+});

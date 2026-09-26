@@ -137,6 +137,35 @@ describe("traceHints", () => {
     expect(hints[2]).toBe("Interruption ends the open span as a failure.");
   });
 
+  // Timestamps from a real run of structuredInterruption: each emitter reads the
+  // clock itself, and the span's end is stamped before the rows around it.
+  it("reads events a few milliseconds apart as one instant", () => {
+    const hints = hintsOf([
+      fork("#0"),
+      fork("#1", "#0"),
+      start("child-1", "#0", 5.708),
+      suspend("#0", 6.0),
+      resume("#0", 6.007),
+      suspend("#0", 6.094),
+      resume("#1", 6.1),
+      suspend("#1", 6.2),
+      resume("#0", 313.656),
+      failed("child-1", "#0", 314.708),
+      finalizer("child-1-cleanup", "#0", 315.769),
+      interrupt("#0", 316.144),
+      suspend("#0", 316.154),
+      resume("#1", 316.311),
+    ]);
+    expect(hints[3]).toBe(
+      "The fiber hit an async boundary that was already settled, so it resumed at once.",
+    );
+    expect(hints[8]).toBe("Time the fiber spent parked.");
+    expect(hints[9]).toBe("Interruption ends the open span as a failure.");
+    expect(hints[13]).toBe(
+      "#0 finished, so the runtime ran the next ready fiber, #1.",
+    );
+  });
+
   it("leaves a failure that was not followed by interruption alone", () => {
     const hints = hintsOf([
       fork("#0"),
