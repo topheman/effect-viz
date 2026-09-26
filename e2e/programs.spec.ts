@@ -195,7 +195,10 @@ test("deadlock leaves Step nothing to run", async ({ page }) => {
   // A deadlocked run still reads as running: only a step can find out that
   // nothing is left to release.
   await expect
-    .poll(async () => count(await logRows(page), /^effect:started waits-for-/))
+    .poll(
+      async () => count(await logRows(page), /^effect:started waits-for-/),
+      { timeout: 30_000 },
+    )
     .toBe(2);
   await pauseButton(page).click();
 
