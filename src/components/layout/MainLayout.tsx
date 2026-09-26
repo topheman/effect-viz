@@ -221,9 +221,11 @@ export function MainLayout() {
 
     setPauseReason("user");
     handlePlay({
-      // A gated run stays paused; only a free-running one reaches "running".
+      // Controls reach the container only once its process is up, which its
+      // first event proves, so the run leaves "starting" here.
       onFirstChunk: () => {
-        if (!startPaused) setPlaybackState("running");
+        if (isCurrentRun())
+          setPlaybackState(startPaused ? "paused" : "running");
       },
       rate,
       startPaused,
@@ -357,9 +359,8 @@ export function MainLayout() {
       if (webContainer.isReady) {
         await webContainer.flushSync(editorContent);
       }
+      setPlaybackState("starting");
       startRun({ startPaused: true });
-      setPlaybackState("paused");
-      setPauseReason("user");
       return;
     }
 

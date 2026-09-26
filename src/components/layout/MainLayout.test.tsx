@@ -21,6 +21,8 @@ let currentRun: {
 const handleReset = vi.fn();
 /** The program each run was started with, as passed to `handlePlay`. */
 const playedPrograms: (ProgramKey | undefined)[] = [];
+/** Set to hold a run's first event back; the test then calls it. */
+let firstChunk: { held: boolean; release?: () => void } = { held: false };
 
 vi.mock("@/hooks/useEventHandlers", () => ({
   useEventHandlers: () => {
@@ -34,7 +36,8 @@ vi.mock("@/hooks/useEventHandlers", () => ({
         programKey?: ProgramKey;
       }) => {
         playedPrograms.push(programKey);
-        onFirstChunk();
+        if (firstChunk.held) firstChunk.release = onFirstChunk;
+        else onFirstChunk();
         return new Promise<void>((resolve, reject) => {
           currentRun = { resolve: () => resolve(), reject };
         });
@@ -101,6 +104,7 @@ describe("MainLayout program switching", () => {
   beforeEach(() => {
     currentRun = null;
     playedPrograms.length = 0;
+    firstChunk = { held: false };
     handleReset.mockClear();
     localStorage.clear();
   });
@@ -184,5 +188,20 @@ describe("MainLayout program switching", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("keeps a run started by Step in starting until its first event", async () => {
+    const user = userEvent.setup();
+    render(<MainLayout />);
+    firstChunk = { held: true };
+
+    await user.click(screen.getAllByRole("button", { name: "Step" })[0]);
+    expect(status()).toBe("starting...");
+    expect(screen.getAllByRole("button", { name: "Run" })[0]).toBeDisabled();
+    expect(screen.getAllByRole("button", { name: "Step" })[0]).toBeDisabled();
+
+    act(() => firstChunk.release?.());
+    expect(status()).toBe("paused");
+    expect(screen.getAllByRole("button", { name: "Run" })[0]).toBeEnabled();
   });
 });
