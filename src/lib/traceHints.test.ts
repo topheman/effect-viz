@@ -137,6 +137,19 @@ describe("traceHints", () => {
     expect(hints[2]).toBe("Interruption ends the open span as a failure.");
   });
 
+  it("explains a failed span that interruption closed on a slow machine", () => {
+    const hints = hintsOf([
+      fork("#0"),
+      fork("#1", "#0"),
+      start("child", "#0"),
+      failed("child", "#0", 300),
+      suspend("#1", 320),
+      finalizer("cleanup", "#0", 340),
+      interrupt("#0", 380),
+    ]);
+    expect(hints[3]).toBe("Interruption ends the open span as a failure.");
+  });
+
   // Timestamps from a real run of structuredInterruption: each emitter reads the
   // clock itself, and the span's end is stamped before the rows around it.
   it("reads events a few milliseconds apart as one instant", () => {

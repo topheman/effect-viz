@@ -136,17 +136,18 @@ function isHandoff(
 }
 
 /**
- * Whether the fiber's next lifecycle event is an interrupt in the same instant,
- * with only span ends and finalizers between: the unwinding of an interruption.
+ * Whether the fiber's next lifecycle event is an interrupt, with only span ends
+ * and finalizers between: the unwinding of an interruption. An interrupted fiber
+ * runs nothing but that unwinding before it reports the interrupt, so the order
+ * is enough; timestamps are not, since a slow machine stretches the unwinding
+ * well past `SAME_INSTANT_MS`.
  */
 function interruptedNext(
   events: readonly TraceEvent[],
   from: number,
   fiberId: string,
 ): boolean {
-  const failedAt = events[from].timestamp;
   for (const event of events.slice(from + 1)) {
-    if (!sameInstant(event.timestamp, failedAt)) return false;
     if (event.fiberId !== fiberId) continue;
     if (event.type === "fiber:interrupt") return true;
     if (event.type !== "effect:end" && event.type !== "finalizer") return false;
