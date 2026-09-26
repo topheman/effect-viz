@@ -36,7 +36,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "playwright:install": "playwright install chromium",
+    "playwright:install": "playwright install chromium webkit",
     "demo:record": "node scripts/demo/record.ts",
     "e2e": "npm run build && playwright test",
     "typecheck:app": "tsc --noEmit -p ./tsconfig.app.json",

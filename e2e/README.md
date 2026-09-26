@@ -7,7 +7,7 @@ npm run playwright:install   # once per machine
 npm run e2e
 ```
 
-`npm run e2e` builds the app, serves `dist/` with `vite preview` on port 4180, and runs the tests in Chromium. The port is fixed and must be free: the run fails rather than testing whatever else is listening there. Tests run against a build because `StrictMode` runs every effect twice in development.
+`npm run e2e` builds the app, serves `dist/` with `vite preview` on port 4180, and runs the tests in Chromium, plus the phone tests in WebKit as an iPhone SE. The port is fixed and must be free: the run fails rather than testing whatever else is listening there. Tests run against a build because `StrictMode` runs every effect twice in development.
 
 To test a server that is already running, the deployed app for instance, skip both the build and the server:
 
