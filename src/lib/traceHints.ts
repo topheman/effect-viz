@@ -46,7 +46,7 @@ export function traceHints(
         } else if (
           next?.type === "fiber:resume" &&
           next.fiberId === event.fiberId &&
-          next.timestamp === event.timestamp
+          sameInstant(next.timestamp, event.timestamp)
         ) {
           add(
             i,
@@ -74,7 +74,7 @@ export function traceHints(
           !(
             prev?.type === "fiber:suspend" &&
             prev.fiberId === event.fiberId &&
-            prev.timestamp === event.timestamp
+            sameInstant(prev.timestamp, event.timestamp)
           )
         ) {
           // An instant resume is explained on its suspend.
@@ -109,6 +109,19 @@ export function traceHints(
 
 type Suspend = Extract<TraceEvent, { type: "fiber:suspend" }>;
 
+/**
+ * Events stamped closer than this belong to one synchronous burst of the
+ * runtime. Virtual time runs on with wall time (runtime/virtualClock.ts) and the
+ * tracer, supervisor and runner each read it themselves, so a burst spans a few
+ * milliseconds and span stamps can be a millisecond early. Speed never exceeds
+ * 1, so a burst is no wider in virtual time; a shorter sleep reads as instant.
+ */
+const SAME_INSTANT_MS = 10;
+
+function sameInstant(a: number, b: number): boolean {
+  return Math.abs(a - b) < SAME_INSTANT_MS;
+}
+
 /** `prev` parked and another fiber took the thread in the same instant. */
 function isHandoff(
   prev: TraceEvent | undefined,
@@ -118,7 +131,7 @@ function isHandoff(
     prev?.type === "fiber:suspend" &&
     next?.type === "fiber:resume" &&
     next.fiberId !== prev.fiberId &&
-    next.timestamp === prev.timestamp
+    sameInstant(next.timestamp, prev.timestamp)
   );
 }
 
@@ -133,7 +146,7 @@ function interruptedNext(
 ): boolean {
   const failedAt = events[from].timestamp;
   for (const event of events.slice(from + 1)) {
-    if (event.timestamp !== failedAt) return false;
+    if (!sameInstant(event.timestamp, failedAt)) return false;
     if (event.fiberId !== fiberId) continue;
     if (event.type === "fiber:interrupt") return true;
     if (event.type !== "effect:end" && event.type !== "finalizer") return false;
