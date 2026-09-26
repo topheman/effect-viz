@@ -70,10 +70,8 @@ test("Step on a finished run starts a fresh one, paused", async ({ page }) => {
   const finished = await texts(page);
 
   await stepButton(page).click();
-  await expect(playbackStatus(page)).toHaveText("paused");
-  // The status turns `paused` before the new run is up, so wait for its first
-  // event before resuming it.
-  await expect.poll(async () => (await texts(page)).length).toBeGreaterThan(0);
+  // The new run is `starting` for about two seconds, until its first event.
+  await expect(playbackStatus(page)).toHaveText("paused", { timeout: 30_000 });
   expect((await texts(page)).length).toBeLessThan(finished.length);
 
   await runButton(page).click();
