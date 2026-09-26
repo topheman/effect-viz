@@ -17,8 +17,9 @@ test("a phone gets a read-only editor and still runs the examples", async ({
   await openApp(page);
 
   const editor = page.locator(".view-lines").filter({ visible: true });
-  // Monaco draws the source after the page is ready.
-  await expect(editor).toContainText("rootEffect");
+  // Monaco draws the source after the page is ready, and WebKit on a slow
+  // machine takes more than the default 5 seconds.
+  await expect(editor).toContainText("rootEffect", { timeout: 30_000 });
   const source = await editor.textContent();
   await editor.locator(".view-line").nth(2).tap();
   await page.keyboard.type("broken");
