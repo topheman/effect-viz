@@ -1,5 +1,3 @@
-import { devices } from "@playwright/test";
-
 import {
   expect,
   logRows,
@@ -9,13 +7,9 @@ import {
   test,
 } from "./utils";
 
-// The narrowest common phone: turned sideways it stays under both the `md`
-// width and the 500px `short:` height the landscape layout needs. Its user
-// agent sends the app down the fallback path, and it runs in WebKit like a real
-// iPhone: Monaco turns on a Safari-only clipboard workaround for that user
-// agent, which throws unhandled rejections in Chromium.
-const iPhone = devices["iPhone SE"];
-test.use({ ...iPhone, browserName: "webkit" });
+// Runs in the `iphone` project (playwright.config.ts), an iPhone SE: the
+// narrowest common phone, which turned sideways stays under both the `md` width
+// and the 500px `short:` height the landscape layout needs.
 
 test("a phone gets a read-only editor and still runs the examples", async ({
   page,
@@ -39,8 +33,11 @@ test("a phone gets a read-only editor and still runs the examples", async ({
   );
 });
 
-test("a phone in landscape shows one view at a time", async ({ page }) => {
-  const { width, height } = iPhone.viewport;
+test("a phone in landscape shows one view at a time", async ({
+  page,
+  viewport,
+}) => {
+  const { width, height } = viewport!;
   await page.setViewportSize({ width: height, height: width });
   await openApp(page);
   await runButton(page).tap();

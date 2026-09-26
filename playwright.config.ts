@@ -25,10 +25,19 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
+      testIgnore: "phone.spec.ts",
       use: {
         ...devices["Desktop Chrome"],
         viewport: { width: 1440, height: 810 },
       },
+    },
+    {
+      // A phone user agent sends the app down the read-only fallback path.
+      // Monaco turns on a Safari-only clipboard workaround for that user agent,
+      // which throws unhandled rejections outside WebKit.
+      name: "iphone",
+      testMatch: "phone.spec.ts",
+      use: devices["iPhone SE"],
     },
   ],
   // The preview server serves dist/ with the COOP/COEP headers the WebContainer
