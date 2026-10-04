@@ -48,6 +48,10 @@ Take over the runtime's clock and scheduler so execution can be slowed and stepp
 - [Phase 10: Slow mode & stepper (issue #13)](./phase-10.md) ✅
 - [Phase 11: Changing speed during a run](./phase-11.md) ✅
 
+### Reference
+
+- [Where trace events come from](./trace-events.md) — which Effect hook reports each event in the log, and what the visualizer adds on top.
+
 ### Maintenance
 
 - [Upgrading Effect to 3.22 (issue #18)](./effect-3.22-upgrade.md) ✅ — what three minor versions changed for the traces, and the one example that traces differently.
