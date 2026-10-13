@@ -32,6 +32,8 @@ Effect Runtime → TraceEvents → TraceStore → React UI
 - Stores (`TraceStore`, `FiberStore`) process events
 - UI components consume stores
 
+[trace-events.md](./trace-events.md) maps each event type to the runtime hook that reports it.
+
 ## File Structure
 
 ```
