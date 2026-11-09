@@ -1,11 +1,13 @@
 {
   "$schema": "https://t3.codes/schema/t3.json",
+  "defaultThreadEnvMode": "local",
   "scripts": [
     {
-      "name": "Setup Worktree",
-      "command": "npm install",
+      "name": "Setup worktree",
+      "command": "sh scripts/setup-worktree.sh",
       "icon": "configure",
-      "runOnWorktreeCreate": true
+      "runOnWorktreeCreate": true,
+      "async": false
     }
   ]
 }
