@@ -1,4 +1,16 @@
+import { createHash } from "node:crypto";
+
 import { defineConfig, devices } from "@playwright/test";
+
+/** Offset of this checkout's ports, from its path, so worktrees run the tests in parallel. */
+const portOffset =
+  createHash("sha1")
+    .update(import.meta.dirname)
+    .digest()
+    .readUInt16BE(0) % 100;
+
+/** Port of the preview server; `E2E_PORT` overrides it. */
+const PORT = Number(process.env.E2E_PORT ?? 4180 + portOffset);
 
 /**
  * End-to-end tests against a production build: see e2e/README.md.
@@ -6,7 +18,6 @@ import { defineConfig, devices } from "@playwright/test";
  * `E2E_BASE_URL` points the tests at a server that is already running, such as
  * the deployed app, and skips starting one.
  */
-const PORT = 4180;
 const externalBaseURL = process.env.E2E_BASE_URL;
 
 export default defineConfig({
