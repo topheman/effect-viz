@@ -13,8 +13,6 @@ npm install
 
 `npm install` also installs the git hooks (see [Commits](#commits)).
 
-In [T3 Code](https://t3.codes), a thread started in a new worktree runs `scripts/setup-worktree.sh` (declared in `t3.json`), which installs the dependencies there.
-
 ## Development
 
 ```sh
