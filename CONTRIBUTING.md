@@ -53,7 +53,7 @@ npm run playwright:install   # once per machine
 npm run e2e
 ```
 
-The e2e tests run the real app in Chromium, and in WebKit as a phone, against a production build. They need network access and don't run in CI. See [`e2e/README.md`](e2e/README.md).
+The e2e tests run the real app in Chromium, and in WebKit as a phone, against a production build. They need network access. CI runs them on a production deployment, on pull requests labeled `e2e` or whose base is not `master`, and on manual runs. See [`e2e/README.md`](e2e/README.md).
 
 ## Demo recording
 
