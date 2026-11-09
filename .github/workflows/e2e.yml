@@ -1,8 +1,8 @@
 name: E2E
 
-# The suite is slow and depends on StackBlitz, so it runs only on request
-# (the `e2e` label on a PR, a manual run), on a production deployment, and on
-# every PR whose base is not `master`, such as a migration branch.
+# The suite is slow and depends on StackBlitz, so it runs only on the `e2e`
+# label, a manual run, a production deployment, and PRs whose base is not
+# `master`, such as a migration branch.
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled]
