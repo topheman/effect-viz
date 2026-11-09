@@ -1,10 +1,11 @@
 name: E2E
 
-# The suite is slow and depends on StackBlitz, so it runs only on request:
-# adding the `e2e` label to a PR, a manual run, or a production deployment.
+# The suite is slow and depends on StackBlitz, so it runs only on request
+# (the `e2e` label on a PR, a manual run), on a production deployment, and on
+# every PR whose base is not `master`, such as a migration branch.
 on:
   pull_request:
-    types: [labeled]
+    types: [opened, synchronize, reopened, labeled]
   deployment_status:
   workflow_dispatch:
 
@@ -14,11 +15,18 @@ permissions:
 jobs:
   e2e:
     if: >-
-      (github.event_name == 'pull_request' && github.event.label.name == 'e2e') ||
+      (github.event_name == 'pull_request' &&
+        (github.event.label.name == 'e2e' ||
+          (github.event.action != 'labeled' && github.base_ref != 'master'))) ||
       (github.event_name == 'deployment_status' &&
         github.event.deployment_status.state == 'success' &&
         github.event.deployment.environment == 'Production') ||
       github.event_name == 'workflow_dispatch'
+    # At job level, so an event that skips the job cancels nothing. A push
+    # cancels its PR's previous run; other runs each get their own group.
+    concurrency:
+      group: ${{ github.event_name == 'pull_request' && format('e2e-pr-{0}', github.event.pull_request.number) || format('e2e-{0}', github.run_id) }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
