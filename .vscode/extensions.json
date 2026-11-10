@@ -1,6 +1,7 @@
 {
   "recommendations": [
     "VoidZero.vite-plus-extension-pack",
-    "bradlc.vscode-tailwindcss"
+    "bradlc.vscode-tailwindcss",
+    "TypeScriptTeam.native-preview"
   ]
 }

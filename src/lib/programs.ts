@@ -4,7 +4,7 @@
  */
 
 // The examples fail with a plain Error to keep them short.
-// @effect-diagnostics effect/globalErrorInEffectFailure:off
+/* oxlint-disable effecttsgo/global-error-in-effect-failure */
 
 import {
   Context,
@@ -431,6 +431,7 @@ export const timeoutExample = Effect.gen(function* () {
       Effect.timeout("1 second"),
       Effect.as(`${label} finished`),
       // A missed deadline fails the effect, so recover to keep going.
+      // oxlint-disable-next-line effecttsgo/catch-to-or-else-succeed
       Effect.catchAll(() => Effect.succeed(`${label} timed out`)),
     );
 

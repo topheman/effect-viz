@@ -37,16 +37,26 @@ pnpm run preview
 
 ## Checks
 
-CI runs `check`, `typecheck:effect`, `test` and `build` on every push and pull request.
+CI runs `check`, `test` and `build` on every push and pull request.
 
-| Script                | What it does                                                                                                                 |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm run check`      | Oxfmt, then Oxlint with type-aware rules and a full type check (`vp check`)                                                  |
-| `pnpm run lint:fix`   | Oxlint with autofix                                                                                                          |
-| `pnpm run format`     | Oxfmt, which also sorts imports                                                                                              |
-| `pnpm run typecheck`  | Type checks the app, the Node config, the demo recorder and the e2e tests, then runs the Effect language service diagnostics |
-| `pnpm run test`       | Vitest, in jsdom                                                                                                             |
-| `pnpm run test:watch` | Vitest in watch mode                                                                                                         |
+| Script                | What it does                                                                                        |
+| --------------------- | --------------------------------------------------------------------------------------------------- |
+| `pnpm run check`      | Oxfmt, then Oxlint with type-aware rules, the Effect diagnostics and a full type check (`vp check`) |
+| `pnpm run lint:fix`   | Oxlint with autofix                                                                                 |
+| `pnpm run format`     | Oxfmt, which also sorts imports                                                                     |
+| `pnpm run test`       | Vitest, in jsdom                                                                                    |
+| `pnpm run test:watch` | Vitest in watch mode                                                                                |
+
+The Effect diagnostics are Oxlint rules from [`@effect/tsgo`](https://github.com/Effect-TS/tsgo), set in the `lint` block of `vite.config.ts`. Only the Effect-patched Oxlint knows them, so `check` and `lint` go through `effect-tsgo vp …`, which runs it without touching `node_modules`. A bare `vp check` or `vp lint` fails with `Unknown plugin: 'effecttsgo'`.
+
+## Editor
+
+In VS Code or Cursor, install the recommended extensions (`.vscode/extensions.json`), including TypeScript 7 (`TypeScriptTeam.native-preview`), and accept the prompt to use the workspace TypeScript version. `.vscode/settings.json` then starts both language servers through `effect-tsgo`, with the wrappers in `scripts/editor/`:
+
+- TypeScript 7 runs `scripts/editor/tsc`, which adds the Effect refactors, completions and quick info.
+- The Oxc extension runs `scripts/editor/oxlint.mjs`, which reports the Effect diagnostics alongside the other lint rules.
+
+`scripts/editor/tsc` is a shell script, so this setup works on macOS and Linux.
 
 ## End-to-end tests
 
@@ -63,4 +73,4 @@ The e2e tests run the real app in Chromium, and in WebKit as a phone, against a 
 
 ## Commits
 
-Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/), with body lines of at most 100 characters, enforced by commitlint in a `commit-msg` hook. A `pre-commit` hook runs `vp check --fix` on staged files (`staged` in `vite.config.ts`). The hooks live in `.vite-hooks/`.
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/), with body lines of at most 100 characters, enforced by commitlint in a `commit-msg` hook. A `pre-commit` hook runs `effect-tsgo vp check --fix` on staged files (`staged` in `vite.config.ts`). The hooks live in `.vite-hooks/`.

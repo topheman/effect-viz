@@ -86,7 +86,7 @@ This project is based on a custom template relying on the following stack:
 
 - React 19 (with react-compiler)
 - Vite+ (Vite 8, Vitest, Oxlint, Oxfmt), configured in `vite.config.ts`
-- TypeScript 5.9
+- TypeScript 7, with the Effect language service and diagnostics from `@effect/tsgo`
 - Tailwind CSS 4
 - Testing: Vitest + React Testing Library
 - Linting: Oxlint, type-aware, with:
@@ -100,7 +100,7 @@ All those are properly configured. Take advantage of it.
 
 - ALWAYS ASK FOR CONFIRMATION before installing a new dependency.
 - TypeScript and Oxlint are properly configured. Take advantage of it.
-  - `pnpm run check`: formats, lints and type checks (`vp check`)
+  - `pnpm run check`: formats, lints, runs the Effect diagnostics and type checks (`effect-tsgo vp check`; a bare `vp check` cannot load the Effect rules)
   - `pnpm run lint:fix`: auto fixes lint errors
   - `pnpm run format`: formats the code
 - Vitest, a test runner, is properly configured with react-testing-library. Take advantage of it. Write tests for your code.

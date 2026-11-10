@@ -23,11 +23,8 @@ jobs:
           run-install: |
             args: [--frozen-lockfile]
 
-      - name: Check (format, lint, types)
-        run: vp check
-
-      - name: Effect diagnostics
-        run: pnpm run typecheck:effect
+      - name: Check (format, lint, types, Effect diagnostics)
+        run: pnpm run check
 
       - name: Testing
         run: pnpm run test

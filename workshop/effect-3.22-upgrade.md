@@ -91,7 +91,7 @@ fixing, unless a future Effect makes the fiber argument load-bearing.
 
 ## Effect LSP
 
-The upgrade also brought in `@effect/language-service`, registered as a
-TypeScript plugin in `tsconfig.app.json`. It only runs on the TypeScript
-installed in the project, so `.vscode/settings.json` points the editor at the
-workspace version; VS Code and Cursor prompt for it on first open.
+The upgrade also brought in the Effect language service, registered as a
+TypeScript plugin in `tsconfig.app.json`. It now comes from `@effect/tsgo`,
+which ships Effect-patched builds of TypeScript 7 and Oxlint: the diagnostics run
+as Oxlint rules in `vp check`, and the editor setup is in `CONTRIBUTING.md`.

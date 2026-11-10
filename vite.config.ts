@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 import path from "path";
 
+import { strict as effectStrict } from "@effect/tsgo/oxlint-presets";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
@@ -123,7 +124,7 @@ export default defineConfig({
     include: ["src/**/*.test.{ts,tsx}"],
   },
   staged: {
-    "*": "vp check --fix",
+    "*": "effect-tsgo vp check --fix",
   },
   fmt: {
     // Prettier's width, which the code was written to.
@@ -141,6 +142,10 @@ export default defineConfig({
     ],
   },
   lint: {
+    // Effect diagnostics: every rule the language service enables by default, as
+    // errors. Only the Effect-patched Oxlint that `effect-tsgo vp` starts knows the
+    // `effecttsgo` plugin, so run `pnpm run check` rather than a bare `vp check`.
+    extends: [effectStrict],
     // public/app is the runtime bundle copy-runtime.mjs lifts out of dist, so it is
     // build output like dist itself, and only exists on a machine that has built.
     ignorePatterns: ["dist", "public/app"],
@@ -159,6 +164,9 @@ export default defineConfig({
     },
     rules: {
       "vite-plus/prefer-vite-plus-imports": "error",
+      // Off in the Effect presets, on through the correctness category otherwise.
+      "effecttsgo/any-unknown-in-error-context": "off",
+      "effecttsgo/unsafe-effect-type-assertion": "off",
       // ESLint's and typescript-eslint's recommended rules outside the correctness category.
       "no-case-declarations": "error",
       "no-empty": "error",
