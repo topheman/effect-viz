@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest"; // Extend Vitest's expect
-import { vi } from "vitest";
+import { vi } from "vite-plus/test";
 
 // Mock ResizeObserver for Radix UI components
 const ResizeObserverMock = vi.fn(

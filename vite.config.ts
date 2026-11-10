@@ -1,11 +1,10 @@
-/// <reference types="vitest/config" />
 import { createRequire } from "node:module";
 import path from "path";
 
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
+import { defineConfig, lazyPlugins } from "vite-plus";
 
 import { runtimeWatchPlugin } from "./vite-plugin-runtime-watch";
 
@@ -23,7 +22,7 @@ export default defineConfig({
   define: {
     __EFFECT_VERSION__: JSON.stringify(effectVersion),
   },
-  plugins: [
+  plugins: lazyPlugins(() => [
     runtimeWatchPlugin(),
     react({
       babel: {
@@ -99,7 +98,7 @@ export default defineConfig({
         ],
       },
     }),
-  ],
+  ]),
   base: "./",
   server: {
     headers: {
@@ -122,5 +121,153 @@ export default defineConfig({
     setupFiles: ["./src/setupTests.ts"],
     // e2e/ holds the Playwright tests (`pnpm run e2e`).
     include: ["src/**/*.test.{ts,tsx}"],
+  },
+  staged: {
+    "*": "vp check --fix",
+  },
+  fmt: {
+    // Prettier's width, which the code was written to.
+    printWidth: 80,
+    // Build output, see `lint.ignorePatterns`, and skills installed from upstream.
+    ignorePatterns: ["public/app/", ".agents/"],
+    sortImports: {},
+    overrides: [
+      {
+        // Snippets in docs are often generator bodies, which Oxfmt parses as
+        // plain scripts and rewrites `yield* x` as `yield * x`.
+        files: ["**/*.md"],
+        options: { embeddedLanguageFormatting: "off" },
+      },
+    ],
+  },
+  lint: {
+    // public/app is the runtime bundle copy-runtime.mjs lifts out of dist, so it is
+    // build output like dist itself, and only exists on a machine that has built.
+    ignorePatterns: ["dist", "public/app"],
+    plugins: ["oxc", "typescript", "unicorn", "react"],
+    jsPlugins: [
+      { name: "vite-plus", specifier: "vite-plus/oxlint-plugin" },
+      { name: "testing-library", specifier: "eslint-plugin-testing-library" },
+      {
+        name: "better-tailwindcss",
+        specifier: "eslint-plugin-better-tailwindcss",
+      },
+    ],
+    categories: { correctness: "error" },
+    settings: {
+      "better-tailwindcss": { entryPoint: "./src/index.css" },
+    },
+    rules: {
+      "vite-plus/prefer-vite-plus-imports": "error",
+      // ESLint's and typescript-eslint's recommended rules outside the correctness category.
+      "no-case-declarations": "error",
+      "no-empty": "error",
+      "no-fallthrough": "error",
+      "no-prototype-builtins": "error",
+      "no-regex-spaces": "error",
+      "no-unused-expressions": "error",
+      "no-useless-escape": "error",
+      "typescript/ban-ts-comment": "error",
+      "typescript/no-empty-object-type": "error",
+      "typescript/no-explicit-any": "error",
+      "typescript/no-array-constructor": "error",
+      "typescript/no-namespace": "error",
+      "typescript/no-require-imports": "error",
+      "typescript/no-unnecessary-type-constraint": "error",
+      "typescript/no-unsafe-function-type": "error",
+      "typescript/prefer-namespace-keyword": "error",
+      "typescript/triple-slash-reference": "error",
+      // React hooks, with the React Compiler's rules.
+      "react/rules-of-hooks": "error",
+      "react/exhaustive-deps": "error",
+      "react/error-boundaries": "error",
+      "react/globals": "error",
+      "react/immutability": "error",
+      "react/incompatible-library": "error",
+      "react/preserve-manual-memoization": "error",
+      "react/purity": "error",
+      "react/refs": "error",
+      "react/set-state-in-effect": "error",
+      "react/set-state-in-render": "error",
+      "react/static-components": "error",
+      "react/unsupported-syntax": "error",
+      "react/use-memo": "error",
+      "react/void-use-memo": "error",
+      "react/only-export-components": ["error", { allowConstantExport: true }],
+      "better-tailwindcss/enforce-consistent-class-order": "error",
+      "better-tailwindcss/enforce-consistent-line-wrapping": "error",
+      "better-tailwindcss/no-conflicting-classes": "error",
+      "better-tailwindcss/no-duplicate-classes": "error",
+      "better-tailwindcss/no-unnecessary-whitespace": "error",
+      "better-tailwindcss/no-unregistered-classes": "error",
+      "testing-library/await-async-events": [
+        "error",
+        { eventModule: "userEvent" },
+      ],
+      "testing-library/await-async-queries": "error",
+      "testing-library/await-async-utils": "error",
+      "testing-library/no-await-sync-events": [
+        "error",
+        { eventModules: ["fire-event"] },
+      ],
+      "testing-library/no-await-sync-queries": "error",
+      "testing-library/no-container": "error",
+      "testing-library/no-debugging-utils": "error",
+      "testing-library/no-dom-import": ["error", "react"],
+      "testing-library/no-global-regexp-flag-in-query": "error",
+      "testing-library/no-manual-cleanup": "error",
+      "testing-library/no-node-access": "error",
+      "testing-library/no-promise-in-fire-event": "error",
+      "testing-library/no-render-in-lifecycle": "error",
+      "testing-library/no-unnecessary-act": "error",
+      "testing-library/no-wait-for-multiple-assertions": "error",
+      "testing-library/no-wait-for-side-effects": "error",
+      "testing-library/no-wait-for-snapshot": "error",
+      "testing-library/prefer-find-by": "error",
+      "testing-library/prefer-presence-queries": "error",
+      "testing-library/prefer-query-by-disappearance": "error",
+      "testing-library/prefer-screen-queries": "error",
+      "testing-library/render-result-naming-convention": "error",
+    },
+    overrides: [
+      {
+        // Asserting on a mocked or stubbed method reads it unbound.
+        files: ["src/**/*.test.{ts,tsx}"],
+        rules: { "typescript/unbound-method": "off" },
+      },
+      {
+        // Playwright locators (`page.getByRole`, ...) read like Testing Library
+        // queries destructured from `render`, which those rules flag, and a
+        // Playwright fixture's `use` callback reads like React's `use` hook.
+        files: ["scripts/demo/**/*.ts", "e2e/**/*.ts", "playwright.config.ts"],
+        env: { node: true },
+        rules: {
+          "testing-library/await-async-events": "off",
+          "testing-library/await-async-queries": "off",
+          "testing-library/await-async-utils": "off",
+          "testing-library/no-await-sync-events": "off",
+          "testing-library/no-await-sync-queries": "off",
+          "testing-library/no-container": "off",
+          "testing-library/no-debugging-utils": "off",
+          "testing-library/no-dom-import": "off",
+          "testing-library/no-global-regexp-flag-in-query": "off",
+          "testing-library/no-manual-cleanup": "off",
+          "testing-library/no-node-access": "off",
+          "testing-library/no-promise-in-fire-event": "off",
+          "testing-library/no-render-in-lifecycle": "off",
+          "testing-library/no-unnecessary-act": "off",
+          "testing-library/no-wait-for-multiple-assertions": "off",
+          "testing-library/no-wait-for-side-effects": "off",
+          "testing-library/no-wait-for-snapshot": "off",
+          "testing-library/prefer-find-by": "off",
+          "testing-library/prefer-presence-queries": "off",
+          "testing-library/prefer-query-by-disappearance": "off",
+          "testing-library/prefer-screen-queries": "off",
+          "testing-library/render-result-naming-convention": "off",
+          "react/rules-of-hooks": "off",
+        },
+      },
+    ],
+    options: { typeAware: true, typeCheck: true },
   },
 });

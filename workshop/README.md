@@ -16,6 +16,7 @@ This folder contains documentation for the EffectViz visualizer learning journey
 ## Phase Documentation
 
 Each phase document covers:
+
 - **Concepts**: What Effect features were explored
 - **Implementation**: What was built
 - **Key Files**: Important code changes
@@ -57,6 +58,7 @@ Take over the runtime's clock and scheduler so execution can be slowed and stepp
 - [Upgrading Effect to 3.22 (issue #18)](./effect-3.22-upgrade.md) ✅ — what three minor versions changed for the traces, and the one example that traces differently.
 
 **Why two versions?**
+
 - **V1** teaches concepts explicitly - you see exactly what gets traced
 - **V2** teaches Effect's production observability patterns
 - The conceptual knowledge from V1 transfers directly to understanding V2

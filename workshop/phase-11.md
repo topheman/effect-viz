@@ -12,25 +12,25 @@ useful at the moment you realise you cannot see what is happening, which is
 necessarily mid-run; re-running at 0.25x throws away the state you were looking
 at when you noticed.
 
-`VIZ_RATE` survives, and still means what it always did: the rate a run *opens*
+`VIZ_RATE` survives, and still means what it always did: the rate a run _opens_
 at. Step-from-idle and the auto-start that follows a speed change on a stopped
 program both go through it.
 
 ## Design Summary
 
-| Concern | Decision |
-|---|---|
-| Where the branch lives | `Stepper.setRate`, because pause state is private to it |
-| Container transport | A fourth `ControlCommand`, `{ cmd: "setRate", rate }` |
-| When the page's model follows | On the reply, not on the click |
-| Availability | `canChangeSpeed` is now unconditionally true |
+| Concern                       | Decision                                                |
+| ----------------------------- | ------------------------------------------------------- |
+| Where the branch lives        | `Stepper.setRate`, because pause state is private to it |
+| Container transport           | A fourth `ControlCommand`, `{ cmd: "setRate", rate }`   |
+| When the page's model follows | On the reply, not on the click                          |
+| Availability                  | `canChangeSpeed` is now unconditionally true            |
 
 ### Pause is rate 0, and that is the whole subtlety
 
 `Stepper.pause()` stashes the clock's rate, sets the clock to zero and gates the
 scheduler; `play()` restores the stashed value. Two mechanisms, one state.
 
-A naive `clock.setRate(next)` on a paused program therefore *unpauses the clock*
+A naive `clock.setRate(next)` on a paused program therefore _unpauses the clock_
 while the scheduler stays gated. Virtual time would start flowing, `Effect.sleep`
 deadlines would come due, and the tasks they queue would land in a gate that
 nothing is going to open — a program that looks frozen but is quietly
@@ -69,16 +69,16 @@ rate up on resume.
 
 ## Created/Modified Files
 
-| File | Changes |
-|---|---|
-| `src/runtime/stepper.ts` | `setRate(rate)` — the paused/running branch |
-| `src/runtime/controlChannel.ts` | `setRate` command and reply; `decodeCommand` learns to carry a payload |
-| `src/lib/containerController.ts` | `setRate(rate)` — send only, nothing waits on the outcome |
-| `src/lib/mirroredClock.ts` | `setRunRate(rate)`; `#runRate` is no longer `readonly` |
-| `src/hooks/useEventHandlers.ts` | `handleSetRate` for both paths; the reply handler follows the mirror |
-| `src/lib/playbackAvailability.ts` | `canChangeSpeed` is unconditionally true |
-| `src/components/layout/MainLayout.tsx` | `onSpeedChange` retunes a live program instead of scheduling an auto-start |
-| `src/components/layout/PlaybackControls.tsx` | A third speed hint: "applies on the next run" is no longer true |
+| File                                         | Changes                                                                    |
+| -------------------------------------------- | -------------------------------------------------------------------------- |
+| `src/runtime/stepper.ts`                     | `setRate(rate)` — the paused/running branch                                |
+| `src/runtime/controlChannel.ts`              | `setRate` command and reply; `decodeCommand` learns to carry a payload     |
+| `src/lib/containerController.ts`             | `setRate(rate)` — send only, nothing waits on the outcome                  |
+| `src/lib/mirroredClock.ts`                   | `setRunRate(rate)`; `#runRate` is no longer `readonly`                     |
+| `src/hooks/useEventHandlers.ts`              | `handleSetRate` for both paths; the reply handler follows the mirror       |
+| `src/lib/playbackAvailability.ts`            | `canChangeSpeed` is unconditionally true                                   |
+| `src/components/layout/MainLayout.tsx`       | `onSpeedChange` retunes a live program instead of scheduling an auto-start |
+| `src/components/layout/PlaybackControls.tsx` | A third speed hint: "applies on the next run" is no longer true            |
 
 ### The codec had to learn about payloads
 
@@ -92,7 +92,7 @@ to a clock that throws on negatives.
 ## Playback availability
 
 Speed is now allowed from every state, so the phase-10 table's `–` in the Speed
-column for `starting` and `running` no longer holds. What a change *does* depends
+column for `starting` and `running` no longer holds. What a change _does_ depends
 on the state: a stopped program is re-run at the new rate after a short debounce
 (unchanged from phase 10, and still the only way to give the choice something to
 show), and a live one — running or paused — is retuned in place.

@@ -23,7 +23,7 @@ are used precisely throughout.
 would measure. It comes from `Date.now()` and `performance.now()`, it always moves
 forward, and nothing we do can slow it down.
 
-**Virtual time** is the time the *program* believes it is living in. It is what
+**Virtual time** is the time the _program_ believes it is living in. It is what
 the Effect `Clock` service reports and what `Effect.sleep` counts down in. We
 control it completely.
 
@@ -62,7 +62,7 @@ Everything in Effect's model routes through the `Clock` service:
 - `Effect.log` timestamps come from `clockService.unsafeCurrentTimeMillis()`
   (`internal/fiberRuntime.ts:871`)
 
-Scaling *all* of time uniformly means `race`, `timeout` and exponential backoff
+Scaling _all_ of time uniformly means `race`, `timeout` and exponential backoff
 stretch together, so the program's observable semantics are unchanged — it is
 genuine slow motion, not a distortion. This is why we instrument the runtime
 rather than replaying recorded events in the UI.
@@ -88,7 +88,7 @@ which is why the two controls belong together.
 Two independent things advance the world: the clock ticking, and the scheduler
 running runnable tasks. With speed > 0 both are free-running, so pressing ⏭️ would
 be decorative — the resume arrives on its own regardless. So ⏭️ freezes first
-(rate → 0 *and* gate the scheduler), then releases exactly one thing, like a
+(rate → 0 _and_ gate the scheduler), then releases exactly one thing, like a
 browser debugger where step is only available while paused.
 
 ### The step ladder
@@ -110,26 +110,26 @@ only be inferred by elimination.
 
 ## Implementation Steps
 
-| # | Step | Status |
-|---|------|--------|
-| 1 | `VirtualClock` — shared virtual time source | ✅ |
-| 2 | Effect `Clock` layer built on `VirtualClock` | ✅ |
-| 3 | `Date` shim in the WebContainer runner | ✅ |
-| 3b | Virtual timestamps at every emit site | ✅ |
-| 4a | Gated `Scheduler` + step ladder | ✅ |
-| 4b | Control channel for the WebContainer | ✅ |
-| 5a | UI: speed combo + playback state matrix | ✅ |
-| 5b | UI: ⏯️ ⏭️ stepper controls (fallback path) | ✅ |
-| 6 | Example programs + explainers | ✅ |
-| 7 | Tag instrumentation events, with a show/hide toggle | ✅ |
+| #   | Step                                                | Status |
+| --- | --------------------------------------------------- | ------ |
+| 1   | `VirtualClock` — shared virtual time source         | ✅     |
+| 2   | Effect `Clock` layer built on `VirtualClock`        | ✅     |
+| 3   | `Date` shim in the WebContainer runner              | ✅     |
+| 3b  | Virtual timestamps at every emit site               | ✅     |
+| 4a  | Gated `Scheduler` + step ladder                     | ✅     |
+| 4b  | Control channel for the WebContainer                | ✅     |
+| 5a  | UI: speed combo + playback state matrix             | ✅     |
+| 5b  | UI: ⏯️ ⏭️ stepper controls (fallback path)          | ✅     |
+| 6   | Example programs + explainers                       | ✅     |
+| 7   | Tag instrumentation events, with a show/hide toggle | ✅     |
 
 ## Step 1: VirtualClock ✅
 
 ### Created Files
 
-| File | Contents |
-|------|----------|
-| `src/runtime/virtualClock.ts` | `VirtualClock` — the single virtual time source |
+| File                               | Contents                                                             |
+| ---------------------------------- | -------------------------------------------------------------------- |
+| `src/runtime/virtualClock.ts`      | `VirtualClock` — the single virtual time source                      |
 | `src/runtime/virtualClock.test.ts` | 28 tests: pause and re-arm regressions, chained sleeps, at-most-once |
 
 Virtual time is a piecewise-linear function of wall time, advancing at `rate`
@@ -156,7 +156,7 @@ Infinity delay fired after 5 ms
 
 So the naive version makes **pause wake every sleeping fiber almost immediately** —
 the exact inverse of pause, and it looks like a race condition rather than an
-arithmetic bug. Instead, `rate = 0` *parks* pending timers (clears the real
+arithmetic bug. Instead, `rate = 0` _parks_ pending timers (clears the real
 timeout, keeps the virtual deadline) and re-arms them on resume with the time
 that was actually remaining.
 
@@ -184,7 +184,7 @@ deadline and firing what is due — with no wall time passing at all. A chain of
 sleeps can be stepped through instantly, which is exactly what `TestClock` does
 in tests.
 
-Jumping time forward invalidates the timers that did *not* fire: they were armed
+Jumping time forward invalidates the timers that did _not_ fire: they were armed
 against the previous anchor, so they would go off late by exactly the amount of
 virtual time the jump skipped. Everything still pending is therefore re-armed
 after the jump. While paused this is a no-op, because parked timers hold no real
@@ -196,7 +196,7 @@ Three properties together guarantee it, and they matter because step 4 will driv
 this clock from the scheduler:
 
 - **`#fire` is the only place a callback is invoked**, and it removes the timer
-  from the map *before* running it. Map membership is the claim to run.
+  from the map _before_ running it. Map membership is the claim to run.
 - **Every path that fires or cancels clears the real timeout first**, so at most
   one is outstanding per timer.
 - **Ids are monotonic**, so a stale callback can never alias a newer timer.
@@ -208,7 +208,7 @@ strays from accumulating rather than from doing damage.
 #### Chained sleeps re-base themselves
 
 A sleep scheduled from inside another sleep's callback takes its deadline from
-virtual time *at the moment it is scheduled*, so error never accumulates across a
+virtual time _at the moment it is scheduled_, so error never accumulates across a
 chain and a rate change between two links applies cleanly to the second one. The
 same holds when the chain is interrupted by a pause: the inner sleep parks like
 any other.
@@ -223,10 +223,10 @@ Effect yet, so it is testable in isolation.
 
 ### Created Files
 
-| File | Contents |
-|------|----------|
-| `src/runtime/vizClock.ts` | `makeVizClock`, `makeVizClockLayer` — Effect `Clock` over the `VirtualClock` |
-| `src/runtime/vizClock.test.ts` | 10 tests driving real Effect programs |
+| File                           | Contents                                                                     |
+| ------------------------------ | ---------------------------------------------------------------------------- |
+| `src/runtime/vizClock.ts`      | `makeVizClock`, `makeVizClockLayer` — Effect `Clock` over the `VirtualClock` |
+| `src/runtime/vizClock.test.ts` | 10 tests driving real Effect programs                                        |
 
 `Layer.setClock` provides it, mirroring the `Layer.setTracer` idiom from phase 7.
 The `Clock` interface is five members: `unsafeCurrentTimeMillis`,
@@ -264,22 +264,22 @@ rate 0 genuinely freezes them.
 
 ## Step 3b: Virtual timestamps at every emit site ✅
 
-The shim made container trace timestamps virtual as a *side effect* of a global
+The shim made container trace timestamps virtual as a _side effect_ of a global
 patch, and left the fallback path on wall time. Both paths now read virtual time
 explicitly, so neither depends on the shim for correctness — the shim is back to
 doing only its real job, serving user code that reaches for `Date` directly.
 
 ### Created/Modified Files
 
-| File | Changes |
-|------|---------|
-| `src/runtime/virtualClock.ts` | Export the `Now` type |
-| `src/runtime/traceEmitter.ts` | 5 sites → `Clock.currentTimeMillis` |
-| `src/runtime/vizTracer.ts` | 2 sites → the runtime-supplied span times |
-| `src/runtime/vizSupervisor.ts` | 4 sites → injected `Now` |
-| `src/runtime/runProgram.ts` | 3 sites → injected `Now` |
+| File                            | Changes                                                    |
+| ------------------------------- | ---------------------------------------------------------- |
+| `src/runtime/virtualClock.ts`   | Export the `Now` type                                      |
+| `src/runtime/traceEmitter.ts`   | 5 sites → `Clock.currentTimeMillis`                        |
+| `src/runtime/vizTracer.ts`      | 2 sites → the runtime-supplied span times                  |
+| `src/runtime/vizSupervisor.ts`  | 4 sites → injected `Now`                                   |
+| `src/runtime/runProgram.ts`     | 3 sites → injected `Now`                                   |
 | `src/hooks/useEventHandlers.ts` | Fallback builds its own clock and provides the clock layer |
-| `src/services/webcontainer.ts` | `RUNNER_JS` passes `now`; prewarm import fixed |
+| `src/services/webcontainer.ts`  | `RUNNER_JS` passes `now`; prewarm import fixed             |
 
 ### Key Learnings
 
@@ -363,7 +363,7 @@ program on one click.
 #### A pause takes hold within one scheduler turn
 
 Tasks already handed to Effect's scheduler still run — they are out of our hands.
-Anything *they* schedule is queued. So the program stops a moment after Pause is
+Anything _they_ schedule is queued. So the program stops a moment after Pause is
 pressed, not instantly.
 
 #### The ladder needs both sources, in order
@@ -490,13 +490,13 @@ it is started again.
 
 ### Created/Modified Files
 
-| File | Changes |
-|------|---------|
-| `src/hooks/useSpeed.ts` | `SPEED_OPTIONS`, `useSpeed` (localStorage-backed), `formatSpeed` |
-| `src/components/layout/PlaybackControls.tsx` | Speed `Select`, `PauseReason`, corrected enable/disable rules |
-| `src/components/layout/MainLayout.tsx` | Speed state, debounced auto-start on speed change; `finished` on completion |
-| `src/hooks/useEventHandlers.ts` | `rate` through to both paths |
-| `src/hooks/useWebContainerBoot.ts`, `src/effects/spawnAndParse.ts` | `VIZ_RATE` spawn environment variable |
+| File                                                               | Changes                                                                     |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| `src/hooks/useSpeed.ts`                                            | `SPEED_OPTIONS`, `useSpeed` (localStorage-backed), `formatSpeed`            |
+| `src/components/layout/PlaybackControls.tsx`                       | Speed `Select`, `PauseReason`, corrected enable/disable rules               |
+| `src/components/layout/MainLayout.tsx`                             | Speed state, debounced auto-start on speed change; `finished` on completion |
+| `src/hooks/useEventHandlers.ts`                                    | `rate` through to both paths                                                |
+| `src/hooks/useWebContainerBoot.ts`, `src/effects/spawnAndParse.ts` | `VIZ_RATE` spawn environment variable                                       |
 
 ### The playback state model
 
@@ -505,14 +505,14 @@ together. **Lifecycle** is `idle → starting → running → paused → finishe
 **readiness** (`isPlayDisabled` while the container boots, `isSyncing` while the
 editor flushes) is orthogonal and can coincide with any of them.
 
-| | ⏯️ | ⏭️ | ↺ | Speed |
-|---|---|---|---|---|
-| `idle` + booting | – | – | – | ✓ |
-| `idle` ready | ✓ | ✓ (starts paused) | – | ✓ |
-| `starting` | – | – | ✓ | – |
-| `running` | ✓ (pause) | – | ✓ | – |
-| `paused` | ✓ (resume) | ✓ | ✓ | ✓ |
-| `finished` | ✓ (re-run) | ✓ (starts paused) | ✓ | ✓ |
+|                  | ⏯️         | ⏭️                | ↺   | Speed |
+| ---------------- | ---------- | ----------------- | --- | ----- |
+| `idle` + booting | –          | –                 | –   | ✓     |
+| `idle` ready     | ✓          | ✓ (starts paused) | –   | ✓     |
+| `starting`       | –          | –                 | ✓   | –     |
+| `running`        | ✓ (pause)  | –                 | ✓   | –     |
+| `paused`         | ✓ (resume) | ✓                 | ✓   | ✓     |
+| `finished`       | ✓ (re-run) | ✓ (starts paused) | ✓   | ✓     |
 
 Speed is locked while running because the WebContainer receives the rate as a
 spawn environment variable and cannot be retuned without restarting. That is a
@@ -521,7 +521,7 @@ channel anyway, and once it exists the rate can travel the same way. It since
 did — see [phase 11](./phase-11.md), which makes speed live in every state and
 supersedes the Speed column above.
 
-⏭️ is enabled at `idle` because there is otherwise no way *into* a paused run:
+⏭️ is enabled at `idle` because there is otherwise no way _into_ a paused run:
 Play starts a free-running program, and by the time the user pauses it, the
 opening events have gone. Step from `idle` starts the program already gated. It
 stays disabled while `running` — stepping remains a pause-mode operation.
@@ -580,11 +580,11 @@ was verified separately against the built runtime bundle under Node.
 
 ### Created/Modified Files
 
-| File | Changes |
-|------|---------|
-| `src/runtime/dateShim.ts` | `installDateShim(virtualClock)` → uninstall function |
-| `src/runtime/dateShim.test.ts` | 13 tests |
-| `src/runtime/index.ts` | Export `_installDateShim`, `_VirtualClock`, `_makeVizClockLayer` |
+| File                           | Changes                                                                    |
+| ------------------------------ | -------------------------------------------------------------------------- |
+| `src/runtime/dateShim.ts`      | `installDateShim(virtualClock)` → uninstall function                       |
+| `src/runtime/dateShim.test.ts` | 13 tests                                                                   |
+| `src/runtime/index.ts`         | Export `_installDateShim`, `_VirtualClock`, `_makeVizClockLayer`           |
 | `src/services/webcontainer.ts` | `RUNNER_JS` creates the clock, installs the shim, provides the clock layer |
 
 Effect's own notion of time already comes from the `Clock`, but code calling
@@ -610,13 +610,13 @@ itself builds log timestamps with `new Date(clock.unsafeCurrentTimeMillis())`.
 #### Only one ordering constraint remains
 
 `runner.js` imports `runtime.js` statically and loads the user's program with a
-*dynamic* `await import()`, so `main()` can install the shim in between: the
+_dynamic_ `await import()`, so `main()` can install the shim in between: the
 program module then evaluates and sees virtual time from its first statement. Had
 the program been a static import it would have initialised before the shim landed
 and captured the real `Date`.
 
 That constraint is inherent — a shim only affects code evaluated after it. The
-*second* constraint this originally had, that the clock must capture `Date.now`
+_second_ constraint this originally had, that the clock must capture `Date.now`
 before being shimmed, was removed by having the clock read `performance` instead.
 
 #### Trace timestamps became virtual for free
@@ -718,18 +718,18 @@ settles any step still waiting with a null outcome.
 
 ### Created/Modified Files
 
-| File | Changes |
-|------|---------|
-| `src/runtime/controlChannel.ts` | Command and reply codecs, `applyCommand`, `makeLineReader` |
-| `src/runtime/controlChannel.test.ts` | 35 tests |
-| `src/lib/mirroredClock.ts` | The page's model of the container's clock |
-| `src/lib/mirroredClock.test.ts` | 7 tests |
-| `src/lib/containerController.ts` | Turns clicks into commands, resolves a step on its reply |
-| `src/lib/containerController.test.ts` | 7 tests |
-| `src/services/webcontainer.ts` | `RUNNER_JS` builds the scheduler and stepper, reads stdin, writes replies |
-| `src/effects/spawnAndParse.ts` | `TRACE_CONTROL:` branch, writes to `proc.input`, `VIZ_START_PAUSED` |
-| `src/hooks/useEventHandlers.ts` | One pair of handlers for both paths; a step is a promise on each |
-| `src/components/layout/PlaybackControls.tsx` | `isSteppingSupported` removed — every path supports it now |
+| File                                         | Changes                                                                   |
+| -------------------------------------------- | ------------------------------------------------------------------------- |
+| `src/runtime/controlChannel.ts`              | Command and reply codecs, `applyCommand`, `makeLineReader`                |
+| `src/runtime/controlChannel.test.ts`         | 35 tests                                                                  |
+| `src/lib/mirroredClock.ts`                   | The page's model of the container's clock                                 |
+| `src/lib/mirroredClock.test.ts`              | 7 tests                                                                   |
+| `src/lib/containerController.ts`             | Turns clicks into commands, resolves a step on its reply                  |
+| `src/lib/containerController.test.ts`        | 7 tests                                                                   |
+| `src/services/webcontainer.ts`               | `RUNNER_JS` builds the scheduler and stepper, reads stdin, writes replies |
+| `src/effects/spawnAndParse.ts`               | `TRACE_CONTROL:` branch, writes to `proc.input`, `VIZ_START_PAUSED`       |
+| `src/hooks/useEventHandlers.ts`              | One pair of handlers for both paths; a step is a promise on each          |
+| `src/components/layout/PlaybackControls.tsx` | `isSteppingSupported` removed — every path supports it now                |
 
 ### Key Learnings
 
@@ -766,7 +766,7 @@ before its rate changes, or the elapsed interval gets re-read at a rate that was
 never in effect for it.
 
 That asymmetry also decides when the model follows a command. It freezes on the
-click, so the cursor stops when the user expects; it resumes on the *reply*,
+click, so the cursor stops when the user expects; it resumes on the _reply_,
 because a model resumed early would run ahead of the container for the rest of
 the run, and forward-only corrections would never pull it back.
 
@@ -775,7 +775,7 @@ the run, and forward-only corrections would never pull it back.
 A listener on `process.stdin` refs Node's event loop. That is a problem and a
 solution at once. Without the release the process would never exit, because
 nothing else keeps it open once a program finishes; the listener is removed when
-the root promise settles. But it also cannot simply be unref'd, because a *paused*
+the root promise settles. But it also cannot simply be unref'd, because a _paused_
 program has no task running and no timer armed — while the gate is closed, that
 listener is the only thing holding the process open at all.
 
@@ -863,15 +863,15 @@ tagged and the user decides.
 
 ### Created/Modified Files
 
-| File | Changes |
-|------|---------|
-| `src/types/trace.ts` | `TraceOrigin`, `TraceEvent & { origin? }`, `isToolEvent` |
-| `src/runtime/traceOrigin.ts` | `makeOriginTagger` — finds the injected yield |
-| `src/runtime/traceOrigin.test.ts` | 7 tests |
-| `src/hooks/useShowInternals.ts` | One preference, shared by both panels |
-| `src/effects/spawnAndParse.ts` | `onStdout` gains an origin; echoed commands classified |
-| `src/components/visualizer/ExecutionLog.tsx` | Filter, toggle, dimmed tool rows |
-| `src/components/editor/WebContainerLogsPanel.tsx` | Filter and toggle for control lines |
+| File                                              | Changes                                                  |
+| ------------------------------------------------- | -------------------------------------------------------- |
+| `src/types/trace.ts`                              | `TraceOrigin`, `TraceEvent & { origin? }`, `isToolEvent` |
+| `src/runtime/traceOrigin.ts`                      | `makeOriginTagger` — finds the injected yield            |
+| `src/runtime/traceOrigin.test.ts`                 | 7 tests                                                  |
+| `src/hooks/useShowInternals.ts`                   | One preference, shared by both panels                    |
+| `src/effects/spawnAndParse.ts`                    | `onStdout` gains an origin; echoed commands classified   |
+| `src/components/visualizer/ExecutionLog.tsx`      | Filter, toggle, dimmed tool rows                         |
+| `src/components/editor/WebContainerLogsPanel.tsx` | Filter and toggle for control lines                      |
 
 ### Key Learnings
 
@@ -935,7 +935,7 @@ The ten programs the visualizer shipped with were all sleep-shaped: every fork i
 followed straight away by an `Effect.sleep`, so the trace reads fork, fork,
 suspend, suspend, wait, resume, resume. That is the speed control's territory —
 those programs are already slow, and slowing them further only stretches gaps the
-reader could see anyway. The stepper earns its keep in the burst *between* the
+reader could see anyway. The stepper earns its keep in the burst _between_ the
 sleeps, and no example had one.
 
 Choosing what to add by concept rather than by what would look busy, five things
@@ -945,21 +945,21 @@ Interruption did appear, but only as `Fiber.interrupt` on two flat siblings in
 Racing: a hierarchy was never cancelled, and a finalizer never unwound on anything
 but the success path.
 
-| Program | Teaches |
-|---------|---------|
-| Cooperative Interleaving | Fibers take turns at yield points; concurrency is not parallelism |
-| Bounded Concurrency | `Effect.all` with a `concurrency` limit, rather than hand-rolled forks |
-| Structured Interruption | Cancelling a parent cancels its children, and finalizers still run |
-| Timeout | A deadline read from the same clock the program sleeps on |
-| Deadlock | `Deferred`, and what a fiber deadlock is |
+| Program                  | Teaches                                                                |
+| ------------------------ | ---------------------------------------------------------------------- |
+| Cooperative Interleaving | Fibers take turns at yield points; concurrency is not parallelism      |
+| Bounded Concurrency      | `Effect.all` with a `concurrency` limit, rather than hand-rolled forks |
+| Structured Interruption  | Cancelling a parent cancels its children, and finalizers still run     |
+| Timeout                  | A deadline read from the same clock the program sleeps on              |
+| Deadlock                 | `Deferred`, and what a fiber deadlock is                               |
 
 ### Created/Modified Files
 
-| File | Changes |
-|------|---------|
-| `src/lib/programs.ts` | Five effects and their registry entries, with the lesson in the code |
-| `src/lib/programs.test.ts` | 5 tests asserting each example does what its comments claim |
-| `src/lib/programCache.test.ts` | Fixture extended to the new keys |
+| File                           | Changes                                                              |
+| ------------------------------ | -------------------------------------------------------------------- |
+| `src/lib/programs.ts`          | Five effects and their registry entries, with the lesson in the code |
+| `src/lib/programs.test.ts`     | 5 tests asserting each example does what its comments claim          |
+| `src/lib/programCache.test.ts` | Fixture extended to the new keys                                     |
 
 ### Key Learnings
 

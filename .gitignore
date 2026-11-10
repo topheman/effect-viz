@@ -43,3 +43,4 @@ recordings
 # Playwright output from `pnpm run e2e`
 test-results
 playwright-report
+.vitest/

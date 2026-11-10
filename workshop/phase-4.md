@@ -22,13 +22,13 @@ Retrying means running the same effect again after a failure. To **track attempt
 
 ### Created/Modified Files
 
-| File | Changes |
-|------|---------|
-| `src/types/trace.ts` | `RetryAttemptEvent` (id, label, attempt, lastError, timestamp?) |
-| `src/runtime/tracedRunner.ts` | `emitRetry`, `retryWithTrace` (loop-based, effect:start/end + retry:attempt) |
-| `src/lib/programs.ts` | `failureAndRecovery` program, `retry` program (Ref + retryWithTrace) |
-| `src/components/visualizer/ExecutionLog.tsx` | Failure styling (red), retry:attempt from current event, `formatError` |
-| `src/hooks/useEventHandlers.ts` | Program as `Effect<unknown, unknown, TraceEmitter>` for union of program types |
+| File                                         | Changes                                                                        |
+| -------------------------------------------- | ------------------------------------------------------------------------------ |
+| `src/types/trace.ts`                         | `RetryAttemptEvent` (id, label, attempt, lastError, timestamp?)                |
+| `src/runtime/tracedRunner.ts`                | `emitRetry`, `retryWithTrace` (loop-based, effect:start/end + retry:attempt)   |
+| `src/lib/programs.ts`                        | `failureAndRecovery` program, `retry` program (Ref + retryWithTrace)           |
+| `src/components/visualizer/ExecutionLog.tsx` | Failure styling (red), retry:attempt from current event, `formatError`         |
+| `src/hooks/useEventHandlers.ts`              | Program as `Effect<unknown, unknown, TraceEmitter>` for union of program types |
 
 ### Key Functions
 

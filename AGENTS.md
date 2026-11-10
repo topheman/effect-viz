@@ -65,11 +65,13 @@ Invoked by the `/resume` skill (Claude Code) at the start of a fresh session.
    - Learning outcomes
 
 **Quick reference:**
+
 - Current phase? → `MEMORY.md` "Current Phase" section
 - Architecture decisions? → `workshop/ARCHITECTURE.md`
 - What was built? → `workshop/phase-N.md` for that phase
 
 When completing a phase, create a phase document in `workshop/`:
+
 - `workshop/phase-N.md` - Document concepts, implementation, and learning outcomes
 - See `workshop/README.md` for the documentation structure
 - Update `workshop/README.md` to mark the phase as complete
@@ -83,26 +85,27 @@ its write-up is in the diff.
 This project is based on a custom template relying on the following stack:
 
 - React 19 (with react-compiler)
-- Vite 7
+- Vite+ (Vite 8, Vitest, Oxlint, Oxfmt), configured in `vite.config.ts`
 - TypeScript 5.9
 - Tailwind CSS 4
 - Testing: Vitest + React Testing Library
-- Linting: ESLint with:
-  - Prettier configured as a plugin
-  - Better Tailwind CSS integration
-  - Testing Library integration
-  - Import plugin
+- Linting: Oxlint, type-aware, with:
+  - React hooks and React Compiler rules
+  - Better Tailwind CSS and Testing Library as JS plugins
+- Formatting: Oxfmt, which also sorts imports
 
 All those are properly configured. Take advantage of it.
 
 ## Guidelines
 
 - ALWAYS ASK FOR CONFIRMATION before installing a new dependency.
-- TypeScript and Eslint is properly configured. Take advantage of it.
-  - `pnpm run lint`: runs eslint
-  - `pnpm run lint:fix`: auto fixes eslint errors
-- vitest, a test runner, is properly configured with react-testing-library. Take advantage of it. Write tests for your code.
+- TypeScript and Oxlint are properly configured. Take advantage of it.
+  - `pnpm run check`: formats, lints and type checks (`vp check`)
+  - `pnpm run lint:fix`: auto fixes lint errors
+  - `pnpm run format`: formats the code
+- Vitest, a test runner, is properly configured with react-testing-library. Take advantage of it. Write tests for your code.
   - `pnpm run test`: runs tests
+  - Test files import from `vite-plus/test`, not `vitest`.
 - Use tailwind 4 for styling unless you are told otherwise.
 - Format on save is enabled.
 - Git hooks are enabled.

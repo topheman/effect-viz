@@ -67,11 +67,13 @@ sequenceDiagram
 There are two distinct "projects":
 
 **Root project (EffectViz)** – The React app that runs in the browser:
+
 - `src/` – App code (components, hooks, stores, etc.)
 - `package.json` – React, Vite, Effect, Monaco, etc.
 - Build produces the app bundle and a **container bundle** (tracedRunner) for the inner project.
 
 **Inner project** – A self-contained Node project that lives **inside** the WebContainer filesystem. It has:
+
 - **Its own package.json** – Dependencies: `effect`, `typescript`, `tsx`. This is the project we run `npm install` on inside the container.
 - **tracedRunner.js** – Bundled from the root's `tracedRunner.ts` and `traceEmitter.ts`. Built as part of the root project (e.g. Vite lib mode or esbuild), output to a path that gets mounted. **Unmangle:** The bundle must preserve export names (`withTrace`, `forkWithTrace`, `makeTraceEmitterLayer`, `runProgramWithTrace`, etc.) so the user's code can `import { withTrace, forkWithTrace, ... } from './tracedRunner'`. Use `minify: false` or equivalent `keepNames` so the API stays usable.
 - **program.ts** – User's edited content (transformed before write). Synced to the container as the user edits (debounced), not only on Play. Keeps the container in sync for types and runtime.
@@ -151,6 +153,7 @@ Mount the inner project so we can run the user's TypeScript with Effect and our 
 ## 4. Transforming editor content and syncing to the container
 
 The editor syncs with the container filesystem as the user edits (debounced, e.g. 2 seconds after typing stops — reduces write frequency; see Effect website). This keeps `program.ts` in the container up to date for:
+
 - **Types and diagnostics:** Run `tsc --noEmit` (or similar) in the container to get accurate errors, using real module resolution (`effect` from node_modules, `./tracedRunner` from the bundle). The container is the source of truth.
 - **Play:** No write step on Play — the file is already there; we only spawn.
 
@@ -194,12 +197,12 @@ The content executed (`program.ts`) is the **transformed** file: the user's Effe
 
 ## 8. Files and responsibilities (summary)
 
-| Area | Responsibility |
-|------|----------------|
-| **Host** | Boot WebContainer on app mount; mount template; run `npm install` in container; on edit (debounced) and when loading built-in: transform editor content, write `program.ts`; on Play: spawn, read output stream, parse `TRACE_EVENT:` lines, push to trace/fiber stores; on Reset: kill process and clear stores. |
-| **Container template** | Minimal Node project with its own package.json (effect, typescript, tsx), tracedRunner bundle (from root, unmangled), program.ts (written at runtime). |
-| **Editor** | Program tab editable; dropdown loads built-in source; shows before Play. |
-| **Deployment** | COOP/COEP headers (e.g. in `vercel.json`); HTTPS in production. |
+| Area                   | Responsibility                                                                                                                                                                                                                                                                                                    |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Host**               | Boot WebContainer on app mount; mount template; run `npm install` in container; on edit (debounced) and when loading built-in: transform editor content, write `program.ts`; on Play: spawn, read output stream, parse `TRACE_EVENT:` lines, push to trace/fiber stores; on Reset: kill process and clear stores. |
+| **Container template** | Minimal Node project with its own package.json (effect, typescript, tsx), tracedRunner bundle (from root, unmangled), program.ts (written at runtime).                                                                                                                                                            |
+| **Editor**             | Program tab editable; dropdown loads built-in source; shows before Play.                                                                                                                                                                                                                                          |
+| **Deployment**         | COOP/COEP headers (e.g. in `vercel.json`); HTTPS in production.                                                                                                                                                                                                                                                   |
 
 ---
 

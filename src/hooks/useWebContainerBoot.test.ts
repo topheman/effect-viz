@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { Effect } from "effect";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import {
   useWebContainerLogsStore,

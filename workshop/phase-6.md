@@ -9,6 +9,7 @@ Effect's **Supervisor** is a runtime hook. When you add a Supervisor via `Layer.
 ### Supervisor.AbstractSupervisor
 
 `Supervisor.AbstractSupervisor<void>` provides the base. You implement:
+
 - **onStart**: Called when a fiber starts; receives parent (Option), fiber; emit `fiber:fork`.
 - **onEnd**: Called when a fiber ends; receives Exit and fiber; emit `fiber:end` or `fiber:interrupt` based on Exit.
 
@@ -20,13 +21,13 @@ Supervisor callbacks are **synchronous**. In the WebContainer, the emit callback
 
 ### Created/Modified Files
 
-| File | Changes |
-|------|---------|
-| `src/runtime/vizSupervisor.ts` | `VizSupervisor` class extending `Supervisor.AbstractSupervisor<void>`; `makeVizLayers(onEmit)` returns `Supervisor.addSupervisor` layer; `shouldIgnoreFiber` filters internal/non-app fibers |
-| `src/runtime/runProgram.ts` | `runProgramFork(program, onEmit)` — forks program with `Effect.runFork`, uses `updateRefs` to emit root `fiber:fork`, returns fiber + promise that emits `fiber:end`/`fiber:interrupt` on completion |
-| `src/hooks/useEventHandlers.ts` | Fallback play: adds `makeVizLayers(onEmit)` to layers, uses `runProgramFork` |
-| `src/services/webcontainer.ts` | RUNNER_JS: adds `makeVizLayers`, uses `runProgramFork`; same layer merge pattern |
-| `src/lib/programs.ts` | Migrated `basic`, `multiStep`, `nestedForks`, `racing` to plain `Effect.fork`; source strings updated |
+| File                            | Changes                                                                                                                                                                                              |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/runtime/vizSupervisor.ts`  | `VizSupervisor` class extending `Supervisor.AbstractSupervisor<void>`; `makeVizLayers(onEmit)` returns `Supervisor.addSupervisor` layer; `shouldIgnoreFiber` filters internal/non-app fibers         |
+| `src/runtime/runProgram.ts`     | `runProgramFork(program, onEmit)` — forks program with `Effect.runFork`, uses `updateRefs` to emit root `fiber:fork`, returns fiber + promise that emits `fiber:end`/`fiber:interrupt` on completion |
+| `src/hooks/useEventHandlers.ts` | Fallback play: adds `makeVizLayers(onEmit)` to layers, uses `runProgramFork`                                                                                                                         |
+| `src/services/webcontainer.ts`  | RUNNER_JS: adds `makeVizLayers`, uses `runProgramFork`; same layer merge pattern                                                                                                                     |
+| `src/lib/programs.ts`           | Migrated `basic`, `multiStep`, `nestedForks`, `racing` to plain `Effect.fork`; source strings updated                                                                                                |
 
 ### Key Functions
 
@@ -56,7 +57,7 @@ The Supervisor's `onStart` fires for every fiber including the root. However, `E
 
 ### Why runProgramFork Instead of Supervisor Alone
 
-The root fiber is created by `Effect.runFork(program)`. At that moment, the program's layers (including Supervisor) are provided to the *program*, but the root fiber itself is created by the runtime *before* the program runs. The Supervisor is part of the program's environment, so it sees child fibers but not the root. Hence `runProgramFork` uses `updateRefs` to emit the root fiber:fork and the promise to emit fiber:end/fiber:interrupt.
+The root fiber is created by `Effect.runFork(program)`. At that moment, the program's layers (including Supervisor) are provided to the _program_, but the root fiber itself is created by the runtime _before_ the program runs. The Supervisor is part of the program's environment, so it sees child fibers but not the root. Hence `runProgramFork` uses `updateRefs` to emit the root fiber:fork and the promise to emit fiber:end/fiber:interrupt.
 
 ### Fork Labels
 

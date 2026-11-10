@@ -45,13 +45,13 @@ flowchart TB
 
 **Play flow → `node program.js`:**
 
-| Step | Action |
-|------|--------|
-| 1 | User clicks Play → `flushSync(editorContent)` (cancel debounce, sync now) |
-| 2 | Sync → Transform → Transpile → `writeFile(program.ts, program.js)` to container |
-| 3 | `runPlay()` → `spawnAndParseTraceEvents` |
-| 4 | Spawn → `wc.spawn("node", ["--enable-source-maps", "program.js"])` → **`node program.js` runs** |
-| 5 | Node stdout → Spawn parses `TRACE_EVENT:` lines → TraceStore + FiberStore |
+| Step | Action                                                                                          |
+| ---- | ----------------------------------------------------------------------------------------------- |
+| 1    | User clicks Play → `flushSync(editorContent)` (cancel debounce, sync now)                       |
+| 2    | Sync → Transform → Transpile → `writeFile(program.ts, program.js)` to container                 |
+| 3    | `runPlay()` → `spawnAndParseTraceEvents`                                                        |
+| 4    | Spawn → `wc.spawn("node", ["--enable-source-maps", "program.js"])` → **`node program.js` runs** |
+| 5    | Node stdout → Spawn parses `TRACE_EVENT:` lines → TraceStore + FiberStore                       |
 
 ---
 
@@ -60,19 +60,21 @@ flowchart TB
 ### 2.1 Problem
 
 Running `pnpm exec tsx program.ts` in the container had ~3.5s delay from Play to first trace event due to:
+
 - tsx startup
 - TypeScript compile on demand
 - Effect/tracedRunner module loading
 
 ### 2.2 Solution
 
-| Step | Location | What |
-|------|----------|------|
-| 1 | Host | Transpile editor content with **esbuild-wasm** |
-| 2 | Host | Write `program.ts` + `program.js` to container |
-| 3 | Container | Run `node --enable-source-maps program.js` |
+| Step | Location  | What                                           |
+| ---- | --------- | ---------------------------------------------- |
+| 1    | Host      | Transpile editor content with **esbuild-wasm** |
+| 2    | Host      | Write `program.ts` + `program.js` to container |
+| 3    | Container | Run `node --enable-source-maps program.js`     |
 
 **Key files:**
+
 - `src/lib/transpileForContainer.ts` — `initEsbuildWasm()`, `transpileForContainer(ts)` using esbuild-wasm CDN
 - `src/lib/transformForContainer.ts` — import path `./tracedRunner.js`, trace emitter bridge, program key `"user"`
 - `src/effects/spawnAndParse.ts` — spawns `node program.js`
@@ -109,6 +111,7 @@ sequenceDiagram
 ### 2.4 Node ESM Requirement
 
 Node ESM requires explicit `.js` in import paths. The transform ensures:
+
 - `@/runtime/tracedRunner` → `./tracedRunner.js`
 - `./tracedRunner` → `./tracedRunner.js`
 
@@ -146,15 +149,15 @@ Node ESM requires explicit `.js` in import paths. The transform ensures:
 
 ### 4.2 Host Timings (browser console)
 
-| Label | Meaning |
-|-------|---------|
-| t0 | Before spawn |
-| t1 | Spawn returned |
-| t0→t1 | Spawn overhead (~4ms) |
-| t2 | First stdout chunk |
+| Label | Meaning                         |
+| ----- | ------------------------------- |
+| t0    | Before spawn                    |
+| t1    | Spawn returned                  |
+| t0→t1 | Spawn overhead (~4ms)           |
+| t2    | First stdout chunk              |
 | t1→t2 | `node program.js` runtime (~1s) |
-| t3 | First TRACE_EVENT parsed |
-| t0→t3 | Total Play → first event |
+| t3    | First TRACE_EVENT parsed        |
+| t0→t3 | Total Play → first event        |
 
 ### 4.3 Container Timings
 
@@ -172,12 +175,12 @@ before `Effect.runFork`. Logged as `[container] ready: <ms>`.
 
 ### 5.1 Tracked Prefixes
 
-| Prefix | Purpose |
-|--------|---------|
-| `TRACE_EVENT:` | JSON trace event (effect:start, fiber:fork, etc.) |
-| `PERF:` | Performance checkpoint from container |
+| Prefix           | Purpose                                                                      |
+| ---------------- | ---------------------------------------------------------------------------- |
+| `TRACE_EVENT:`   | JSON trace event (effect:start, fiber:fork, etc.)                            |
+| `PERF:`          | Performance checkpoint from container                                        |
 | `TRACE_CONTROL:` | Reply to a pause, resume or step command (see [phase-10.md](../phase-10.md)) |
-| *(none)* | Anything else → from something writing to stdout inside the container |
+| _(none)_         | Anything else → from something writing to stdout inside the container        |
 
 ### 5.2 Un-tracked Lines
 
@@ -259,13 +262,13 @@ sequenceDiagram
 
 ## 8. File Reference
 
-| File | Role |
-|------|------|
-| `src/lib/transpileForContainer.ts` | esbuild-wasm init + TS→ESM transform |
-| `src/lib/transformForContainer.ts` | Import path, trace emitter, program key, perf injection |
-| `src/effects/spawnAndParse.ts` | Spawn `node program.js`, parse TRACE_EVENT, forward other stdout to the host |
-| `src/hooks/useWebContainerBoot.ts` | syncToContainer, flushSync, isSyncing, runPlay |
-| `src/services/webcontainer.ts` | Boot, mount, INITIAL_PROGRAM + program.js, tracedRunner.js |
-| `src/components/layout/MainLayout.tsx` | onPlay with flushSync |
-| `src/components/layout/PlaybackControls.tsx` | Syncing... indicator |
-| `src/components/editor/WebContainerLogsPanel.tsx` | Boot logs, program stdout, errors |
+| File                                              | Role                                                                         |
+| ------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `src/lib/transpileForContainer.ts`                | esbuild-wasm init + TS→ESM transform                                         |
+| `src/lib/transformForContainer.ts`                | Import path, trace emitter, program key, perf injection                      |
+| `src/effects/spawnAndParse.ts`                    | Spawn `node program.js`, parse TRACE_EVENT, forward other stdout to the host |
+| `src/hooks/useWebContainerBoot.ts`                | syncToContainer, flushSync, isSyncing, runPlay                               |
+| `src/services/webcontainer.ts`                    | Boot, mount, INITIAL_PROGRAM + program.js, tracedRunner.js                   |
+| `src/components/layout/MainLayout.tsx`            | onPlay with flushSync                                                        |
+| `src/components/layout/PlaybackControls.tsx`      | Syncing... indicator                                                         |
+| `src/components/editor/WebContainerLogsPanel.tsx` | Boot logs, program stdout, errors                                            |

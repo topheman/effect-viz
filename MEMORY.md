@@ -3,6 +3,7 @@
 **Quick Context**: See [`workshop/README.md`](workshop/README.md) for full documentation.
 
 ## Current Phase
+
 **Phase 11**: COMPLETE ✅ — speed is live during a run (`workshop/phase-11.md`). The rate travels on the control channel alongside pause, resume and step, so a running program is retuned where it stands and a paused one resumes at the rate chosen while it was frozen. `VIZ_RATE` still sets the rate a run opens at.
 
 **Phase 10**: COMPLETE ✅ — slow mode & stepper (issue #13). All steps done: VirtualClock, Effect Clock layer, Date shim, virtual timestamps, GatedScheduler + step ladder, control channel for the WebContainer, speed combo + stepper controls, origin tagging with show-internals toggle, and five new example programs.
@@ -14,12 +15,14 @@
 ## Completed Phases
 
 ### Phase 1: Lazy Evaluation and Success/Failure
+
 - [x] TraceStore (`src/stores/traceStore.tsx`)
 - [x] ExecutionLog wired with color-coded events
 - [x] `TraceEmitter` service + `makeTraceEmitterLayer`
 - [x] Play button wired via `useEventHandlers` hook
 
 ### Phase 2: Fibers, Fork/Join, Interruption
+
 - [x] FiberStore with processEvent (fork, end, interrupt)
 - [x] buildFiberTree recursive function
 - [x] `forkWithTrace` using Effect's real FiberId
@@ -31,6 +34,7 @@
 - [x] Reset button to interrupt running fibers
 
 ### Phase 3: Scheduling, Delays, Suspended Fibers
+
 - [x] `sleepWithTrace()` - emits sleep:start/sleep:end events
 - [x] FiberStore handles sleep events (suspended state)
 - [x] FiberTreeView shows suspended indicator (zzz + pulse animation)
@@ -40,6 +44,7 @@
 - [x] Legend for timeline states (running/suspended/completed/interrupted)
 
 ### Phase 4: Errors and Retries
+
 - [x] Failure & Recovery program (`failureAndRecovery`)
 - [x] Retry program with Ref and retry
 - [x] retry loop-based: effect:start/effect:end + retry:attempt per failed attempt
@@ -47,12 +52,14 @@
 - [x] ExecutionLog: failure styling (red), retry:attempt from current event, formatError
 
 ### Phase 9: retry with Schedule API
+
 - [x] `retry(effect, schedule, label)` — Schedule as second arg (like Effect.retry)
 - [x] Schedule.driver + loop; keep emitStart/emitEnd/emitRetry (same id for association)
 - [x] Programs use `retry`, `Schedule.recurs`, `Schedule.addDelay`; retryExponentialBackoff example
 - [x] Public APIs match Effect; internal APIs prefixed with _
 
 ### Phase 6: Supervisor for Automatic Fiber Tracking
+
 - [x] VizSupervisor extending Supervisor.AbstractSupervisor<void>
 - [x] makeVizLayers(onEmit) → Supervisor.addSupervisor layer
 - [x] runProgramFork for root fiber emission (updateRefs + promise)
@@ -62,18 +69,21 @@
 - [x] makeVizLayers wired in fallback and WebContainer RUNNER_JS
 
 ### Phase 7: Custom Tracer for Effect.withSpan
+
 - [x] makeVizTracer(onEmit) → Tracer via Tracer.make
 - [x] Layer.setTracer wired in useEventHandlers and WebContainer RUNNER_JS
 - [x] All programs migrated from withTrace to Effect.withSpan
 - [x] withTrace removed from tracedRunner and exports
 
 ### Phase 8: Sleep Visibility via Supervisor onSuspend/onResume
+
 - [x] VizSupervisor onSuspend/onResume emit fiber:suspend, fiber:resume
 - [x] FiberStore and TimelineView handle suspend/resume; ignore spurious suspend when fiber already terminated
 - [x] All programs migrated from sleepWithTrace to Effect.sleep
 - [x] sleepWithTrace removed from tracedRunner and exports
 
 ### Phase 5: Scopes and Resources
+
 - [x] `FinalizerEvent`, `AcquireEvent` in trace types
 - [x] `emitFinalizer`, `emitAcquire` in tracedRunner
 - [x] `addFinalizerWithTrace` (wraps Effect.addFinalizer, emits on run)
@@ -82,6 +92,7 @@
 - [x] Basic Finalizers program (3 finalizers, LIFO demo) and Acquire Release program; both use Effect.scoped
 
 ### Key Learning (Phase 3)
+
 - Fibers **suspend** (yield control) rather than block
 - Cooperative scheduling: fibers yield at suspension points
 - `Duration.decode()` converts DurationInput to Duration
@@ -89,38 +100,45 @@
 - Manual instrumentation limitations vs runtime hooks
 
 ### Key Learning (Phase 4)
+
 - Typed errors: effect:end with result "failure" and error
 - Retry attempt tracking: loop with Effect.exit(effect), emit retry:attempt, same span id
 - Ref for state across retry attempts (e.g. fail N times then succeed)
 - ExecutionLog must use current event for retry:attempt (not first match)
 
 ### Key Learning (Phase 6)
+
 - Supervisor is a runtime hook: onStart/onEnd fire for every fiber; no user code changes
 - Root fiber: Supervisor sees child fibers but not the root (created before program runs); runProgramFork uses updateRefs + promise
 - Internal fibers: cleanup fibers (Effect.scoped) can be filtered (no services injected); Effect.race/all fibers cannot be identified (inherit parent context)
 
 ### Key Learning (Phase 7)
+
 - Tracer.make returns a Tracer; span() emits effect:start and returns Span; span.end() emits effect:end
 - Layer.setTracer provides the Tracer; Effect.withSpan uses it—no TraceEmitter in R
 - Same ergonomics as withTrace but standard Effect API
 
 ### Key Learning (Phase 8)
+
 - Supervisor onSuspend/onResume fire when fibers yield (sleep) and when they complete (onSuspend in finally)
 - Ignore fiber:suspend when fiber is already completed/interrupted to avoid timeline never stopping
 - Plain Effect.sleep—no wrapper needed for suspension visibility
 
 ### Key Learning (Phase 9)
+
 - Schedule.driver lets us step through a schedule; driver.next(error) sleeps for delay and returns when schedule continues
 - retry mirrors Effect.retry(effect, schedule) with label for tracing
 - Keep TraceEmitter for effect:start, effect:end, retry:attempt so all share same span id
 - Public APIs match Effect (retry, addFinalizer, acquireRelease); internal APIs prefixed with _
 
 ### Key Learning (Phase 5)
+
 - addFinalizer callback must **return** an Effect (emit then run user finalizer); runtime provides env when it runs
 - Finalizers run LIFO; use Effect.scoped(effect) so programs have a scope
 - acquireReleaseWithTrace built on addFinalizerWithTrace; AcquireEvent for acquire outcome, FinalizerEvent for release
 
 ### Key Learning (Phase 10)
+
 - Two clocks: **wall** (performance.now, unshimmable) vs **virtual** (the program's Clock); connected by `rate`; re-anchor on every rate change so time never jumps
 - Pause must **park** timers, not `setTimeout(d/0)` — Infinity overflows to 1ms and wakes every sleeper instantly
 - Scaling the Clock preserves semantics: the program only observes virtual time, so slow motion is genuine
@@ -134,6 +152,7 @@
 - Origin tagging: absent means the program's own; only `"tool"` is ever set, so unknown events are shown, never hidden
 
 ## Design Decisions
+
 - **Service + Layer** pattern for TraceEmitter
 - R channel (Requirements) introduced early
 - `makeTraceEmitterLayer` bridges Effect to React
@@ -141,6 +160,7 @@
 - **Runtime hooks** planned for V2 (automatic, production-ready)
 
 ## Key Files
+
 - `src/runtime/vizSupervisor.ts` - VizSupervisor, makeVizLayers (Phase 6+8: onSuspend/onResume)
 - `src/runtime/vizTracer.ts` - makeVizTracer (Phase 7)
 - `src/runtime/runProgram.ts` - runProgramFork (root fiber emission)
@@ -165,6 +185,7 @@
 - `src/runtime/traceOrigin.ts` - makeOriginTagger: finds the injected yield (Phase 10)
 
 ## Learning Phases
+
 1. ~~**Phase 1**: Lazy evaluation, success/failure~~ ✅ See [`workshop/phase-1.md`](workshop/phase-1.md)
 2. ~~**Phase 2**: Fibers, fork/join, interruption~~ ✅ See [`workshop/phase-2.md`](workshop/phase-2.md)
 3. ~~**Phase 3**: Scheduling, delays, suspended fibers~~ ✅ See [`workshop/phase-3.md`](workshop/phase-3.md)
@@ -177,5 +198,6 @@
 10. ~~**Phase 10**: Slow mode & stepper (issue #13)~~ ✅ See [`workshop/phase-10.md`](workshop/phase-10.md)
 
 ## Documentation
+
 - [`workshop/README.md`](workshop/README.md) - Documentation overview
 - [`workshop/ARCHITECTURE.md`](workshop/ARCHITECTURE.md) - Design decisions

@@ -1,5 +1,5 @@
 import { Effect, Fiber, FiberId } from "effect";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { makeVizTracer } from "@/runtime/vizTracer";
 import type { TraceEvent } from "@/types/trace";

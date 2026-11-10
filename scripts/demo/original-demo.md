@@ -18,7 +18,7 @@ Source: `https://github.com/user-attachments/assets/c6073f78-d18e-4573-805b-65b1
 | 7.0–7.5    | user | Move to the Run button; its `Run` tooltip appears.                                                                                                                                     |
 | 7.5–8.0    | user | **Click Run.** Idle → `Starting...`                                                                                                                                                    |
 | 9.0–10.5   | app  | Basic Example runs. `#0` forks `#6` and `#7`; log streams rows `[4]`→`[30]`; three Timeline lanes fill to ~1.5s. Console prints `All workers done!` then `Program completed: { … }`.   |
-| 10.5–11.5  | user | Move up to the horizontal splitter between the cards row and the Timeline; the cursor becomes `↕` and the splitter highlights.                                                        |
+| 10.5–11.5  | user | Move up to the horizontal splitter between the cards row and the Timeline; the cursor becomes `↕` and the splitter highlights.                                                         |
 | 11.5–13.0  | user | **Drag the splitter up ~58px** (y 628 → 570), enlarging the Timeline so all three fiber lanes fit at once. The Execution Log is clipped as a result.                                   |
 | 13.0–13.5  | user | **Open the program dropdown** (native macOS popup, 10 options, `Basic Example` ticked).                                                                                                |
 | 14.0–14.5  | user | **Select `Multi-Step Worker`.** Editor swaps to its template; all three visualizer cards reset.                                                                                        |

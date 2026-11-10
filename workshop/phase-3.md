@@ -31,13 +31,13 @@ Effect abstracts time through a `Clock` service:
 
 ### Created/Modified Files
 
-| File | Changes |
-|------|---------|
-| `src/runtime/tracedRunner.ts` | Added `sleepWithTrace()` |
-| `src/stores/fiberStore.tsx` | Handle `sleep:start`, `sleep:end` events |
-| `src/lib/programs.ts` | Updated examples to use `sleepWithTrace()` |
-| `src/components/visualizer/FiberTreeView.tsx` | Suspended indicator (zzz + pulse) |
-| `src/components/visualizer/TimelineView.tsx` | Full implementation with real-time updates |
+| File                                          | Changes                                    |
+| --------------------------------------------- | ------------------------------------------ |
+| `src/runtime/tracedRunner.ts`                 | Added `sleepWithTrace()`                   |
+| `src/stores/fiberStore.tsx`                   | Handle `sleep:start`, `sleep:end` events   |
+| `src/lib/programs.ts`                         | Updated examples to use `sleepWithTrace()` |
+| `src/components/visualizer/FiberTreeView.tsx` | Suspended indicator (zzz + pulse)          |
+| `src/components/visualizer/TimelineView.tsx`  | Full implementation with real-time updates |
 
 ### Key Functions
 

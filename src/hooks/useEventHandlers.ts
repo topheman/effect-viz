@@ -265,7 +265,7 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
       // Interruption reaches a fiber as a task, so a gated program cannot be
       // torn down: the scheduler has to be running first.
       stepperRef.current?.play();
-      Effect.runPromise(Fiber.interrupt(runningFiberRef.current));
+      void Effect.runPromise(Fiber.interrupt(runningFiberRef.current));
       runningFiberRef.current = null;
     }
     stepperRef.current?.reset();

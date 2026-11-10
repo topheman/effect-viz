@@ -2,7 +2,7 @@
 
 The app ran `effect` 3.19.15 on both execution paths. This upgrade moves both to
 3.22.1, the latest 3.x, and records what the three intervening minor versions
-changed for a program that is *watched* rather than merely run.
+changed for a program that is _watched_ rather than merely run.
 
 ## One version, on both paths
 
@@ -61,7 +61,7 @@ Supervisor — which reads a fiber's exit to label its end — emitted
 3.22.1 runs the work side under `Effect.exit` ([#6507](https://github.com/Effect-TS/effect/pull/6507),
 released as "disable unhandled error logging for fibers spawned by
 `Effect.timeout`"). Interruption of that fiber is now captured as a value, so the
-fiber's exit is a *success* and the Supervisor can only report `fiber:end`. The
+fiber's exit is a _success_ and the Supervisor can only report `fiber:end`. The
 sleep side is unwrapped and still ends as an interrupt.
 
 The interruption is not lost from the trace: the `slow-task` span still ends as a

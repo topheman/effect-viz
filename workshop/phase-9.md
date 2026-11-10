@@ -24,12 +24,12 @@ Effect's `Effect.retry(effect, schedule)` uses a **Schedule** to control retry p
 
 ### Created/Modified Files
 
-| File | Changes |
-|------|---------|
+| File                          | Changes                                                                                                                                   |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/runtime/tracedRunner.ts` | `retryWithTrace(effect, schedule, label)`; use `Schedule.driver` + loop; keep `emitStart`/`emitEnd`/`emitRetry` (same id for association) |
-| `src/runtime/index.ts` | Export `retryWithTrace as retry` so programs use plain `retry` |
-| `src/lib/programs.ts` | `retry(flakyEffect, Schedule.recurs(3), "flaky-task")`; exponential backoff with `Schedule.addDelay(Schedule.recurs(5), ...)` |
-| `public/fallback-types.d.ts` | Add minimal Schedule types (`Schedule.recurs`, `Schedule.addDelay`) for fallback runtime |
+| `src/runtime/index.ts`        | Export `retryWithTrace as retry` so programs use plain `retry`                                                                            |
+| `src/lib/programs.ts`         | `retry(flakyEffect, Schedule.recurs(3), "flaky-task")`; exponential backoff with `Schedule.addDelay(Schedule.recurs(5), ...)`             |
+| `public/fallback-types.d.ts`  | Add minimal Schedule types (`Schedule.recurs`, `Schedule.addDelay`) for fallback runtime                                                  |
 
 ### Key Function
 

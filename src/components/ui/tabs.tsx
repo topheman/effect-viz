@@ -1,4 +1,4 @@
-/* eslint-disable react-refresh/only-export-components */
+/* oxlint-disable react-refresh/only-export-components */
 "use client";
 
 import * as TabsPrimitive from "@radix-ui/react-tabs";

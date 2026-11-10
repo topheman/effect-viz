@@ -40,12 +40,12 @@ flowchart TB
 
 ## The four sources
 
-| Events                                                      | Source                                                                                     | Native to Effect?                                                 |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
-| `fiber:fork`, `fiber:end`, `fiber:interrupt`, `fiber:suspend`, `fiber:resume` | A `Supervisor` added with `Supervisor.addSupervisor` ([`vizSupervisor.ts`](../src/runtime/vizSupervisor.ts)) | Yes: the runtime calls these hooks on every fiber          |
-| `effect:start`, `effect:end`                                | A custom `Tracer` set with `Layer.setTracer` ([`vizTracer.ts`](../src/runtime/vizTracer.ts)) | Yes: each `Effect.withSpan` opens and ends a span          |
-| The root's `fiber:fork`                                     | The `updateRefs` option of `Effect.runFork` ([`runProgram.ts`](../src/runtime/runProgram.ts)) | Yes, but indirectly: the Supervisor cannot see the root, which exists before it is installed |
-| `retry:attempt`, `finalizer`, `acquire`                     | Thin wrappers exported from `@/runtime` ([`tracedRunner.ts`](../src/runtime/tracedRunner.ts)) | No: they delegate to Effect's API and emit through the `TraceEmitter` service, because Effect has no hook for "an attempt failed" or "this finalizer is running" |
+| Events                                                                        | Source                                                                                                       | Native to Effect?                                                                                                                                                |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fiber:fork`, `fiber:end`, `fiber:interrupt`, `fiber:suspend`, `fiber:resume` | A `Supervisor` added with `Supervisor.addSupervisor` ([`vizSupervisor.ts`](../src/runtime/vizSupervisor.ts)) | Yes: the runtime calls these hooks on every fiber                                                                                                                |
+| `effect:start`, `effect:end`                                                  | A custom `Tracer` set with `Layer.setTracer` ([`vizTracer.ts`](../src/runtime/vizTracer.ts))                 | Yes: each `Effect.withSpan` opens and ends a span                                                                                                                |
+| The root's `fiber:fork`                                                       | The `updateRefs` option of `Effect.runFork` ([`runProgram.ts`](../src/runtime/runProgram.ts))                | Yes, but indirectly: the Supervisor cannot see the root, which exists before it is installed                                                                     |
+| `retry:attempt`, `finalizer`, `acquire`                                       | Thin wrappers exported from `@/runtime` ([`tracedRunner.ts`](../src/runtime/tracedRunner.ts))                | No: they delegate to Effect's API and emit through the `TraceEmitter` service, because Effect has no hook for "an attempt failed" or "this finalizer is running" |
 
 ## What the visualizer adds
 

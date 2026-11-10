@@ -53,6 +53,7 @@ export function useWebContainerBoot() {
     if (shouldUseFallback()) {
       // Fallback runs the programs in-browser and needs nothing booted, so Play is
       // available straight away; the types load behind it.
+      // oxlint-disable-next-line react/set-state-in-effect
       setStatus("fallback");
       setError(null);
       // Offline wins: it's why this session can't compile, even on mobile or Safari.
@@ -143,7 +144,7 @@ export function useWebContainerBoot() {
 
     return () => {
       if (bootFiberRef.current) {
-        Effect.runPromise(Fiber.interrupt(bootFiberRef.current));
+        void Effect.runPromise(Fiber.interrupt(bootFiberRef.current));
         bootFiberRef.current = null;
       }
       handleRef.current = null;
@@ -222,7 +223,7 @@ export function useWebContainerBoot() {
 
   const interruptPlay = useCallback(() => {
     if (playFiberRef.current) {
-      Effect.runPromise(Fiber.interrupt(playFiberRef.current));
+      void Effect.runPromise(Fiber.interrupt(playFiberRef.current));
       playFiberRef.current = null;
     }
   }, []);
@@ -262,7 +263,7 @@ export function useWebContainerBoot() {
       if (debouncedSyncRef.current) clearTimeout(debouncedSyncRef.current);
       debouncedSyncRef.current = setTimeout(() => {
         debouncedSyncRef.current = null;
-        syncToContainer(content);
+        void syncToContainer(content);
       }, 500);
     },
     [syncToContainer],

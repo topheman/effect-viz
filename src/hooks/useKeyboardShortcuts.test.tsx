@@ -12,7 +12,7 @@ function Harness(props: HarnessProps) {
   return (
     <>
       {/* Monaco's own class, which is what the hook looks for. */}
-      {/* eslint-disable-next-line better-tailwindcss/no-unregistered-classes */}
+      {/* oxlint-disable-next-line better-tailwindcss/no-unregistered-classes */}
       <div className="monaco-editor">
         <textarea data-testid="in-editor" />
       </div>
