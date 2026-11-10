@@ -135,7 +135,7 @@ export function MainLayout() {
     editorCacheRef.current = updatedCache;
     setEditorContent(newContent);
     if (webContainer.isReady) {
-      webContainer.syncToContainer(newContent);
+      void webContainer.syncToContainer(newContent);
     }
   }, [selectedProgram, programs, webContainer, cancelAutoStart]);
 
@@ -148,11 +148,11 @@ export function MainLayout() {
 
   useEffect(() => {
     if (webContainer.isReady) {
-      webContainer.syncToContainer(editorContent);
+      void webContainer.syncToContainer(editorContent);
     }
     // Only sync when container becomes ready; editorContent is intentionally
     // excluded to avoid syncing on every keystroke (debounced sync handles edits).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [webContainer.isReady]);
 
   const editorTabs = [
@@ -303,7 +303,7 @@ export function MainLayout() {
     handleReset();
     setEditorTabId("program");
     if (webContainer.isReady) {
-      webContainer.syncToContainer(newContent);
+      void webContainer.syncToContainer(newContent);
     }
     scheduleAutoStart(speed, { key: programKey, content: newContent });
   };

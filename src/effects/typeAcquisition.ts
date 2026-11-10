@@ -74,7 +74,7 @@ function acquireAppLibs(
         try: () => fetch(url).then((r) => r.text()),
         catch: (cause) =>
           new TypeAcquisitionError({
-            message: `Failed to fetch ${url}: ${cause}`,
+            message: `Failed to fetch ${url}: ${String(cause)}`,
             cause,
           }),
       }).pipe(
@@ -101,7 +101,7 @@ function configureMonacoPaths(
     ...opts,
     baseUrl: "file:///",
     paths: {
-      ...(opts.paths ?? {}),
+      ...opts.paths,
       "@/*": ["*"],
       "@/runtime": ["runtime/index.d.ts"],
       ...pathsOverride,
@@ -151,7 +151,7 @@ export const acquireMonacoTypesFallback: Effect.Effect<
       ),
     catch: (cause) =>
       new TypeAcquisitionError({
-        message: `Failed to fetch effect-types.json: ${cause}`,
+        message: `Failed to fetch effect-types.json: ${String(cause)}`,
         cause,
       }),
   });

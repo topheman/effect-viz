@@ -3,7 +3,6 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 // Retrieve src path from --src flag using the built-in Node.js API (process.argv), fallback to "dist/runtime" if not provided.
 const parsed = process.argv.find((arg) => arg.startsWith("--src="));

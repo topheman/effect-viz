@@ -25,9 +25,7 @@ function shouldIgnoreFiber(
   fiber: Fiber.RuntimeFiber<unknown, unknown>,
 ): boolean {
   const keys = Array.from(fiber.currentContext.unsafeMap.keys());
-  return (
-    keys.length === 0 || keys.every((k) => k === "effect/Layer/CurrentMemoMap")
-  );
+  return keys.every((k) => k === "effect/Layer/CurrentMemoMap");
 }
 
 class VizSupervisor extends Supervisor.AbstractSupervisor<void> {

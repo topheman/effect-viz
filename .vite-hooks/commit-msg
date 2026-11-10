@@ -1,0 +1,4 @@
+#!/bin/sh
+# Project-owned hook: commitlint is not part of the Vite+ toolchain, so it stays
+# a plain script here. `vp hooks disable` leaves project-owned scripts alone.
+vp exec commitlint --edit "$1"

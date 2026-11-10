@@ -12,6 +12,10 @@ on:
 permissions:
   contents: read
 
+env:
+  # `prepare` installs the Git hook dispatcher, which CI has no use for.
+  VP_GIT_HOOKS: 0
+
 jobs:
   e2e:
     if: >-
@@ -33,18 +37,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      # The pnpm version comes from `devEngines.packageManager` in package.json.
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
+      # The vp version comes from the `vite-plus` catalog entry in pnpm-workspace.yaml,
+      # the pnpm version from `devEngines.packageManager` in package.json.
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1.22.0
         with:
           node-version-file: ".nvmrc"
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+          cache: true
+          run-install: |
+            args: [--frozen-lockfile]
 
       - name: Install browsers
         run: pnpm exec playwright install --with-deps chromium webkit

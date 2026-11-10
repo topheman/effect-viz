@@ -285,7 +285,7 @@ async function untilEnabled(target: Locator, timeout = 15_000): Promise<void> {
   for (;;) {
     if (await target.isEnabled()) return;
     if (Date.now() > deadline) {
-      throw new Error(`Target still disabled after ${timeout}ms: ${target}`);
+      throw new Error(`Target still disabled after ${timeout}ms: ${String(target)}`);
     }
     await target.page().waitForTimeout(100);
   }

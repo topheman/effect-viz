@@ -1,5 +1,5 @@
 import { Effect, Fiber, Layer } from "effect";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { makeTraceEmitterLayer } from "@/runtime/tracedRunner";
 import type { TraceEmitter } from "@/runtime/traceEmitter";

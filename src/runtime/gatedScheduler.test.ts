@@ -1,5 +1,5 @@
 import { Effect, Fiber } from "effect";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { GatedScheduler } from "@/runtime/gatedScheduler";
 import { VirtualClock, type VirtualClockHost } from "@/runtime/virtualClock";

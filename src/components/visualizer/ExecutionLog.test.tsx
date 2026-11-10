@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useEffect } from "react";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { resetLogView } from "@/hooks/useLogView";
 import { TraceStoreProvider, useTraceStore } from "@/stores/traceStore";

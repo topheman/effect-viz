@@ -4,7 +4,7 @@
  */
 import path from "path";
 
-import { defineConfig } from "vite";
+import { defineConfig } from "vite-plus";
 
 export default defineConfig({
   publicDir: false, // Don't copy public/ into output (we only want runtime.js)
@@ -16,7 +16,7 @@ export default defineConfig({
     },
     outDir: "dist/runtime",
     minify: false,
-    rollupOptions: {
+    rolldownOptions: {
       external: ["effect"],
       output: {
         format: "es",

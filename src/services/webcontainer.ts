@@ -264,7 +264,7 @@ export const WebContainerLive = Layer.scoped(
       try: () => fetch("/app/runtime.js").then((r) => r.text()),
       catch: (cause) =>
         new WebContainerBootError({
-          message: `Failed to fetch runtime.js: ${cause}`,
+          message: `Failed to fetch runtime.js: ${String(cause)}`,
           cause,
         }),
     });
@@ -335,7 +335,7 @@ export const WebContainerLive = Layer.scoped(
           try: () => container.fs.readFile(path),
           catch: (cause) =>
             new WebContainerFsError({
-              message: `Failed to read ${path}: ${cause}`,
+              message: `Failed to read ${path}: ${String(cause)}`,
               path,
               cause,
             }),
@@ -353,7 +353,7 @@ export const WebContainerLive = Layer.scoped(
               ),
           catch: (cause) =>
             new WebContainerFsError({
-              message: `Failed to readdir ${path}: ${cause}`,
+              message: `Failed to readdir ${path}: ${String(cause)}`,
               path,
               cause,
             }),

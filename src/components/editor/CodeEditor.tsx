@@ -136,7 +136,7 @@ function registerTapToHover(editor: MonacoTypes.editor.IStandaloneCodeEditor) {
   if (!matchMedia("(pointer: coarse)").matches) return;
   editor.onDidChangeCursorSelection((e) => {
     if (e.source !== "mouse" || !e.selection.isEmpty()) return;
-    editor.getAction("editor.action.showHover")?.run();
+    void editor.getAction("editor.action.showHover")?.run();
   });
 }
 
@@ -167,6 +167,9 @@ export function CodeEditor({
   onPlayPauseShortcut,
   onStepShortcut,
 }: CodeEditorProps) {
+  // `Monaco` is `any`: @monaco-editor/react types it from an extensionless deep
+  // import, which monaco-editor's package exports cannot resolve.
+  // oxlint-disable-next-line typescript/no-redundant-type-constituents
   const monacoRef = useRef<Monaco | null>(null);
   // Actions are registered once, at mount, so they reach their handlers through
   // a ref rather than capturing the ones that happened to be current then.
@@ -180,7 +183,7 @@ export function CodeEditor({
 
   useEffect(() => {
     if (typesReady && monacoRef.current) {
-      revalidateModels(monacoRef.current);
+      void revalidateModels(monacoRef.current);
     }
   }, [typesReady]);
 
@@ -202,7 +205,7 @@ export function CodeEditor({
           registerPlaybackActions(editor, monaco, shortcutsRef);
           registerTapToHover(editor);
           if (typesReady) {
-            revalidateModels(monaco);
+            void revalidateModels(monaco);
           }
         }}
         options={{

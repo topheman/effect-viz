@@ -98,7 +98,7 @@ export function TraceStoreProvider({ children }: TraceStoreProviderProps) {
  * Hook to access the trace store.
  * Must be used within a TraceStoreProvider.
  */
-// eslint-disable-next-line react-refresh/only-export-components
+// oxlint-disable-next-line react-refresh/only-export-components
 export function useTraceStore(): TraceStore {
   const store = useContext(TraceStoreContext);
   if (!store) {

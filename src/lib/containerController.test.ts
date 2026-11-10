@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { ContainerController } from "@/lib/containerController";
 import type { ControlCommand } from "@/runtime/controlChannel";

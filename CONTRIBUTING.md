@@ -37,12 +37,13 @@ pnpm run preview
 
 ## Checks
 
-CI runs `lint`, `typecheck`, `test` and `build` on every push and pull request.
+CI runs `check`, `typecheck:effect`, `test` and `build` on every push and pull request.
 
 | Script | What it does |
 | --- | --- |
-| `pnpm run lint` | ESLint, with Prettier as a rule |
-| `pnpm run lint:fix` | ESLint with autofix |
+| `pnpm run check` | Oxfmt, then Oxlint with type-aware rules and a full type check (`vp check`) |
+| `pnpm run lint:fix` | Oxlint with autofix |
+| `pnpm run format` | Oxfmt, which also sorts imports |
 | `pnpm run typecheck` | Type checks the app, the Node config, the demo recorder and the e2e tests, then runs the Effect language service diagnostics |
 | `pnpm run test` | Vitest, in jsdom |
 | `pnpm run test:watch` | Vitest in watch mode |
@@ -62,4 +63,4 @@ The e2e tests run the real app in Chromium, and in WebKit as a phone, against a 
 
 ## Commits
 
-Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/), with body lines of at most 100 characters, enforced by commitlint in a `commit-msg` hook. A `pre-commit` hook runs on staged files, through lint-staged: `eslint --fix`, the full `typecheck`, and `vitest related`.
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/), with body lines of at most 100 characters, enforced by commitlint in a `commit-msg` hook. A `pre-commit` hook runs `vp check --fix` on staged files (`staged` in `vite.config.ts`). The hooks live in `.vite-hooks/`.

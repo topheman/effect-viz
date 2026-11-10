@@ -86,7 +86,7 @@ export function WebContainerLogsStoreProvider({
  * Hook to access the WebContainer logs store.
  * Must be used within a WebContainerLogsStoreProvider.
  */
-// eslint-disable-next-line react-refresh/only-export-components
+// oxlint-disable-next-line react-refresh/only-export-components
 export function useWebContainerLogsStore(): WebContainerLogsStore {
   const store = useContext(WebContainerLogsStoreContext);
   if (!store) {
