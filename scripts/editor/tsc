@@ -1,0 +1,5 @@
+#!/bin/sh
+# Effect-patched TypeScript 7 for the editor: `js/ts.tsdk.path` in
+# .vscode/settings.json points at this folder, and the TypeScript 7 extension
+# launches the `tsc` it finds there. See CONTRIBUTING.md.
+exec "$(dirname "$0")/../../node_modules/.bin/effect-tsgo" tsc "$@"

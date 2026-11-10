@@ -15,6 +15,10 @@
   "editor.codeActionsOnSave": {
     "source.fixAll.oxc": "explicit"
   },
-  "js/ts.tsdk.path": "node_modules/typescript/lib",
-  "js/ts.tsdk.promptToUseWorkspaceVersion": true
+  // TypeScript 7 and Oxlint through their Effect-patched builds, which add the
+  // Effect language service and diagnostics. See CONTRIBUTING.md.
+  "js/ts.experimental.useTsgo": true,
+  "js/ts.tsdk.path": "scripts/editor",
+  "js/ts.tsdk.promptToUseWorkspaceVersion": true,
+  "oxc.path.oxlint": "scripts/editor/oxlint.mjs"
 }
