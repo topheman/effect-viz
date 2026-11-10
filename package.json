@@ -26,8 +26,8 @@
     "vite"
   ],
   "scripts": {
-    "dev": "npm run copy:esbuild-wasm && npm run build:runtime && npm run build:effect-types && vite",
-    "build": "npm run copy:esbuild-wasm && npm run build:runtime && npm run build:effect-types && tsc -b && vite build",
+    "dev": "pnpm run copy:esbuild-wasm && pnpm run build:runtime && pnpm run build:effect-types && vite",
+    "build": "pnpm run copy:esbuild-wasm && pnpm run build:runtime && pnpm run build:effect-types && tsc -b && vite build",
     "build:runtime": "vite build --config vite.runtime.config.ts && tsc -p tsconfig.runtime.json && node scripts/extract-dts-from-runtime.mjs --src=dist/runtime > src/effects/app-lib-dts-urls.json && node scripts/copy-runtime.mjs",
     "build:effect-types": "node scripts/extract-effect-dts.mjs",
     "copy:esbuild-wasm": "cp node_modules/esbuild-wasm/esbuild.wasm public/esbuild.wasm",
@@ -38,13 +38,13 @@
     "test:watch": "vitest",
     "playwright:install": "playwright install chromium webkit",
     "demo:record": "node scripts/demo/record.ts",
-    "e2e": "npm run build && playwright test",
+    "e2e": "pnpm run build && playwright test",
     "typecheck:app": "tsc --noEmit -p ./tsconfig.app.json",
     "typecheck:node": "tsc --noEmit -p ./tsconfig.node.json",
     "typecheck:demo": "tsc --noEmit -p ./tsconfig.demo.json",
     "typecheck:e2e": "tsc --noEmit -p ./tsconfig.e2e.json",
     "typecheck:effect": "effect-language-service diagnostics --project tsconfig.app.json --strict",
-    "typecheck": "npm run typecheck:app && npm run typecheck:node && npm run typecheck:demo && npm run typecheck:e2e && npm run typecheck:effect",
+    "typecheck": "pnpm run typecheck:app && pnpm run typecheck:node && pnpm run typecheck:demo && pnpm run typecheck:e2e && pnpm run typecheck:effect",
     "prepare": "husky"
   },
   "dependencies": {
@@ -94,6 +94,7 @@
     "husky": "^9.1.7",
     "jsdom": "^27.2.0",
     "lint-staged": "^16.2.7",
+    "monaco-editor": "0.55.1",
     "playwright": "^1.62.1",
     "prettier": "3.6.2",
     "tailwindcss": "^4.1.17",
@@ -102,12 +103,17 @@
     "typescript-eslint": "^8.46.4",
     "vite": "npm:rolldown-vite@7.2.5",
     "vite-plugin-pwa": "^1.2.0",
-    "vitest": "^5.0.5"
-  },
-  "overrides": {
-    "vite": "npm:rolldown-vite@7.2.5"
+    "vitest": "^5.0.5",
+    "workbox-window": "^7.4.0"
   },
   "engines": {
     "node": "26.x"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.18.0",
+      "onFail": "download"
+    }
   }
 }

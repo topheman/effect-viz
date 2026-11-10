@@ -3,8 +3,6 @@
  *
  * Boots a single WebContainer instance, mounts the inner project template,
  * runs pnpm install, and provides writeFile/spawn/run.
- *
- * Requires: npm install @webcontainer/api
  */
 import { WebContainer as WC, type FileSystemTree } from "@webcontainer/api";
 import { Context, Data, Effect, GlobalValue, Layer } from "effect";

@@ -1,7 +1,7 @@
 export default {
   "*.{js,jsx,ts,tsx}": [
     "eslint --fix",
-    () => "npm run typecheck",
+    () => "pnpm run typecheck",
     "vitest related"
   ]
 }

@@ -13,7 +13,7 @@ import type { WebContainerHandle } from "@/services/webcontainer";
 import { WebContainer } from "@/services/webcontainer";
 
 /**
- * App lib types emitted by `npm run build:runtime` (tsc -p tsconfig.runtime.json).
+ * App lib types emitted by `pnpm run build:runtime` (tsc -p tsconfig.runtime.json).
  * `scripts/extract-dts-from-runtime.mjs` extracts the .d.ts files into this JSON file.
  *
  * The files are served from public/app/ and added to Monaco for @/ paths resolution.

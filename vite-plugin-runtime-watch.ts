@@ -21,7 +21,7 @@ export function runtimeWatchPlugin() {
     if (isBuilding) return;
     isBuilding = true;
     console.log("[runtime-watch] Rebuilding runtime...");
-    const child = spawn("npm", ["run", "build:runtime"], {
+    const child = spawn("pnpm", ["run", "build:runtime"], {
       cwd: root,
       shell: true,
       stdio: "inherit",

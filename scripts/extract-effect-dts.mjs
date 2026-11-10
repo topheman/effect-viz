@@ -34,7 +34,7 @@ const out = path.resolve(
 
 const pkgJsonPath = path.resolve(PKG_DIR, "package.json");
 if (!fs.existsSync(pkgJsonPath)) {
-  fail(`${pkgJsonPath} not found. Run npm install first.`);
+  fail(`${pkgJsonPath} not found. Run pnpm install first.`);
 }
 const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, "utf8"));
 

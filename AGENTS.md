@@ -99,10 +99,10 @@ All those are properly configured. Take advantage of it.
 
 - ALWAYS ASK FOR CONFIRMATION before installing a new dependency.
 - TypeScript and Eslint is properly configured. Take advantage of it.
-  - `npm run lint`: runs eslint
-  - `npm run lint:fix`: auto fixes eslint errors
+  - `pnpm run lint`: runs eslint
+  - `pnpm run lint:fix`: auto fixes eslint errors
 - vitest, a test runner, is properly configured with react-testing-library. Take advantage of it. Write tests for your code.
-  - `npm run test`: runs tests
+  - `pnpm run test`: runs tests
 - Use tailwind 4 for styling unless you are told otherwise.
 - Format on save is enabled.
 - Git hooks are enabled.
