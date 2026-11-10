@@ -19,8 +19,8 @@ The same fallback is also used when offline. WebContainer boots via a cross-orig
 
 Types for the Monaco editor are split as follows:
 
-- **`public/effect-types.json`**: the installed `effect` package's own declarations, one entry per module at its `node_modules/effect/dist/dts/` path. `npm run build:effect-types` (`scripts/extract-effect-dts.mjs`) writes it on every `dev` and `build`, so it follows the version in `package.json`. The service worker precaches it along with `public/app/`, so the types are there offline too. Monaco resolves `effect` through the same paths as on the WebContainer path, so both editors see the same types.
-- **`public/app/`**: the `@/runtime` and trace types, emitted by `npm run build:runtime`.
+- **`public/effect-types.json`**: the installed `effect` package's own declarations, one entry per module at its `node_modules/effect/dist/dts/` path. `pnpm run build:effect-types` (`scripts/extract-effect-dts.mjs`) writes it on every `dev` and `build`, so it follows the version in `package.json`. The service worker precaches it along with `public/app/`, so the types are there offline too. Monaco resolves `effect` through the same paths as on the WebContainer path, so both editors see the same types.
+- **`public/app/`**: the `@/runtime` and trace types, emitted by `pnpm run build:runtime`.
 
 The declarations stay one file per module instead of being bundled. effect makes `Option`, `Either` and `Context` tags yieldable in `Effect.gen` through `declare module "./Effect.js"` augmentations, and a single-file bundle cannot keep them: rollup-plugin-dts leaves them pointing at modules that no longer exist, dts-bundle-generator and api-extractor reject effect's `export * as` namespaces outright.
 

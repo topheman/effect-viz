@@ -3,16 +3,16 @@
 Playwright tests that run the real pipeline: the WebContainer boots, a program runs under the instrumented runtime, and its trace reaches the UI. The Vitest suite runs in jsdom with mocks and sees none of this.
 
 ```sh
-npm run playwright:install   # once per machine
-npm run e2e
+pnpm run playwright:install   # once per machine
+pnpm run e2e
 ```
 
-`npm run e2e` builds the app, serves `dist/` with `vite preview`, and runs the tests in Chromium, plus the phone tests in WebKit as an iPhone SE. The port is 4180 plus an offset derived from the checkout's path, so several worktrees can run the tests at once; `E2E_PORT` sets it. It must be free: the run fails rather than testing whatever else is listening there. Tests run against a build because `StrictMode` runs every effect twice in development.
+`pnpm run e2e` builds the app, serves `dist/` with `vite preview`, and runs the tests in Chromium, plus the phone tests in WebKit as an iPhone SE. The port is 4180 plus an offset derived from the checkout's path, so several worktrees can run the tests at once; `E2E_PORT` sets it. It must be free: the run fails rather than testing whatever else is listening there. Tests run against a build because `StrictMode` runs every effect twice in development.
 
 To test a server that is already running, the deployed app for instance, skip both the build and the server:
 
 ```sh
-E2E_BASE_URL=https://effect-viz.vercel.app npx playwright test
+E2E_BASE_URL=https://effect-viz.vercel.app pnpm exec playwright test
 ```
 
 Each test boots its own WebContainer, which takes 5 to 15 seconds and needs network access to StackBlitz. That makes the suite too slow for every push to `master`, so CI runs it in these cases (`.github/workflows/e2e.yml`):
@@ -22,7 +22,7 @@ Each test boots its own WebContainer, which takes 5 to 15 seconds and needs netw
 - each successful production deployment on Vercel, against `https://effect-viz.vercel.app`;
 - every push to a pull request whose base is not `master`, such as a migration branch, where a new push cancels the run it replaces.
 
-Failed and flaky tests show up as annotations on the run. Every run also uploads the HTML report, with the traces of those tests, as the `playwright-report` artifact: `gh run download <run-id> -n playwright-report -D playwright-report`, then `npx playwright show-report`.
+Failed and flaky tests show up as annotations on the run. Every run also uploads the HTML report, with the traces of those tests, as the `playwright-report` artifact: `gh run download <run-id> -n playwright-report -D playwright-report`, then `pnpm exec playwright show-report`.
 
 Tests assert on what a user sees: the playback status, log rows, fiber lanes. They never reach into runtime internals, so they keep passing across a runtime upgrade that preserves behaviour.
 

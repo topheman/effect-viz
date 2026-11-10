@@ -7,8 +7,8 @@
  * than under the dev server, and that boot is dead time at the head of the
  * video.
  *
- *   npm run build && npm run preview
- *   npm run demo:record
+ *   pnpm run build && pnpm run preview
+ *   pnpm run demo:record
  *
  * Not the dev server: `StrictMode` runs every effect twice in development,
  * which can film states no user sees. The preview server sends the
@@ -101,13 +101,13 @@ async function main() {
   await rm(OUT_DIR, { recursive: true, force: true });
   await mkdir(OUT_DIR, { recursive: true });
 
-  // `npm install` fetches the Playwright package but not the browser it drives,
+  // `pnpm install` fetches the Playwright package but not the browser it drives,
   // deliberately: only this script and the e2e tests need it, and CI never does.
   const browser = await chromium
     .launch({ headless: !headed })
     .catch((cause) => {
       throw new Error(
-        "Cannot launch Chromium. Run `npm run playwright:install` once to download it.",
+        "Cannot launch Chromium. Run `pnpm run playwright:install` once to download it.",
         { cause },
       );
     });

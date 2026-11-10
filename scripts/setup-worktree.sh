@@ -8,11 +8,10 @@ if [ -z "${T3CODE_PROJECT_ROOT:-}" ]; then
   exit 1
 fi
 
-# npm ci deletes node_modules first, which would break a dev server running in
-# the main checkout.
+# The main checkout manages its own dependencies.
 if [ "$(cd "$T3CODE_PROJECT_ROOT" && pwd -P)" = "$(pwd -P)" ]; then
   echo "This is the main checkout: nothing to set up."
   exit 0
 fi
 
-npm ci --prefer-offline
+pnpm install --frozen-lockfile --prefer-offline
