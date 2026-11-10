@@ -53,7 +53,7 @@ export function useWebContainerBoot() {
     if (shouldUseFallback()) {
       // Fallback runs the programs in-browser and needs nothing booted, so Play is
       // available straight away; the types load behind it.
-      // oxlint-disable-next-line react/set-state-in-effect -- a once-at-mount check, with its boot logs
+      // oxlint-disable-next-line react/set-state-in-effect
       setStatus("fallback");
       setError(null);
       // Offline wins: it's why this session can't compile, even on mobile or Safari.
