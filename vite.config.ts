@@ -131,6 +131,14 @@ export default defineConfig({
     // Build output, see `lint.ignorePatterns`, and skills installed from upstream.
     ignorePatterns: ["public/app/", ".agents/"],
     sortImports: {},
+    overrides: [
+      {
+        // Snippets in docs are often generator bodies, which Oxfmt parses as
+        // plain scripts and rewrites `yield* x` as `yield * x`.
+        files: ["**/*.md"],
+        options: { embeddedLanguageFormatting: "off" },
+      },
+    ],
   },
   lint: {
     // public/app is the runtime bundle copy-runtime.mjs lifts out of dist, so it is

@@ -34,12 +34,10 @@ Effect's **Tracer** is a service. When you use `Effect.withSpan("name")(effect)`
 
 ```typescript
 // makeVizTracer: returns a Tracer that emits effect:start/effect:end to onEmit
-export function makeVizTracer(
-  onEmit: (event: TraceEvent) => void,
-): Tracer.Tracer;
+export function makeVizTracer(onEmit: (event: TraceEvent) => void): Tracer.Tracer
 
 // User code: Effect.withSpan("label")(effect) — standard Effect API
-yield * Effect.withSpan("step-1")(Effect.succeed(42));
+yield* Effect.withSpan("step-1")(Effect.succeed(42));
 ```
 
 ### Span Fields

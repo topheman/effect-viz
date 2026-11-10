@@ -39,7 +39,7 @@ export function retryWithTrace<A, E, R, X, R2>(
   effect: Effect.Effect<A, E, R>,
   schedule: Schedule.Schedule<X, E, R2>,
   label: string,
-): Effect.Effect<A, Cause.Cause<E>, R | R2 | TraceEmitter>;
+): Effect.Effect<A, Cause.Cause<E>, R | R2 | TraceEmitter>
 ```
 
 ### Flow

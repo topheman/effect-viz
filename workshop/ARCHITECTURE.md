@@ -69,7 +69,7 @@ const traced = withTrace(effect, "label");
 ### Forking with Tracing
 
 ```typescript
-const fiber = yield * forkWithTrace(effect, "fiber-label");
+const fiber = yield* forkWithTrace(effect, "fiber-label");
 // Emits: fiber:fork, fiber:end (or fiber:interrupt)
 ```
 

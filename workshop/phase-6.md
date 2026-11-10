@@ -33,15 +33,13 @@ Supervisor callbacks are **synchronous**. In the WebContainer, the emit callback
 
 ```typescript
 // VizSupervisor: onStart emits fiber:fork (fiberId, parentId, label); onEnd emits fiber:end or fiber:interrupt
-export function makeVizLayers(
-  onEmit: (event: TraceEvent) => void,
-): Layer.Layer<never>;
+export function makeVizLayers(onEmit: (event: TraceEvent) => void): Layer.Layer<never>
 
 // DRY for fallback and WebContainer: fork program, emit root fiber:fork via updateRefs, return fiber + promise
 export function runProgramFork<A>(
   program: Effect.Effect<A, unknown, never>,
   onEmit: (event: TraceEvent) => void,
-): { fiber: Fiber.RuntimeFiber<A, unknown>; promise: Promise<A> };
+): { fiber: Fiber.RuntimeFiber<A, unknown>; promise: Promise<A> }
 ```
 
 ### Internal Fiber Filtering

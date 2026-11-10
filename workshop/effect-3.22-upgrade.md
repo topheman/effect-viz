@@ -16,9 +16,7 @@ time with the version the build itself resolves:
 
 ```ts
 // vite.config.ts
-const effectVersion = createRequire(import.meta.url)(
-  "effect/package.json",
-).version;
+const effectVersion = createRequire(import.meta.url)("effect/package.json").version
 // define: { __EFFECT_VERSION__: JSON.stringify(effectVersion) }
 ```
 

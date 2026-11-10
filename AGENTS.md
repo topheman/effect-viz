@@ -35,7 +35,7 @@ type TraceEvent =
   | { type: "fiber:end"; fiberId: string }
   | { type: "fiber:interrupt"; fiberId: string }
   | { type: "fiber:suspend"; fiberId: string; duration: number }
-  | { type: "sleep:end"; fiberId: string };
+  | { type: "sleep:end"; fiberId: string }
 ```
 
 ## Context Recovery (For Fresh Sessions)
