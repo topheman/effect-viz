@@ -63,7 +63,7 @@ export default defineConfig({
   webServer: externalBaseURL
     ? undefined
     : {
-        command: `pnpm exec vite preview --port ${PORT} --strictPort --host 127.0.0.1`,
+        command: `pnpm exec vp preview --port ${PORT} --strictPort --host 127.0.0.1`,
         url: `http://127.0.0.1:${PORT}`,
         reuseExistingServer: false,
       },
