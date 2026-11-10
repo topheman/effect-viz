@@ -8,7 +8,7 @@ if [ -z "${T3CODE_PROJECT_ROOT:-}" ]; then
   exit 1
 fi
 
-# The main checkout manages its own dependencies.
+# Never install into the main checkout, where a dev server may be running.
 if [ "$(cd "$T3CODE_PROJECT_ROOT" && pwd -P)" = "$(pwd -P)" ]; then
   echo "This is the main checkout: nothing to set up."
   exit 0
