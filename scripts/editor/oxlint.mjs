@@ -18,7 +18,12 @@ const child = spawn(
   [effectTsgo, "vp", "lint", ...process.argv.slice(2)],
   { stdio: "inherit" },
 );
+// The editor stops the server by signalling this wrapper; pass it on to the child.
+const signals = ["SIGINT", "SIGTERM", "SIGHUP"];
+const forward = (signal) => child.kill(signal);
+for (const signal of signals) process.on(signal, forward);
 child.on("exit", (code, signal) => {
+  for (const s of signals) process.off(s, forward);
   if (signal) process.kill(process.pid, signal);
   else process.exitCode = code ?? 1;
 });

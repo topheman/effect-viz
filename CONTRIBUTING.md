@@ -39,13 +39,13 @@ pnpm run preview
 
 CI runs `check`, `test` and `build` on every push and pull request.
 
-| Script                | What it does                                                                                        |
-| --------------------- | --------------------------------------------------------------------------------------------------- |
-| `pnpm run check`      | Oxfmt, then Oxlint with type-aware rules, the Effect diagnostics and a full type check (`vp check`) |
-| `pnpm run lint:fix`   | Oxlint with autofix                                                                                 |
-| `pnpm run format`     | Oxfmt, which also sorts imports                                                                     |
-| `pnpm run test`       | Vitest, in jsdom                                                                                    |
-| `pnpm run test:watch` | Vitest in watch mode                                                                                |
+| Script                | What it does                                                                                                    |
+| --------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `pnpm run check`      | Oxfmt, then Oxlint with type-aware rules, the Effect diagnostics and a full type check (`effect-tsgo vp check`) |
+| `pnpm run lint:fix`   | Oxlint with autofix                                                                                             |
+| `pnpm run format`     | Oxfmt, which also sorts imports                                                                                 |
+| `pnpm run test`       | Vitest, in jsdom                                                                                                |
+| `pnpm run test:watch` | Vitest in watch mode                                                                                            |
 
 The Effect diagnostics are Oxlint rules from [`@effect/tsgo`](https://github.com/Effect-TS/tsgo), set in the `lint` block of `vite.config.ts`. Only the Effect-patched Oxlint knows them, so `check` and `lint` go through `effect-tsgo vp …`, which runs it without touching `node_modules`. A bare `vp check` or `vp lint` fails with `Unknown plugin: 'effecttsgo'`.
 
