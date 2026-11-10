@@ -44,8 +44,8 @@ function isLocalHostname(hostname: string): boolean {
     hostname === "[::1]" ||
     hostname === "::1" ||
     hostname.endsWith(".local") ||
-    hostname.startsWith('10.') ||
-    hostname.startsWith('192.168.') ||
+    hostname.startsWith("10.") ||
+    hostname.startsWith("192.168.") ||
     /^172\.(1[6-9]|2\d|3[01])\./.test(hostname)
   );
 }

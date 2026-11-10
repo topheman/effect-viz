@@ -3,8 +3,8 @@ import path from "path";
 
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig, lazyPlugins } from "vite-plus";
 import { VitePWA } from "vite-plugin-pwa";
+import { defineConfig, lazyPlugins } from "vite-plus";
 
 import { runtimeWatchPlugin } from "./vite-plugin-runtime-watch";
 
@@ -140,7 +140,10 @@ export default defineConfig({
     jsPlugins: [
       { name: "vite-plus", specifier: "vite-plus/oxlint-plugin" },
       { name: "testing-library", specifier: "eslint-plugin-testing-library" },
-      { name: "better-tailwindcss", specifier: "eslint-plugin-better-tailwindcss" },
+      {
+        name: "better-tailwindcss",
+        specifier: "eslint-plugin-better-tailwindcss",
+      },
     ],
     categories: { correctness: "error" },
     settings: {
@@ -188,10 +191,16 @@ export default defineConfig({
       "better-tailwindcss/no-duplicate-classes": "error",
       "better-tailwindcss/no-unnecessary-whitespace": "error",
       "better-tailwindcss/no-unregistered-classes": "error",
-      "testing-library/await-async-events": ["error", { eventModule: "userEvent" }],
+      "testing-library/await-async-events": [
+        "error",
+        { eventModule: "userEvent" },
+      ],
       "testing-library/await-async-queries": "error",
       "testing-library/await-async-utils": "error",
-      "testing-library/no-await-sync-events": ["error", { eventModules: ["fire-event"] }],
+      "testing-library/no-await-sync-events": [
+        "error",
+        { eventModules: ["fire-event"] },
+      ],
       "testing-library/no-await-sync-queries": "error",
       "testing-library/no-container": "error",
       "testing-library/no-debugging-utils": "error",

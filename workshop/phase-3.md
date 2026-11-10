@@ -31,13 +31,13 @@ Effect abstracts time through a `Clock` service:
 
 ### Created/Modified Files
 
-| File | Changes |
-|------|---------|
-| `src/runtime/tracedRunner.ts` | Added `sleepWithTrace()` |
-| `src/stores/fiberStore.tsx` | Handle `sleep:start`, `sleep:end` events |
-| `src/lib/programs.ts` | Updated examples to use `sleepWithTrace()` |
-| `src/components/visualizer/FiberTreeView.tsx` | Suspended indicator (zzz + pulse) |
-| `src/components/visualizer/TimelineView.tsx` | Full implementation with real-time updates |
+| File                                          | Changes                                    |
+| --------------------------------------------- | ------------------------------------------ |
+| `src/runtime/tracedRunner.ts`                 | Added `sleepWithTrace()`                   |
+| `src/stores/fiberStore.tsx`                   | Handle `sleep:start`, `sleep:end` events   |
+| `src/lib/programs.ts`                         | Updated examples to use `sleepWithTrace()` |
+| `src/components/visualizer/FiberTreeView.tsx` | Suspended indicator (zzz + pulse)          |
+| `src/components/visualizer/TimelineView.tsx`  | Full implementation with real-time updates |
 
 ### Key Functions
 
@@ -93,15 +93,15 @@ Our wrapper approach (`sleepWithTrace`, `forkWithTrace`) only traces what we exp
 
 ```typescript
 // Fork explicitly to make fibers visible in timeline
-const fast = yield* forkWithTrace(sleepWithTrace("1 second"), "fast");
-const slow = yield* forkWithTrace(sleepWithTrace("2 seconds"), "slow");
+const fast = yield * forkWithTrace(sleepWithTrace("1 second"), "fast");
+const slow = yield * forkWithTrace(sleepWithTrace("2 seconds"), "slow");
 
 // Race the joins (not the fibers directly)
-const winner = yield* Effect.race(Fiber.join(fast), Fiber.join(slow));
+const winner = yield * Effect.race(Fiber.join(fast), Fiber.join(slow));
 
 // Clean up
-yield* Fiber.interrupt(fast);
-yield* Fiber.interrupt(slow);
+yield * Fiber.interrupt(fast);
+yield * Fiber.interrupt(slow);
 ```
 
 ## UI Enhancements

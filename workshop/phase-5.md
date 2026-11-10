@@ -25,12 +25,12 @@ In Effect, a **scope** defines the lifetime during which a resource is valid. Wh
 
 ### Created/Modified Files
 
-| File | Changes |
-|------|---------|
-| `src/types/trace.ts` | `FinalizerEvent` (id, label, timestamp); `AcquireEvent` (success/failure with id, label, result, error?, timestamp) |
-| `src/runtime/tracedRunner.ts` | `emitFinalizer`, `emitAcquire`, `addFinalizerWithTrace`, `acquireReleaseWithTrace` (built on addFinalizerWithTrace) |
-| `src/lib/programs.ts` | `basicFinalizersExample` (3 finalizers, LIFO demo), `acquireReleaseExample`; both run inside `Effect.scoped` |
-| `src/components/visualizer/ExecutionLog.tsx` | `finalizer` and `acquire` cases: "Finalizer ran: &lt;label&gt;", "Resource acquired" / "Resource acquire failed" |
+| File                                         | Changes                                                                                                             |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `src/types/trace.ts`                         | `FinalizerEvent` (id, label, timestamp); `AcquireEvent` (success/failure with id, label, result, error?, timestamp) |
+| `src/runtime/tracedRunner.ts`                | `emitFinalizer`, `emitAcquire`, `addFinalizerWithTrace`, `acquireReleaseWithTrace` (built on addFinalizerWithTrace) |
+| `src/lib/programs.ts`                        | `basicFinalizersExample` (3 finalizers, LIFO demo), `acquireReleaseExample`; both run inside `Effect.scoped`        |
+| `src/components/visualizer/ExecutionLog.tsx` | `finalizer` and `acquire` cases: "Finalizer ran: &lt;label&gt;", "Resource acquired" / "Resource acquire failed"    |
 
 ### Key Functions
 

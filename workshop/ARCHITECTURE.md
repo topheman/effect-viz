@@ -5,6 +5,7 @@
 ### Why Service + Layer Pattern?
 
 Instead of callbacks, we use Effect's **Service** pattern:
+
 - `TraceEmitter` service defined with `Context.Tag`
 - `makeTraceEmitterLayer` provides implementation
 - Effects explicitly require `TraceEmitter` in their R channel
@@ -17,6 +18,7 @@ Public APIs match Effect's naming (`retry`, `addFinalizer`, `acquireRelease`) so
 ### Why Real FiberIds?
 
 We use `Effect.fiberId` and `FiberId.threadName()` instead of custom UUIDs:
+
 - Effect already tracks parent-child relationships
 - No need to reinvent fiber tracking
 - **Benefit**: Accurate visualization of Effect's actual runtime
@@ -67,7 +69,7 @@ const traced = withTrace(effect, "label");
 ### Forking with Tracing
 
 ```typescript
-const fiber = yield* forkWithTrace(effect, "fiber-label");
+const fiber = yield * forkWithTrace(effect, "fiber-label");
 // Emits: fiber:fork, fiber:end (or fiber:interrupt)
 ```
 

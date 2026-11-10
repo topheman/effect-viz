@@ -12,7 +12,9 @@ const src = path.join(root, "dist/runtime");
 const dest = path.join(root, "public/app");
 
 if (!fs.existsSync(src)) {
-  console.error("copy-runtime: dist/runtime not found. Run build:runtime first.");
+  console.error(
+    "copy-runtime: dist/runtime not found. Run build:runtime first.",
+  );
   process.exit(1);
 }
 

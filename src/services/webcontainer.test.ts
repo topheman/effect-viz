@@ -9,7 +9,6 @@ import { version as resolvedEffectVersion } from "effect/package.json";
 import { describe, expect, it } from "vite-plus/test";
 
 import appPackageJson from "../../package.json?raw";
-
 // Read as text: importing the service initialises esbuild-wasm, which throws under jsdom.
 import webcontainerSource from "./webcontainer.ts?raw";
 

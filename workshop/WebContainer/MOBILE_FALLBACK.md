@@ -8,12 +8,12 @@ The same fallback is also used when offline. WebContainer boots via a cross-orig
 
 ## What the Fallback Provides
 
-| Feature          | Supported (WebContainer)             | Fallback (Mobile / Safari / Offline)       |
-| ---------------- | ------------------------------------ | ------------------------------------------ |
-| Editor           | Editable                             | Readonly                                   |
-| Execution        | WebContainer (`pnpm run`, etc.)      | In-browser Effect (`runFallbackPlay`)      |
-| Monaco types     | From `node_modules/effect` + app libs | From `effect-types.json` + `public/app/` |
-| Sync to container | Yes                                 | No                                         |
+| Feature           | Supported (WebContainer)              | Fallback (Mobile / Safari / Offline)     |
+| ----------------- | ------------------------------------- | ---------------------------------------- |
+| Editor            | Editable                              | Readonly                                 |
+| Execution         | WebContainer (`pnpm run`, etc.)       | In-browser Effect (`runFallbackPlay`)    |
+| Monaco types      | From `node_modules/effect` + app libs | From `effect-types.json` + `public/app/` |
+| Sync to container | Yes                                   | No                                       |
 
 ## Type Split
 

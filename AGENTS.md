@@ -35,7 +35,7 @@ type TraceEvent =
   | { type: "fiber:end"; fiberId: string }
   | { type: "fiber:interrupt"; fiberId: string }
   | { type: "fiber:suspend"; fiberId: string; duration: number }
-  | { type: "sleep:end"; fiberId: string }
+  | { type: "sleep:end"; fiberId: string };
 ```
 
 ## Context Recovery (For Fresh Sessions)
@@ -65,11 +65,13 @@ Invoked by the `/resume` skill (Claude Code) at the start of a fresh session.
    - Learning outcomes
 
 **Quick reference:**
+
 - Current phase? → `MEMORY.md` "Current Phase" section
 - Architecture decisions? → `workshop/ARCHITECTURE.md`
 - What was built? → `workshop/phase-N.md` for that phase
 
 When completing a phase, create a phase document in `workshop/`:
+
 - `workshop/phase-N.md` - Document concepts, implementation, and learning outcomes
 - See `workshop/README.md` for the documentation structure
 - Update `workshop/README.md` to mark the phase as complete

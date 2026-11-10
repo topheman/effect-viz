@@ -1,5 +1,12 @@
 import { Clock, Effect, Fiber, Option } from "effect";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vite-plus/test";
 
 import { VirtualClock, type VirtualClockHost } from "@/runtime/virtualClock";
 import { makeVizClockLayer } from "@/runtime/vizClock";

@@ -250,23 +250,23 @@ Step-based loader similar to Effect site: "Booting WebContainer" → "Installing
 
 ## File Structure (New/Modified)
 
-| File | Responsibility |
-|------|----------------|
-| `vite.config.ts` | Add server headers; add lib build for tracedRunner |
-| `vercel.json` | COOP/COEP headers for page and Monaco workers |
-| `src/services/webcontainer.ts` | Effect.Service: boot (semaphore, acquireRelease), writeFile, spawn, run |
-| `src/services/loader.ts` | Effect.Service: withIndicator, step-based boot UI (optional) |
-| `src/lib/transformForContainer.ts` | Pure transform: import path, trace emitter bridge, program key |
-| `src/effects/editorSync.ts` | Effect: Stream-based editor→container sync (debounce, transform, write) |
-| `src/effects/spawnAndParse.ts` | Effect: spawn npx tsx, Stream.fromReadableStream, parse TRACE_EVENT, push to stores |
-| `src/hooks/useEventHandlers.ts` | Bridge: run spawn Effect, interrupt on Reset, clear stores |
-| `src/hooks/useWebContainerBoot.ts` | Bridge: run WebContainer Effect, expose status/instance to React |
-| `src/components/editor/CodeEditor.tsx` | Types from container; remove bundled defs |
-| `src/components/layout/MainLayout.tsx` | Editable Program tab; controlled editor content |
-| `inner-project/package.json` | Template for container (effect, tsx, typescript) |
-| `inner-project/tsconfig.json` | Minimal TS config for container |
-| `dist/tracedRunner.d.ts` (emitted from build) | Monaco extra lib; served and added after tracedRunner lib build |
-| Remove `public/editor-bundled-definitions.d.ts` | Replaced by container types |
+| File                                            | Responsibility                                                                      |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `vite.config.ts`                                | Add server headers; add lib build for tracedRunner                                  |
+| `vercel.json`                                   | COOP/COEP headers for page and Monaco workers                                       |
+| `src/services/webcontainer.ts`                  | Effect.Service: boot (semaphore, acquireRelease), writeFile, spawn, run             |
+| `src/services/loader.ts`                        | Effect.Service: withIndicator, step-based boot UI (optional)                        |
+| `src/lib/transformForContainer.ts`              | Pure transform: import path, trace emitter bridge, program key                      |
+| `src/effects/editorSync.ts`                     | Effect: Stream-based editor→container sync (debounce, transform, write)             |
+| `src/effects/spawnAndParse.ts`                  | Effect: spawn npx tsx, Stream.fromReadableStream, parse TRACE_EVENT, push to stores |
+| `src/hooks/useEventHandlers.ts`                 | Bridge: run spawn Effect, interrupt on Reset, clear stores                          |
+| `src/hooks/useWebContainerBoot.ts`              | Bridge: run WebContainer Effect, expose status/instance to React                    |
+| `src/components/editor/CodeEditor.tsx`          | Types from container; remove bundled defs                                           |
+| `src/components/layout/MainLayout.tsx`          | Editable Program tab; controlled editor content                                     |
+| `inner-project/package.json`                    | Template for container (effect, tsx, typescript)                                    |
+| `inner-project/tsconfig.json`                   | Minimal TS config for container                                                     |
+| `dist/tracedRunner.d.ts` (emitted from build)   | Monaco extra lib; served and added after tracedRunner lib build                     |
+| Remove `public/editor-bundled-definitions.d.ts` | Replaced by container types                                                         |
 
 **Optional:** `@effect-atom/atom-react` for full Effect–React integration (like the Effect website). Without it, use `Effect.runPromise` and `Effect.forkScoped` for the bridge.
 
