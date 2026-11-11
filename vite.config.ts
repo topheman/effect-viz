@@ -2,8 +2,9 @@ import { createRequire } from "node:module";
 import path from "path";
 
 import { strict as effectStrict } from "@effect/tsgo/oxlint-presets";
+import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
-import react from "@vitejs/plugin-react";
+import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 import { defineConfig, lazyPlugins } from "vite-plus";
 
@@ -25,11 +26,8 @@ export default defineConfig({
   },
   plugins: lazyPlugins(() => [
     runtimeWatchPlugin(),
-    react({
-      babel: {
-        plugins: ["babel-plugin-react-compiler"],
-      },
-    }),
+    react(),
+    babel({ presets: [reactCompilerPreset()] }),
     tailwindcss(),
     VitePWA({
       registerType: "prompt",
