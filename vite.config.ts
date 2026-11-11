@@ -205,7 +205,7 @@ export default defineConfig({
       "better-tailwindcss/no-conflicting-classes": "error",
       "better-tailwindcss/no-duplicate-classes": "error",
       "better-tailwindcss/no-unnecessary-whitespace": "error",
-      "better-tailwindcss/no-unregistered-classes": "error",
+      "better-tailwindcss/no-unknown-classes": "error",
       "testing-library/await-async-events": [
         "error",
         { eventModule: "userEvent" },
