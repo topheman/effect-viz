@@ -1,4 +1,3 @@
-import { GripHorizontal } from "lucide-react";
 import { useState } from "react";
 
 import {
@@ -12,21 +11,6 @@ import { ExecutionLog } from "./ExecutionLog";
 import { FiberTreeView } from "./FiberTreeView";
 import { TimelineView } from "./TimelineView";
 
-function TimelineHeader() {
-  return (
-    <div
-      className={`
-        flex h-10 shrink-0 cursor-row-resize items-center gap-2 bg-muted/30 px-3
-      `}
-    >
-      <GripHorizontal className="h-4 w-4 text-muted-foreground/50" />
-      <span className="text-sm font-medium text-muted-foreground">
-        Timeline
-      </span>
-    </div>
-  );
-}
-
 /** Fiber Tree + Execution Log with resizable split (desktop only) */
 function MainContent() {
   return (
@@ -39,13 +23,16 @@ function MainContent() {
         `}
       >
         <ResizablePanelGroup orientation="horizontal" className="h-full">
-          <ResizablePanel defaultSize={50} minSize={25}>
+          <ResizablePanel defaultSize="50%" minSize="25%">
             <div className="h-full p-2 pr-1">
               <FiberTreeView />
             </div>
           </ResizablePanel>
-          <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={50} minSize={25}>
+          <ResizableHandle
+            withHandle
+            aria-label="Resize fiber tree and execution log"
+          />
+          <ResizablePanel defaultSize="50%" minSize="25%">
             <div className="h-full p-2 pl-1">
               <ExecutionLog />
             </div>
@@ -143,16 +130,13 @@ export function VisualizerPanel({
 function StackedViews({ timelineDurationMs }: { timelineDurationMs?: number }) {
   return (
     <ResizablePanelGroup orientation="vertical" className="h-full">
-      <ResizablePanel defaultSize={65} minSize={20}>
+      <ResizablePanel defaultSize="65%" minSize="20%">
         <MainContent />
       </ResizablePanel>
 
-      {/* Timeline header IS the resize handle */}
-      <ResizableHandle className="h-auto w-full">
-        <TimelineHeader />
-      </ResizableHandle>
+      <ResizableHandle withHandle aria-label="Resize timeline" />
 
-      <ResizablePanel defaultSize={35} minSize={15}>
+      <ResizablePanel defaultSize="35%" minSize="15%">
         <div className="h-full overflow-hidden p-2">
           <TimelineView defaultDurationMs={timelineDurationMs} />
         </div>
