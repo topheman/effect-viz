@@ -310,8 +310,8 @@ importers:
         specifier: 'catalog:'
         version: '@voidzero-dev/vite-plus-core@1.5.0(@types/node@26.6.6)(jiti@2.6.1)(terser@5.51.2)(typescript@7.0.2)(yaml@2.8.1)'
       vite-plugin-pwa:
-        specifier: ^1.3.0
-        version: 1.3.0(@voidzero-dev/vite-plus-core@1.5.0(@types/node@26.6.6)(jiti@2.6.1)(terser@5.51.2)(typescript@7.0.2)(yaml@2.8.1))(supports-color@7.2.0)(workbox-build@7.4.1(@types/babel__core@7.20.5)(supports-color@7.2.0))(workbox-window@7.4.1)
+        specifier: ^2.0.0
+        version: 2.0.0(@voidzero-dev/vite-plus-core@1.5.0(@types/node@26.6.6)(jiti@2.6.1)(terser@5.51.2)(typescript@7.0.2)(yaml@2.8.1))(supports-color@7.2.0)(workbox-build@7.4.1(@types/babel__core@7.20.5)(supports-color@7.2.0))(workbox-window@7.4.1)
       vite-plus:
         specifier: 'catalog:'
         version: 1.5.0(@types/node@26.6.6)(@vitest/ui@5.1.0)(jiti@2.6.1)(jsdom@27.4.0(supports-color@7.2.0))(playwright@1.65.0)(terser@5.51.2)(typescript@7.0.2)(yaml@2.8.1)
@@ -4391,11 +4391,11 @@ packages:
       '@types/react':
         optional: true
 
-  vite-plugin-pwa@1.3.0:
-    resolution: {integrity: sha512-c5kMgN+ITrOtHXp8PAtk2uOIEea6XjP/unCGxOWWBzQ6qa65qj/awHg0wf+QF9E/2u9vh86LqxPwzEPNbM2r5A==}
-    engines: {node: '>=16.0.0'}
+  vite-plugin-pwa@2.0.0:
+    resolution: {integrity: sha512-6G9dsPKT9QKYpeTuTLJM28zZL3HsXUTUM/QUZBEgQk2jbfrPJDq2i8gTewAKqi1c9Mt6MiidrL4SFI+HthiQMg==}
+    engines: {node: '>=20.19.0'}
     peerDependencies:
-      '@vite-pwa/assets-generator': ^1.0.0
+      '@vite-pwa/assets-generator': ^1.0.0 || ^2.0.0
       vite: ^3.1.0 || ^4.0.0 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0
       workbox-build: ^7.4.1
       workbox-window: ^7.4.1
@@ -8571,7 +8571,7 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.3.0
 
-  vite-plugin-pwa@1.3.0(@voidzero-dev/vite-plus-core@1.5.0(@types/node@26.6.6)(jiti@2.6.1)(terser@5.51.2)(typescript@7.0.2)(yaml@2.8.1))(supports-color@7.2.0)(workbox-build@7.4.1(@types/babel__core@7.20.5)(supports-color@7.2.0))(workbox-window@7.4.1):
+  vite-plugin-pwa@2.0.0(@voidzero-dev/vite-plus-core@1.5.0(@types/node@26.6.6)(jiti@2.6.1)(terser@5.51.2)(typescript@7.0.2)(yaml@2.8.1))(supports-color@7.2.0)(workbox-build@7.4.1(@types/babel__core@7.20.5)(supports-color@7.2.0))(workbox-window@7.4.1):
     dependencies:
       debug: 4.4.3(supports-color@7.2.0)
       pretty-bytes: 6.1.1
