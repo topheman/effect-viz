@@ -1,4 +1,4 @@
-import { GripHorizontal, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { MultiModelEditor } from "@/components/editor/MultiModelEditor";
@@ -437,10 +437,10 @@ export function MainLayout() {
         `}
       >
         <ResizablePanelGroup orientation="horizontal" className="h-full">
-          <ResizablePanel defaultSize={40} minSize={25}>
+          <ResizablePanel defaultSize="40%" minSize="25%">
             {showLogsPanel ? (
               <ResizablePanelGroup orientation="vertical" className="h-full">
-                <ResizablePanel defaultSize={75} minSize={30}>
+                <ResizablePanel defaultSize="75%" minSize="30%">
                   <div className="flex h-full min-w-0 flex-col">
                     <MultiModelEditor
                       tabs={editorTabs}
@@ -454,21 +454,11 @@ export function MainLayout() {
                     />
                   </div>
                 </ResizablePanel>
-                <ResizableHandle className="h-auto w-full">
-                  <div
-                    className={cn(
-                      "flex h-4 cursor-row-resize items-center justify-center",
-                      "border-y border-border bg-muted/20",
-                    )}
-                    aria-hidden
-                  >
-                    <GripHorizontal
-                      className="size-3.5 text-muted-foreground/50"
-                      aria-hidden
-                    />
-                  </div>
-                </ResizableHandle>
-                <ResizablePanel defaultSize={25} minSize={10}>
+                <ResizableHandle
+                  withHandle
+                  aria-label="Resize editor and logs"
+                />
+                <ResizablePanel defaultSize="25%" minSize="10%">
                   <WebContainerLogsPanel
                     expanded={showLogsPanel}
                     onToggle={() => setShowLogsPanel((v) => !v)}
@@ -497,9 +487,12 @@ export function MainLayout() {
             )}
           </ResizablePanel>
 
-          <ResizableHandle withHandle />
+          <ResizableHandle
+            withHandle
+            aria-label="Resize editor and visualizer"
+          />
 
-          <ResizablePanel defaultSize={60} minSize={30}>
+          <ResizablePanel defaultSize="60%" minSize="30%">
             <div className="flex h-full flex-col">
               <div className="flex-1 overflow-hidden">
                 <VisualizerPanel
@@ -527,7 +520,7 @@ export function MainLayout() {
               orientation="vertical"
               className="min-h-0 flex-1"
             >
-              <ResizablePanel defaultSize={75} minSize={30}>
+              <ResizablePanel defaultSize="75%" minSize="30%">
                 <MultiModelEditor
                   tabs={editorTabs}
                   value={editorTabId}
@@ -539,21 +532,8 @@ export function MainLayout() {
                   className="flex h-full min-w-0 flex-col"
                 />
               </ResizablePanel>
-              <ResizableHandle className="h-auto w-full">
-                <div
-                  className={cn(
-                    "flex h-4 cursor-row-resize items-center justify-center",
-                    "border-y border-border bg-muted/20",
-                  )}
-                  aria-hidden
-                >
-                  <GripHorizontal
-                    className="size-3.5 text-muted-foreground/50"
-                    aria-hidden
-                  />
-                </div>
-              </ResizableHandle>
-              <ResizablePanel defaultSize={25} minSize={10}>
+              <ResizableHandle withHandle aria-label="Resize editor and logs" />
+              <ResizablePanel defaultSize="25%" minSize="10%">
                 <WebContainerLogsPanel
                   expanded={showLogsPanel}
                   onToggle={() => setShowLogsPanel((v) => !v)}
