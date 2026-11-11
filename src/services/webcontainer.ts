@@ -230,7 +230,7 @@ function filesToTree(files: Record<string, string>): FileSystemTree {
 
 /**
  * WebContainer Layer - scoped, single instance.
- * Boots container, mounts template, runs npm install.
+ * Boots container, mounts template, runs pnpm install.
  * Requires WebContainerLogs to be provided (e.g. via Layer.merge).
  */
 export const WebContainerLive = Layer.scoped(

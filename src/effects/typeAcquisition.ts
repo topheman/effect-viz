@@ -166,7 +166,7 @@ export const acquireMonacoTypesFallback: Effect.Effect<
 
 /**
  * Acquire all types for Monaco: Effect from container, app libs from public.
- * Adds them to Monaco's TypeScript extra libs. Run after npm install in boot.
+ * Adds them to Monaco's TypeScript extra libs. Run after pnpm install in boot.
  */
 export const acquireMonacoTypes: Effect.Effect<
   void,

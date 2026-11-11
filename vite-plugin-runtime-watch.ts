@@ -4,16 +4,17 @@
  * runtime and the WebContainer fetches it on next boot.
  */
 import { spawn } from "node:child_process";
-import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+import type { Plugin, ViteDevServer } from "vite-plus";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, ".");
 const DEBOUNCE_MS = 300;
 
-export function runtimeWatchPlugin() {
-  let server: { ws: { send: (payload: object) => void } } | null = null;
+export function runtimeWatchPlugin(): Plugin {
+  let server: ViteDevServer | null = null;
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   let isBuilding = false;
 
@@ -53,19 +54,23 @@ export function runtimeWatchPlugin() {
     path.join(root, "src/types/trace.ts"),
   ];
 
+  const isWatched = (file: string) =>
+    watchPaths.some((p) => file === p || file.startsWith(p + path.sep));
+
   return {
     name: "runtime-watch",
-    configureServer(s: typeof server) {
+    configureServer(s) {
       server = s;
-      for (const p of watchPaths) {
-        if (!fs.existsSync(p)) continue;
-        const isDir = fs.statSync(p).isDirectory();
-        fs.watch(p, { recursive: isDir }, (_eventType, filename) => {
-          // filename may be undefined on some platforms; schedule build to be safe
-          if (!filename || /\.(ts|tsx|js|json)$/.test(filename)) {
+      // Vite's own watcher already covers these paths and is closed with the
+      // server; a separate fs.watch handle would keep Vitest's servers alive.
+      for (const event of ["add", "change", "unlink"] as const) {
+        s.watcher.on(event, (file) => {
+          if (isWatched(file) && /\.(ts|tsx|js|json)$/.test(file)) {
             scheduleBuild();
           }
         });
+      }
+      for (const p of watchPaths) {
         console.log(`[runtime-watch] Watching ${path.relative(root, p)}`);
       }
     },
