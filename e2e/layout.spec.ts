@@ -22,7 +22,7 @@ test("dragging where two handles meet resizes both", async ({ page }) => {
   const columnsBefore = await columns.getAttribute("aria-valuenow");
   const rowsBefore = await rows.getAttribute("aria-valuenow");
 
-  // The centre of the grip drawn where the two lines cross.
+  // The Timeline handle's grip, which sits on the columns line at a 50/50 split.
   const x = columnsBox.x + columnsBox.width / 2;
   const y = rowsBox.y + rowsBox.height / 2;
   await page.mouse.move(x, y);

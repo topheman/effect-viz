@@ -38,12 +38,8 @@ function ResizableHandle({
     <PanelResizeHandle
       data-slot="resizable-handle"
       className={cn(
-        // The separator takes no space and `before:` draws its line, so the
-        // panels on each side meet on it. v4 hit-tests a separator only along
-        // its own element and lets anything painted above it, the grip
-        // included, block the hit: a separator one pixel short of the one it
-        // meets, or a grip taking the pointer, stops both being dragged at once
-        // from where they cross.
+        // Zero-size separators, with `before:` drawing the line, so crossing
+        // handles overlap end to end and both drag from where they meet.
         `
           relative flex w-0 items-center justify-center
           before:absolute before:inset-y-0 before:left-1/2 before:w-px
@@ -53,7 +49,6 @@ function ResizableHandle({
           focus-visible:ring-1 focus-visible:ring-ring
           focus-visible:ring-offset-1 focus-visible:outline-hidden
           aria-[orientation=horizontal]:h-0 aria-[orientation=horizontal]:w-full
-          aria-[orientation=horizontal]:before:inset-y-auto
           aria-[orientation=horizontal]:before:left-0
           aria-[orientation=horizontal]:before:h-px
           aria-[orientation=horizontal]:before:w-full
@@ -79,6 +74,8 @@ function ResizableHandle({
       {...props}
     >
       {withHandle && (
+        // v4 lets an element painted above a separator block its hit, so the
+        // grip must let the pointer through where two handles cross.
         <div
           className={`
             pointer-events-none z-10 flex h-4 w-3 shrink-0 items-center
