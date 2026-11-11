@@ -34,7 +34,7 @@ public/effect-types.json
 
 src/types/editor-bundled-definitions.d.ts
 
-# Worktrees created by t3code / Claude Code
+# Local files created by t3code / Claude Code
 .claude/worktrees
 .claude/settings.local.json
 
