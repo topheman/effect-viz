@@ -89,7 +89,8 @@ function TabsTrigger({
           disabled:pointer-events-none disabled:opacity-50
           group-data-[variant=default]/tabs-list:data-[state=active]:shadow-sm
           group-data-[variant=line]/tabs-list:data-[state=active]:shadow-none
-          dark:text-muted-foreground dark:hover:text-foreground
+          dark:text-muted-foreground
+          dark:hover:text-foreground
           [&_svg]:pointer-events-none [&_svg]:shrink-0
           [&_svg:not([class*='size-'])]:size-4
         `,
