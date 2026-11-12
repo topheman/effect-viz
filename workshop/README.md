@@ -1,6 +1,6 @@
 # EffectViz Workshop Documentation
 
-> Phases 1 to 11 were written on Effect 3: their code and their explanations describe the Effect 3 runtime. What Effect 4 changes for the visualizer is in [Migrating to Effect 4](./effect-4-migration.md).
+> Phases 1 to 11 were written on Effect 3. What Effect 4 changes for the visualizer is in [Migrating to Effect 4](./effect-4-migration.md).
 
 This folder contains documentation for the EffectViz visualizer learning journey.
 
