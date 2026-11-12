@@ -1,5 +1,7 @@
 # EffectViz Workshop Documentation
 
+> Phases 1 to 11 were written on Effect 3: their code and their explanations describe the Effect 3 runtime. What Effect 4 changes for the visualizer is in [Migrating to Effect 4](./effect-4-migration.md).
+
 This folder contains documentation for the EffectViz visualizer learning journey.
 
 ## Purpose
@@ -56,6 +58,7 @@ Take over the runtime's clock and scheduler so execution can be slowed and stepp
 ### Maintenance
 
 - [Upgrading Effect to 3.22 (issue #18)](./effect-3.22-upgrade.md) ✅ — what three minor versions changed for the traces, and the one example that traces differently.
+- [Migrating to Effect 4](./effect-4-migration.md) — what v4 changes to fibers, scheduling, interruption and scopes, and what that changes in the runtime and the traces.
 
 **Why two versions?**
 
