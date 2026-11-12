@@ -310,13 +310,7 @@ export function InfoModal({
           and overlay scrollbars show nothing, so a footer left inside it reads
           as missing rather than as further down.
         */}
-        <nav
-          aria-label="Effect versions"
-          className="flex flex-col items-center gap-1 pt-4"
-        >
-          <p className="text-sm text-muted-foreground">
-            Built on Effect {__EFFECT_VERSION__}.
-          </p>
+        <nav aria-label="Effect versions" className="flex justify-center pt-4">
           <VersionLinks className="flex-row gap-2" />
         </nav>
         <p className="text-center">

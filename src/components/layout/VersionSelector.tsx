@@ -5,20 +5,26 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { EFFECT_VERSION_SITES, majorOf } from "@/lib/effectVersions";
+import { CURRENT_MAJOR, EFFECT_VERSION_SITES } from "@/lib/effectVersions";
 import { cn } from "@/lib/utils";
 
-const CURRENT_MAJOR = majorOf(__EFFECT_VERSION__);
+interface VersionLinksProps {
+  className?: string;
+  currentMajor?: number;
+}
 
 /**
  * The deployed EffectViz sites, one per Effect major: this build's entry is
  * marked current and is not a link, the others link to their site.
  */
-export function VersionLinks({ className }: { className?: string }) {
+export function VersionLinks({
+  className,
+  currentMajor = CURRENT_MAJOR,
+}: VersionLinksProps) {
   return (
     <ul className={cn("flex flex-col gap-1", className)}>
       {EFFECT_VERSION_SITES.map((site) =>
-        site.major === CURRENT_MAJOR ? (
+        site.major === currentMajor ? (
           <li key={site.major}>
             <span
               aria-current="page"
@@ -55,9 +61,11 @@ export function VersionLinks({ className }: { className?: string }) {
 export function VersionSelector() {
   return (
     <Popover>
+      {/* Radix announces a popover as a dialog; a list of links is a disclosure. */}
       <PopoverTrigger
+        aria-haspopup={undefined}
         className={`
-          flex items-center gap-1 rounded-full border border-border px-2 py-0.5
+          flex items-center gap-1 rounded-full border border-border px-2 py-1
           text-xs whitespace-nowrap text-muted-foreground
           hover:bg-accent hover:text-accent-foreground
           focus-visible:ring-[3px] focus-visible:ring-ring/50
@@ -67,7 +75,7 @@ export function VersionSelector() {
         Effect {__EFFECT_VERSION__}
         <ChevronDown aria-hidden className="size-3" />
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-40 p-1">
+      <PopoverContent role={undefined} align="start" className="w-40 p-1">
         <nav aria-label="Effect versions">
           <VersionLinks />
         </nav>

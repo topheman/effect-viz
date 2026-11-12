@@ -15,3 +15,6 @@ export const EFFECT_VERSION_SITES: readonly EffectVersionSite[] = [
 export function majorOf(version: string): number {
   return Number.parseInt(version, 10);
 }
+
+/** The Effect major this build runs on. */
+export const CURRENT_MAJOR = majorOf(__EFFECT_VERSION__);

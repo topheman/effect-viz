@@ -61,8 +61,6 @@ test("a phone opens the version pill", async ({ page }) => {
   await openApp(page);
   await page.getByRole("button", { name: /^Effect \d/ }).tap();
   await expect(
-    page
-      .getByRole("navigation", { name: "Effect versions" })
-      .getByRole("link", { name: "Effect 4" }),
+    page.getByRole("navigation", { name: "Effect versions" }).getByRole("link"),
   ).toBeVisible();
 });

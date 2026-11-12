@@ -1,36 +1,48 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { VersionSelector } from "./VersionSelector";
+import { VersionLinks, VersionSelector } from "./VersionSelector";
 
 describe("VersionSelector", () => {
-  it("shows the build's Effect version on the pill", () => {
-    render(<VersionSelector />);
-
-    expect(
-      screen.getByRole("button", { name: `Effect ${__EFFECT_VERSION__}` }),
-    ).toBeInTheDocument();
-  });
-
-  it("lists the other site as a link and marks this one current", async () => {
+  it("discloses the version links from a pill showing the build's version", async () => {
     const user = userEvent.setup();
     render(<VersionSelector />);
+    const pill = screen.getByRole("button", {
+      name: `Effect ${__EFFECT_VERSION__}`,
+    });
+    expect(pill).toHaveAttribute("aria-expanded", "false");
+    expect(pill).not.toHaveAttribute("aria-haspopup");
 
-    await user.click(
-      screen.getByRole("button", { name: `Effect ${__EFFECT_VERSION__}` }),
-    );
+    await user.click(pill);
 
-    const nav = screen.getByRole("navigation", { name: "Effect versions" });
-    expect(within(nav).getByRole("link", { name: "Effect 4" })).toHaveAttribute(
-      "href",
-      "https://effect-viz.vercel.app",
-    );
+    expect(pill).toHaveAttribute("aria-expanded", "true");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(
-      within(nav).queryByRole("link", { name: "Effect 3" }),
-    ).not.toBeInTheDocument();
-    expect(within(nav).getByText("Effect 3")).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+      screen.getByRole("navigation", { name: "Effect versions" }),
+    ).toBeInTheDocument();
   });
+});
+
+describe("VersionLinks", () => {
+  it.each([
+    { current: 3, other: "Effect 4", url: "https://effect-viz.vercel.app" },
+    { current: 4, other: "Effect 3", url: "https://effect-viz-v3.vercel.app" },
+  ])(
+    "on Effect $current, links to $other and marks Effect $current current",
+    ({ current, other, url }) => {
+      render(<VersionLinks currentMajor={current} />);
+
+      expect(screen.getByRole("link", { name: other })).toHaveAttribute(
+        "href",
+        url,
+      );
+      expect(
+        screen.queryByRole("link", { name: `Effect ${current}` }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByText(`Effect ${current}`)).toHaveAttribute(
+        "aria-current",
+        "page",
+      );
+    },
+  );
 });

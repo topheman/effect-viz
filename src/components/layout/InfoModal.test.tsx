@@ -1,6 +1,8 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import { CURRENT_MAJOR, EFFECT_VERSION_SITES } from "@/lib/effectVersions";
+
 import { InfoModal } from "./InfoModal";
 
 describe("InfoModal", () => {
@@ -59,18 +61,17 @@ describe("InfoModal", () => {
     expect(portfolioLink).toHaveAttribute("target", "_blank");
   });
 
-  it("links to the EffectViz site for the other Effect version", async () => {
+  it("links to the EffectViz site of each Effect major", async () => {
     const user = userEvent.setup();
     render(<InfoModal />);
 
     await user.click(screen.getByRole("button"));
 
     const nav = screen.getByRole("navigation", { name: "Effect versions" });
-    expect(within(nav).getByRole("link", { name: "Effect 4" })).toHaveAttribute(
-      "href",
-      "https://effect-viz.vercel.app",
+    expect(within(nav).getAllByRole("link")).toHaveLength(
+      EFFECT_VERSION_SITES.length - 1,
     );
-    expect(within(nav).getByText("Effect 3")).toHaveAttribute(
+    expect(within(nav).getByText(`Effect ${CURRENT_MAJOR}`)).toHaveAttribute(
       "aria-current",
       "page",
     );
