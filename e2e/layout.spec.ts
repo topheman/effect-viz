@@ -36,3 +36,16 @@ test("dragging where two handles meet resizes both", async ({ page }) => {
   );
   await expect(rows).not.toHaveAttribute("aria-valuenow", rowsBefore ?? "");
 });
+
+test("the version pill opens the list of EffectViz sites", async ({ page }) => {
+  await openApp(page);
+  await page.getByRole("button", { name: /^Effect \d/ }).click();
+  const versions = page.getByRole("navigation", { name: "Effect versions" });
+  await expect(
+    versions.getByRole("link", { name: "Effect 4" }),
+  ).toHaveAttribute("href", "https://effect-viz.vercel.app");
+  await expect(versions.getByText("Effect 3")).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+});

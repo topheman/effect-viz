@@ -21,6 +21,8 @@ import { formatShortcut } from "@/lib/keyboardShortcuts";
 import { useCanSupportWebContainer, useIsMobile } from "@/lib/mobileDetection";
 import { cn } from "@/lib/utils";
 
+import { VersionLinks } from "./VersionSelector";
+
 const GITHUB_REPO_URL = "https://github.com/topheman/effect-viz";
 const PORTFOLIO_URL = "https://topheman.github.io/me/";
 
@@ -308,7 +310,16 @@ export function InfoModal({
           and overlay scrollbars show nothing, so a footer left inside it reads
           as missing rather than as further down.
         */}
-        <p className="pt-4 text-center">
+        <nav
+          aria-label="Effect versions"
+          className="flex flex-col items-center gap-1 pt-4"
+        >
+          <p className="text-sm text-muted-foreground">
+            Built on Effect {__EFFECT_VERSION__}.
+          </p>
+          <VersionLinks className="flex-row gap-2" />
+        </nav>
+        <p className="text-center">
           {/* GitHub Link */}
           <a
             href={GITHUB_REPO_URL}

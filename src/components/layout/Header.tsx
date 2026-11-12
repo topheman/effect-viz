@@ -1,3 +1,5 @@
+import { VersionSelector } from "./VersionSelector";
+
 interface HeaderProps {
   title?: string;
   description?: string;
@@ -15,7 +17,12 @@ export function Header({
       `}
     >
       <h1 className="text-lg font-semibold text-foreground">{title}</h1>
-      <span className="ml-2 text-sm text-muted-foreground">{description}</span>
+      <div className="ml-2 shrink-0">
+        <VersionSelector />
+      </div>
+      <span className="ml-2 min-w-0 truncate text-sm text-muted-foreground">
+        {description}
+      </span>
     </header>
   );
 }

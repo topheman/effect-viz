@@ -59,6 +59,23 @@ describe("InfoModal", () => {
     expect(portfolioLink).toHaveAttribute("target", "_blank");
   });
 
+  it("links to the EffectViz site for the other Effect version", async () => {
+    const user = userEvent.setup();
+    render(<InfoModal />);
+
+    await user.click(screen.getByRole("button"));
+
+    const nav = screen.getByRole("navigation", { name: "Effect versions" });
+    expect(within(nav).getByRole("link", { name: "Effect 4" })).toHaveAttribute(
+      "href",
+      "https://effect-viz.vercel.app",
+    );
+    expect(within(nav).getByText("Effect 3")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
   it("renders a QR code in the modal", async () => {
     const user = userEvent.setup();
     render(<InfoModal />);
