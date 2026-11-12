@@ -1,0 +1,22 @@
+name: Bug — Effect 3 (effect-viz-v3.vercel.app)
+description: Report a bug in the Effect 3 app.
+labels: [bug, v3]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you saw instead.
+    validations:
+      required: true
+  - type: textarea
+    id: program
+    attributes:
+      label: Program
+      description: The program you ran, if the bug depends on it.
+      render: typescript
+  - type: input
+    id: browser
+    attributes:
+      label: Browser
+      placeholder: Chrome 142, macOS
