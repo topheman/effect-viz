@@ -5,7 +5,7 @@
  * runs pnpm install, and provides writeFile/spawn/run.
  */
 import { WebContainer as WC, type FileSystemTree } from "@webcontainer/api";
-import { Context, Data, Effect, GlobalValue, Layer } from "effect";
+import { Context, Data, Effect, Layer, Semaphore } from "effect";
 
 import {
   initEsbuildWasm,
@@ -61,8 +61,8 @@ Example:
 `;
 
 /** Runner: imports program.js, injects trace layer, runs. Fixed bootstrap — no user code transformation for tracing. */
-const RUNNER_JS = `import { Effect, Layer } from "effect";
-import { _makeTraceEmitterLayer, _makeVizLayers, _makeVizTracer, _runProgramFork, _VirtualClock, _makeVizClockLayer, _installDateShim, _GatedScheduler, _Stepper, _applyCommand, _decodeCommand, _encodeReply, _makeLineReader, _makeOriginTagger } from "./runtime.js";
+const RUNNER_JS = `import { Effect } from "effect";
+import { _withViz, _runProgramFork, _VirtualClock, _installDateShim, _GatedScheduler, _Stepper, _applyCommand, _decodeCommand, _encodeReply, _makeLineReader, _makeOriginTagger } from "./runtime.js";
 
 const ROOT_EFFECT_MISSING_MSG = ${JSON.stringify(ROOT_EFFECT_MISSING_MSG)};
 
@@ -101,7 +101,7 @@ async function main() {
   const stepper = new _Stepper({
     scheduler,
     clock: virtualClock,
-    isFinished: () => rootFiber !== null && rootFiber.unsafePoll() !== null,
+    isFinished: () => rootFiber !== null && rootFiber.pollUnsafe() !== undefined,
   });
 
   // A paused start injects a yield the program never wrote; the tagger marks the
@@ -124,26 +124,18 @@ async function main() {
   process.stdin.setEncoding("utf8");
   process.stdin.on("data", readStdin);
 
-  const now = () => virtualClock.now();
-
-  const traceLayer = _makeTraceEmitterLayer(onEmit);
-  const supervisorLayer = _makeVizLayers(onEmit, now);
-  const tracerLayer = Layer.setTracer(_makeVizTracer(onEmit, now));
-  const clockLayer = _makeVizClockLayer(virtualClock);
-  const allLayers = Layer.mergeAll(traceLayer, supervisorLayer, tracerLayer, clockLayer, ...requirements);
-
-  // Gate before the program is forked, so even its first task is held.
+  // Gate before the program is forked, so even its first operation is held.
   if (startPaused) stepper.pause();
 
-  // runFork runs a fiber synchronously until its first yield, and the scheduler
-  // only governs resumption. Yielding first therefore hands the very first
-  // operation to the gate, so a paused start can be stepped from event one.
-  const body = startPaused ? Effect.zipRight(Effect.yieldNow(), rootEffect) : rootEffect;
-  const program = Effect.scoped(body).pipe(Effect.withScheduler(scheduler), Effect.provide(allLayers));
+  // A paused gate already holds the root before its first operation. The
+  // leading yield gives a paused start a suspend and resume pair, which the
+  // log tags as the tool's and can hide.
+  const body = startPaused ? Effect.andThen(Effect.yieldNow, rootEffect) : rootEffect;
+  const program = _withViz(body, { onEmit, clock: virtualClock, scheduler, layers: requirements });
 
-  process.stdout.write(_encodeReply({ reply: "ready", virtualNow: now() }));
+  process.stdout.write(_encodeReply({ reply: "ready", virtualNow: virtualClock.now() }));
 
-  const { fiber, promise } = _runProgramFork(program, onEmit, now);
+  const { fiber, promise } = _runProgramFork(program);
   rootFiber = fiber;
   promise.then(
     (result) => console.log("Program completed:", result),
@@ -157,12 +149,11 @@ async function main() {
 main();
 `;
 
-/** Minimal traced Effect program for pre-warm — loads effect, runtime, emits one trace event */
+/** Minimal program for pre-warm: loads effect and the runtime, and runs one fiber. */
 const PREWARM_PROGRAM = `import { Effect } from "effect";
 import { _runProgramFork } from "./runtime.js";
 const program = Effect.succeed("prewarm");
-// Events are discarded here, so wall time is fine — no clock is installed.
-const { promise } = _runProgramFork(program, () => {}, Date.now);
+const { promise } = _runProgramFork(program);
 promise.then(() => {}, (error) => console.error("Warmup program failed:", error));
 `;
 
@@ -170,9 +161,11 @@ promise.then(() => {}, (error) => console.error("Warmup program failed:", error)
 // Semaphore: only one WebContainer at a time
 // ---
 
-const semaphore = GlobalValue.globalValue("app/WebContainer/semaphore", () =>
-  Effect.unsafeMakeSemaphore(1),
-);
+const SEMAPHORE_KEY = Symbol.for("app/WebContainer/semaphore");
+
+/** Kept on `globalThis`, so a module reloaded by HMR shares the permit with the old one. */
+const semaphore = ((globalThis as Record<symbol, unknown>)[SEMAPHORE_KEY] ??=
+  Semaphore.makeUnsafe(1)) as Semaphore.Semaphore;
 
 // ---
 // Errors
@@ -218,7 +211,7 @@ export interface WebContainerHandle {
 }
 
 export const WebContainer =
-  Context.GenericTag<WebContainerHandle>("app/WebContainer");
+  Context.Service<WebContainerHandle>("app/WebContainer");
 
 function filesToTree(files: Record<string, string>): FileSystemTree {
   const tree: FileSystemTree = {};
@@ -233,7 +226,7 @@ function filesToTree(files: Record<string, string>): FileSystemTree {
  * Boots container, mounts template, runs pnpm install.
  * Requires WebContainerLogs to be provided (e.g. via Layer.merge).
  */
-export const WebContainerLive = Layer.scoped(
+export const WebContainerLive = Layer.effect(
   WebContainer,
   Effect.gen(function* () {
     const logs = yield* WebContainerLogs;
@@ -316,7 +309,7 @@ export const WebContainerLive = Layer.scoped(
     yield* logs.log("boot", "6/6 Boot complete, returning handle");
 
     // Pre-warm traced path: run minimal traced Effect so first Play has warmer tsx/Effect/runtime
-    yield* Effect.fork(
+    yield* Effect.forkChild(
       Effect.gen(function* () {
         const proc = yield* Effect.promise(() =>
           container.spawn("pnpm", ["exec", "tsx", "prewarm.ts"], {

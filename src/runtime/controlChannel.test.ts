@@ -168,7 +168,7 @@ describe("applyCommand", () => {
     const { scheduler, target } = setup();
     applyCommand({ cmd: "pause" }, target);
     const task = vi.fn();
-    scheduler.scheduleTask(task, 0);
+    scheduler.makeDispatcher().scheduleTask(task, 0);
 
     const reply = applyCommand({ cmd: "step" }, target);
 
@@ -207,7 +207,7 @@ describe("applyCommand", () => {
     const { scheduler, target } = setup({ isFinished: () => true });
     applyCommand({ cmd: "pause" }, target);
     const task = vi.fn();
-    scheduler.scheduleTask(task, 0);
+    scheduler.makeDispatcher().scheduleTask(task, 0);
 
     const reply = applyCommand({ cmd: "step" }, target);
 

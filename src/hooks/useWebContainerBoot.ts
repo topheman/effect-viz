@@ -40,10 +40,8 @@ export function useWebContainerBoot() {
   const [error, setError] = useState<string | null>(null);
   const [typesReady, setTypesReady] = useState(false);
   const handleRef = useRef<WebContainerHandle | null>(null);
-  const bootFiberRef = useRef<Fiber.RuntimeFiber<void, unknown> | null>(null);
-  const playFiberRef = useRef<Fiber.RuntimeFiber<unknown, unknown> | null>(
-    null,
-  );
+  const bootFiberRef = useRef<Fiber.Fiber<void, unknown> | null>(null);
+  const playFiberRef = useRef<Fiber.Fiber<unknown, unknown> | null>(null);
   const lastSyncedContentRef = useRef<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -108,7 +106,7 @@ export function useWebContainerBoot() {
       yield* acquireMonacoTypes.pipe(
         Effect.tap(() => Effect.sync(() => addLog("boot", "Types acquired"))),
         Effect.tap(() => Effect.sync(() => setTypesReady(true))),
-        Effect.catchAll((err) =>
+        Effect.catch((err) =>
           Effect.sync(() => {
             addLog("boot", `Types unavailable: ${err.message}`);
             console.error("[useWebContainerBoot] Type acquisition failed", err);
@@ -203,7 +201,7 @@ export function useWebContainerBoot() {
               exitCode,
             }),
             onFailure: (cause): PlayResult =>
-              Cause.isInterruptedOnly(cause)
+              Cause.hasInterruptsOnly(cause)
                 ? { outcome: "interrupted" }
                 : { outcome: "failed", error: Cause.pretty(cause) },
           }),
