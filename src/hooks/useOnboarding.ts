@@ -4,7 +4,7 @@ import { useCallback, useSyncExternalStore } from "react";
 const ONBOARDING_STORAGE_KEY = "effect-viz-onboarding";
 const ONBOARDING_VERSION = Number(import.meta.env.VITE_ONBOARDING_VERSION) || 1;
 
-const OnboardingStep = Schema.Literal(
+const OnboardingStep = Schema.Literals([
   "play",
   "showVisualizer",
   "programSelect",
@@ -12,7 +12,7 @@ const OnboardingStep = Schema.Literal(
   "step",
   "speed",
   "logOptions",
-);
+]);
 type OnboardingStep = Schema.Schema.Type<typeof OnboardingStep>;
 
 const OnboardingStored = Schema.Struct({
