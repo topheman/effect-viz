@@ -9,7 +9,7 @@ export interface WebContainerLogs {
   ) => Effect.Effect<void>;
 }
 
-export const WebContainerLogs = Context.GenericTag<WebContainerLogs>(
+export const WebContainerLogs = Context.Service<WebContainerLogs>(
   "app/WebContainerLogs",
 );
 

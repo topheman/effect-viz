@@ -5,7 +5,7 @@
  * runs pnpm install, and provides writeFile/spawn/run.
  */
 import { WebContainer as WC, type FileSystemTree } from "@webcontainer/api";
-import { Context, Data, Effect, GlobalValue, Layer } from "effect";
+import { Context, Data, Effect, Layer, Semaphore } from "effect";
 
 import {
   initEsbuildWasm,
@@ -170,9 +170,11 @@ promise.then(() => {}, (error) => console.error("Warmup program failed:", error)
 // Semaphore: only one WebContainer at a time
 // ---
 
-const semaphore = GlobalValue.globalValue("app/WebContainer/semaphore", () =>
-  Effect.unsafeMakeSemaphore(1),
-);
+const SEMAPHORE_KEY = Symbol.for("app/WebContainer/semaphore");
+
+/** Kept on `globalThis`, so a module reloaded by HMR shares the permit with the old one. */
+const semaphore = ((globalThis as Record<symbol, unknown>)[SEMAPHORE_KEY] ??=
+  Semaphore.makeUnsafe(1)) as Semaphore.Semaphore;
 
 // ---
 // Errors
@@ -218,7 +220,7 @@ export interface WebContainerHandle {
 }
 
 export const WebContainer =
-  Context.GenericTag<WebContainerHandle>("app/WebContainer");
+  Context.Service<WebContainerHandle>("app/WebContainer");
 
 function filesToTree(files: Record<string, string>): FileSystemTree {
   const tree: FileSystemTree = {};
@@ -233,7 +235,7 @@ function filesToTree(files: Record<string, string>): FileSystemTree {
  * Boots container, mounts template, runs pnpm install.
  * Requires WebContainerLogs to be provided (e.g. via Layer.merge).
  */
-export const WebContainerLive = Layer.scoped(
+export const WebContainerLive = Layer.effect(
   WebContainer,
   Effect.gen(function* () {
     const logs = yield* WebContainerLogs;
@@ -316,7 +318,7 @@ export const WebContainerLive = Layer.scoped(
     yield* logs.log("boot", "6/6 Boot complete, returning handle");
 
     // Pre-warm traced path: run minimal traced Effect so first Play has warmer tsx/Effect/runtime
-    yield* Effect.fork(
+    yield* Effect.forkChild(
       Effect.gen(function* () {
         const proc = yield* Effect.promise(() =>
           container.spawn("pnpm", ["exec", "tsx", "prewarm.ts"], {
