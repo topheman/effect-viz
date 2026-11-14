@@ -3,7 +3,7 @@
  * TRACE_EVENT: lines from stdout. The runner imports program.js (rootEffect, requirements)
  * and injects the trace layer before running.
  */
-import { Duration, Effect, Option, Ref, Stream } from "effect";
+import { Duration, Effect, Ref, Stream } from "effect";
 
 import {
   CONTROL_REPLY_PREFIX,
@@ -175,7 +175,8 @@ export function spawnAndParseTraceEvents({
     );
 
     const lineStream = rawStream.pipe(
-      Stream.mapConcat((chunk) => chunk.split("\n")),
+      Stream.map((chunk) => chunk.split("\n")),
+      Stream.flattenIterable,
     );
     const traceStream = lineStream.pipe(
       Stream.tap((line) =>
@@ -211,13 +212,14 @@ export function spawnAndParseTraceEvents({
           onStdout?.(line, "program");
         }),
       ),
-      Stream.filterMap((line) => Option.fromNullable(parseTraceEvent(line))),
+      Stream.map(parseTraceEvent),
+      Stream.filter((event): event is TraceEvent => event !== null),
     );
 
     const firstChunkCalledRef = yield* Ref.make(false);
     // Run stream consumer in background; don't block on stream EOF.
     // WebContainer's output stream may not close when process exits.
-    yield* Effect.fork(
+    yield* Effect.forkChild(
       Stream.runForEach(traceStream, (event) =>
         Effect.gen(function* () {
           const wasFirst = yield* Ref.getAndSet(firstChunkCalledRef, true);

@@ -71,8 +71,8 @@ export default defineConfig({
           "effect-types.json",
           "app/**/*.d.ts",
         ],
-        // effect-types.json is ~4.2 MB, over the 2 MiB default.
-        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
+        // effect-types.json is ~7.6 MiB, over the 2 MiB default.
+        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
         runtimeCaching: [
           {
             // Note: jsdelivr serves versioned paths like monaco-editor@0.55.1/...
