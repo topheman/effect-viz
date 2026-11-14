@@ -7,7 +7,7 @@
 export interface EffectStartEvent {
   type: "effect:start";
   id: string;
-  /** Fiber the event was emitted on, as `FiberId.threadName` prints it */
+  /** Fiber the event was emitted on, as `fiberLabel` prints it */
   fiberId: string;
   label: string;
   timestamp: number;
@@ -119,7 +119,7 @@ type AcquireEvent =
 /**
  * Who caused an event: the program under observation, or the visualizer itself.
  *
- * Starting a run paused injects an `Effect.yieldNow()` before the program body,
+ * Starting a run paused injects an `Effect.yieldNow` before the program body,
  * and the runtime yields for real — so the trace contains a suspend and resume
  * pair that the program's author never wrote. Absent means `"program"`, which
  * keeps the common case unannotated.

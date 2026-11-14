@@ -7,28 +7,38 @@
  * program's observable behaviour is unchanged: it is slow motion, not a
  * distortion. Only the wall-clock duration changes.
  */
-import { Clock, Duration, Effect, Layer } from "effect";
+import { Duration, Effect } from "effect";
+import type { Clock } from "effect";
 
 import type { VirtualClock } from "@/runtime/virtualClock";
 
 const NANOS_PER_MILLI = 1_000_000;
 
-export function makeVizClock(virtual: VirtualClock): Clock.Clock {
-  const unsafeCurrentTimeMillis = () => virtual.now();
-  const unsafeCurrentTimeNanos = () =>
+/**
+ * `wake` runs the resume of a fiber whose sleep is over. The visualizer passes
+ * `GatedScheduler.wake`, so a timer firing while paused only queues it.
+ */
+export function makeVizClock(
+  virtual: VirtualClock,
+  wake: (resume: () => void) => void = (resume) => resume(),
+): Clock.Clock {
+  const currentTimeMillisUnsafe = () => virtual.now();
+  const currentTimeNanosUnsafe = () =>
     BigInt(Math.round(virtual.now() * NANOS_PER_MILLI));
 
   return {
-    [Clock.ClockTypeId]: Clock.ClockTypeId,
-    unsafeCurrentTimeMillis,
-    unsafeCurrentTimeNanos,
+    currentTimeMillisUnsafe,
+    currentTimeNanosUnsafe,
+    // Virtual time is monotonic: it only changes slope, never jumps back.
+    monotonicTimeNanosUnsafe: currentTimeNanosUnsafe,
     // `Effect.sync` defers, so these read virtual time when run, not when built.
-    currentTimeMillis: Effect.sync(unsafeCurrentTimeMillis),
-    currentTimeNanos: Effect.sync(unsafeCurrentTimeNanos),
+    currentTimeMillis: Effect.sync(currentTimeMillisUnsafe),
+    currentTimeNanos: Effect.sync(currentTimeNanosUnsafe),
+    monotonicTimeNanos: Effect.sync(currentTimeNanosUnsafe),
     sleep: (duration: Duration.Duration) =>
-      Effect.async<void>((resume) => {
+      Effect.callback<void>((resume) => {
         const cancel = virtual.sleep(Duration.toMillis(duration), () =>
-          resume(Effect.void),
+          wake(() => resume(Effect.void)),
         );
         // Returned canceler runs on interruption, so an interrupted fiber does
         // not leave a timer pending on the virtual clock.
@@ -36,6 +46,3 @@ export function makeVizClock(virtual: VirtualClock): Clock.Clock {
       }),
   };
 }
-
-export const makeVizClockLayer = (virtual: VirtualClock): Layer.Layer<never> =>
-  Layer.setClock(makeVizClock(virtual));
