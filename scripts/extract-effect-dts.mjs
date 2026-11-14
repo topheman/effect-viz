@@ -19,8 +19,10 @@ import fs from "node:fs";
 import path from "node:path";
 
 import {
+  declarationCandidates,
   effectTypesLayout,
   exportTypesPath,
+  relativeSpecifiers,
 } from "../src/effects/effectTypesLayout.ts";
 
 const PKG_DIR = "node_modules/effect";
@@ -53,16 +55,10 @@ if (!fs.existsSync(path.join(dtsDir, entry))) {
   fail(`${layout.entry} is declared by package.json but missing on disk.`);
 }
 
-// Relative specifiers (`from "./Effect.js"`, `import("./Cause.ts")`,
-// `declare module "./Effect.js"`) are followed from the entry; one that lands
-// on no file would leave Monaco typing its names as any. Comments are skipped:
-// JSDoc examples import from paths that are not part of the package.
-const SPECIFIER =
-  /(?:from|import\(|declare module)\s*["'](\.{1,2}\/[^"']+)["']/g;
-const COMMENT = /\/\*[\s\S]*?\*\/|\/\/.*$/gm;
-
 const contents = new Map();
 const unresolved = [];
+// Follows relative imports from the entry; one landing on no file would leave
+// Monaco typing its names as any.
 const pending = [entry];
 while (pending.length > 0) {
   const file = pending.pop();
@@ -71,11 +67,8 @@ while (pending.length > 0) {
     .readFileSync(path.join(dtsDir, file), "utf8")
     .replace(/^\/\/# sourceMappingURL=.*$/m, "");
   contents.set(file, content);
-  for (const [, spec] of content.replace(COMMENT, "").matchAll(SPECIFIER)) {
-    const base = path.posix
-      .join(path.posix.dirname(file), spec)
-      .replace(/\.[jt]s$/, "");
-    const target = [`${base}.d.ts`, `${base}/index.d.ts`].find((candidate) =>
+  for (const spec of relativeSpecifiers(content)) {
+    const target = declarationCandidates(file, spec).find((candidate) =>
       fs.existsSync(path.join(dtsDir, candidate)),
     );
     if (target === undefined) unresolved.push(`  ${file}: "${spec}"`);
@@ -89,31 +82,31 @@ if (unresolved.length > 0) {
       unresolved.slice(0, 20).join("\n"),
   );
 }
-// Code-unit order, as a bare sort() would give, so the output stays stable.
+// A bare sort(), spelled out for oxlint's require-array-sort-compare.
 const relFiles = [...contents.keys()].sort((a, b) =>
   a < b ? -1 : a > b ? 1 : 0,
 );
 
-// Every `effect/<Module>` must be extracted, since that is what Monaco's
-// `effect/*` path mapping points at: the subpaths effect 3 lists one by one, and
-// the files effect 4's `./*` pattern matches. Only files directly in the
-// declarations directory count: effect 4's folder packages (`effect/http`…) are
-// not reachable from the entry and are left out. Subpaths whose file effect does
-// not ship (3.22.1 declares `./.index` without it) are broken upstream too.
+// Every top-level `effect/<Module>` must be extracted, as Monaco's `effect/*`
+// mapping points there: effect 3's explicit subpaths, effect 4's `./*` matches.
+// Effect 4's folder indexes (`effect/http`…) are left out to keep the file
+// small. Files effect does not ship (3.22.1's `./.index`) are skipped.
 const subpathFiles = Object.entries(pkg.exports)
   .filter(([key]) => key !== ".")
   .flatMap(([key, target]) => {
     const types = exportTypesPath(target);
     if (types === undefined) return [];
     const files = key.includes("*")
-      ? fs.globSync(types, { cwd: path.resolve(PKG_DIR) })
+      ? fs
+          .globSync(types, { cwd: path.resolve(PKG_DIR) })
+          .map((file) => file.split(path.sep).join("/"))
       : [types];
     return files.map((file) => ({
       key: key.includes("*") ? file : key,
       file: path.posix.relative(layout.dir, path.posix.normalize(file)),
     }));
   })
-  .filter(({ file }) => !file.includes("/"))
+  .filter(({ file }) => file.startsWith("../") || !file.includes("/"))
   .filter(({ file }) => fs.existsSync(path.join(dtsDir, file)));
 const extracted = new Set(relFiles);
 const missingSubpaths = subpathFiles.filter(({ file }) => !extracted.has(file));
@@ -129,7 +122,7 @@ fs.writeFileSync(
   JSON.stringify({
     version: pkg.version,
     files: relFiles.map((file) => ({
-      path: `file:///${PKG_DIR}/${layout.dir}/${file}`,
+      path: `file:///${path.posix.join(PKG_DIR, layout.dir, file)}`,
       content: contents.get(file),
     })),
   }),

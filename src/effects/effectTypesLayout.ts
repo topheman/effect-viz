@@ -17,7 +17,7 @@ export interface EffectPackageJson {
 export interface EffectTypesLayout {
   /** `dist/dts/index.d.ts` for effect 3, `dist/index.d.ts` for effect 4. */
   readonly entry: string;
-  /** The directory every `effect/<Module>` declaration sits in. */
+  /** The directory every `effect/<Module>` declaration sits in, `""` for the package root. */
   readonly dir: string;
 }
 
@@ -53,15 +53,43 @@ export function effectTypesLayout(pkg: EffectPackageJson): EffectTypesLayout {
     );
   }
   const slash = entry.lastIndexOf("/");
-  return { entry, dir: slash === -1 ? "." : entry.slice(0, slash) };
+  return { entry, dir: slash === -1 ? "" : entry.slice(0, slash) };
 }
 
 /** The Monaco `paths` mapping for `effect` and `effect/*`, from the package root `node_modules/effect`. */
 export function effectPaths(
   layout: EffectTypesLayout,
 ): Record<string, string[]> {
+  const dir = layout.dir === "" ? "" : `${layout.dir}/`;
   return {
     effect: [`node_modules/effect/${layout.entry}`],
-    "effect/*": [`node_modules/effect/${layout.dir}/*`],
+    "effect/*": [`node_modules/effect/${dir}*`],
   };
+}
+
+const SPECIFIER =
+  /(?:from|import\(|declare module)\s*["'](\.{1,2}\/[^"']+)["']/g;
+const COMMENT = /\/\*[\s\S]*?\*\/|\/\/.*$/gm;
+
+/**
+ * The relative specifiers a declaration file imports, re-exports or augments
+ * (`from "./Effect.js"`, `import("./Cause.ts")`, `declare module "./Effect.js"`).
+ * Comments are skipped, since JSDoc examples import paths outside the package.
+ */
+export function relativeSpecifiers(content: string): string[] {
+  return [...content.replace(COMMENT, "").matchAll(SPECIFIER)].map(
+    ([, spec]) => spec,
+  );
+}
+
+/**
+ * The declaration files a relative specifier can land on, in TypeScript's
+ * order, relative to the same directory as `file`: a `.js` (effect 3) or `.ts`
+ * (effect 4) extension maps to the `.d.ts` beside it, a folder to its index.
+ */
+export function declarationCandidates(file: string, spec: string): string[] {
+  const base = new URL(spec, `file:///${file}`).pathname
+    .slice(1)
+    .replace(/\.[jt]s$/, "");
+  return [`${base}.d.ts`, `${base}/index.d.ts`];
 }
