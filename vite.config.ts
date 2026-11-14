@@ -8,7 +8,14 @@ import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 import { defineConfig, lazyPlugins } from "vite-plus";
 
+import {
+  effectPaths,
+  effectTypesLayout,
+} from "./src/effects/effectTypesLayout";
 import { runtimeWatchPlugin } from "./vite-plugin-runtime-watch";
+
+/** The package.json of the `effect` this build resolves. */
+const effectPackageJson = createRequire(import.meta.url)("effect/package.json");
 
 /**
  * The version of `effect` this build resolves, injected into the WebContainer's
@@ -16,13 +23,15 @@ import { runtimeWatchPlugin } from "./vite-plugin-runtime-watch";
  * installs effect itself, so without this the two run paths could install
  * different versions and trace the same program differently — see #17 and #18.
  */
-const effectVersion = createRequire(import.meta.url)("effect/package.json")
-  .version as string;
+const effectVersion = effectPackageJson.version as string;
 
 // https://vite.dev/config/
 export default defineConfig({
   define: {
     __EFFECT_VERSION__: JSON.stringify(effectVersion),
+    __EFFECT_PATHS__: JSON.stringify(
+      effectPaths(effectTypesLayout(effectPackageJson)),
+    ),
   },
   plugins: lazyPlugins(() => [
     runtimeWatchPlugin(),

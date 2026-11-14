@@ -123,11 +123,11 @@ const initMonaco = Effect.tryPromise({
     }),
 });
 
-/** The paths under which Monaco finds effect's declarations, on both paths. */
-const EFFECT_PATHS = {
-  effect: ["node_modules/effect/dist/dts/index.d.ts"],
-  "effect/*": ["node_modules/effect/dist/dts/*"],
-};
+/**
+ * The paths under which Monaco finds effect's declarations, on both paths:
+ * computed at build time from effect's package.json, like the extraction.
+ */
+const EFFECT_PATHS = __EFFECT_PATHS__;
 
 /**
  * Acquire Monaco types for the fallback path (no WebContainer).

@@ -8,19 +8,24 @@
  * and the bundlers tried (rollup-plugin-dts, dts-bundle-generator, api-extractor)
  * either break those or refuse effect's `export * as` namespaces.
  *
- * Every assumption about effect's layout is checked against its package.json and
- * the extracted files, so a layout change in an effect upgrade fails the build
- * with a message naming what moved, instead of shipping an editor without types.
+ * The files extracted are the root declaration and everything it reaches through
+ * relative imports, located with the rule in src/effects/effectTypesLayout.ts, so
+ * the script reads effect 3's layout (`dist/dts/`, `.js` specifiers) and effect
+ * 4's (`dist/`, `.ts` specifiers, public files importing `internal/`) alike. A
+ * layout change in an effect upgrade fails the build with a message naming what
+ * moved, instead of shipping an editor without types.
  */
 import fs from "node:fs";
 import path from "node:path";
 
-// Must match EFFECT_PATHS in src/effects/typeAcquisition.ts, which points Monaco
-// at these files on both editor paths.
+import {
+  declarationCandidates,
+  effectTypesLayout,
+  exportTypesPath,
+  relativeSpecifiers,
+} from "../src/effects/effectTypesLayout.ts";
+
 const PKG_DIR = "node_modules/effect";
-const DTS_SUBDIR = "dist/dts";
-const DTS_DIR = `${PKG_DIR}/${DTS_SUBDIR}`;
-const ENTRY = "index.d.ts";
 
 function fail(message) {
   console.error(`extract-effect-dts: ${message}`);
@@ -38,89 +43,77 @@ if (!fs.existsSync(pkgJsonPath)) {
 }
 const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, "utf8"));
 
-// The "." export's types is where TypeScript resolves `import ... from "effect"`.
-const rootTypes = pkg.exports?.["."]?.types;
-if (typeof rootTypes !== "string") {
-  fail(
-    `effect@${pkg.version}'s package.json has no exports["."].types; ` +
-      `its exports layout changed. Found: ${JSON.stringify(pkg.exports?.["."])}`,
-  );
+let layout;
+try {
+  layout = effectTypesLayout(pkg);
+} catch (error) {
+  fail(error.message);
 }
-const expectedRootTypes = `./${DTS_SUBDIR}/${ENTRY}`;
-if (rootTypes !== expectedRootTypes) {
-  fail(
-    `effect@${pkg.version} declares its types at "${rootTypes}", expected ` +
-      `"${expectedRootTypes}". Update DTS_SUBDIR/ENTRY here and EFFECT_PATHS in ` +
-      `src/effects/typeAcquisition.ts together.`,
-  );
+const dtsDir = path.resolve(PKG_DIR, layout.dir);
+const entry = path.posix.relative(layout.dir, layout.entry);
+if (!fs.existsSync(path.join(dtsDir, entry))) {
+  fail(`${layout.entry} is declared by package.json but missing on disk.`);
 }
 
-const dtsDir = path.resolve(DTS_DIR);
-if (!fs.existsSync(path.join(dtsDir, ENTRY))) {
-  fail(`${DTS_DIR}/${ENTRY} is declared by package.json but missing on disk.`);
-}
-
-// internal/ is never referenced by the public declarations; the import check
-// below fails if that stops being true.
-const relFiles = fs
-  .globSync("**/*.d.ts", { cwd: dtsDir, exclude: ["internal/**"] })
-  .map((file) => file.split(path.sep).join("/"))
-  .sort();
-const extracted = new Set(relFiles);
-
-// Every `effect/<Module>` subpath must resolve to an extracted file, since that
-// is what Monaco's `effect/*` path mapping points at. Subpaths whose file effect
-// does not ship (3.22.1 declares `./.index` without it) are broken upstream too.
-const missingSubpaths = Object.entries(pkg.exports)
-  .filter(([key, value]) => key !== "." && typeof value?.types === "string")
-  .filter(([, value]) => fs.existsSync(path.resolve(PKG_DIR, value.types)))
-  .map(([key, value]) => ({
-    key,
-    file: path.posix.relative(DTS_SUBDIR, path.posix.normalize(value.types)),
-  }))
-  .filter(({ file }) => !extracted.has(file));
-if (missingSubpaths.length > 0) {
-  fail(
-    `these export subpaths point at files outside the extraction:\n` +
-      missingSubpaths
-        .map(({ key, file }) => `  effect/${key.slice(2)} -> ${file}`)
-        .join("\n"),
-  );
-}
-
-const files = relFiles.map((file) => ({
-  file,
-  content: fs
-    .readFileSync(path.join(dtsDir, file), "utf8")
-    .replace(/^\/\/# sourceMappingURL=.*$/m, ""),
-}));
-
-// Relative specifiers (`from "./Effect.js"`, `import("./Cause.js")`,
-// `declare module "./Effect.js"`) must land on an extracted file, or Monaco
-// silently types those names as any. Comments are skipped: JSDoc examples
-// import from paths that are not part of the package.
-const SPECIFIER =
-  /(?:from|import\(|declare module)\s*["'](\.{1,2}\/[^"']+)["']/g;
-const COMMENT = /\/\*[\s\S]*?\*\/|\/\/.*$/gm;
+const contents = new Map();
 const unresolved = [];
-for (const { file, content } of files) {
-  for (const [, spec] of content.replace(COMMENT, "").matchAll(SPECIFIER)) {
-    const base = path.posix
-      .join(path.posix.dirname(file), spec)
-      .replace(/\.js$/, "");
-    if (
-      !extracted.has(`${base}.d.ts`) &&
-      !extracted.has(`${base}/index.d.ts`)
-    ) {
-      unresolved.push(`  ${file}: "${spec}"`);
-    }
+// Follows relative imports from the entry; one landing on no file would leave
+// Monaco typing its names as any.
+const pending = [entry];
+while (pending.length > 0) {
+  const file = pending.pop();
+  if (contents.has(file)) continue;
+  const content = fs
+    .readFileSync(path.join(dtsDir, file), "utf8")
+    .replace(/^\/\/# sourceMappingURL=.*$/m, "");
+  contents.set(file, content);
+  for (const spec of relativeSpecifiers(content)) {
+    const target = declarationCandidates(file, spec).find((candidate) =>
+      fs.existsSync(path.join(dtsDir, candidate)),
+    );
+    if (target === undefined) unresolved.push(`  ${file}: "${spec}"`);
+    else pending.push(target);
   }
 }
 if (unresolved.length > 0) {
   fail(
-    `${unresolved.length} relative import(s) resolve outside the extraction ` +
-      `(an internal/ reference, or a new declaration extension?):\n` +
+    `${unresolved.length} relative import(s) resolve to no declaration file ` +
+      `(a new declaration extension?):\n` +
       unresolved.slice(0, 20).join("\n"),
+  );
+}
+// A bare sort(), spelled out for oxlint's require-array-sort-compare.
+const relFiles = [...contents.keys()].sort((a, b) =>
+  a < b ? -1 : a > b ? 1 : 0,
+);
+
+// Every top-level `effect/<Module>` must be extracted, as Monaco's `effect/*`
+// mapping points there: effect 3's explicit subpaths, effect 4's `./*` matches.
+// Effect 4's folder indexes (`effect/http`…) are left out to keep the file
+// small. Files effect does not ship (3.22.1's `./.index`) are skipped.
+const subpathFiles = Object.entries(pkg.exports)
+  .filter(([key]) => key !== ".")
+  .flatMap(([key, target]) => {
+    const types = exportTypesPath(target);
+    if (types === undefined) return [];
+    const files = key.includes("*")
+      ? fs
+          .globSync(types, { cwd: path.resolve(PKG_DIR) })
+          .map((file) => file.split(path.sep).join("/"))
+      : [types];
+    return files.map((file) => ({
+      key: key.includes("*") ? file : key,
+      file: path.posix.relative(layout.dir, path.posix.normalize(file)),
+    }));
+  })
+  .filter(({ file }) => file.startsWith("../") || !file.includes("/"))
+  .filter(({ file }) => fs.existsSync(path.join(dtsDir, file)));
+const extracted = new Set(relFiles);
+const missingSubpaths = subpathFiles.filter(({ file }) => !extracted.has(file));
+if (missingSubpaths.length > 0) {
+  fail(
+    `these export subpaths are not reachable from ${layout.entry}:\n` +
+      missingSubpaths.map(({ key, file }) => `  ${key} -> ${file}`).join("\n"),
   );
 }
 
@@ -128,12 +121,12 @@ fs.writeFileSync(
   out,
   JSON.stringify({
     version: pkg.version,
-    files: files.map(({ file, content }) => ({
-      path: `file:///${DTS_DIR}/${file}`,
-      content,
+    files: relFiles.map((file) => ({
+      path: `file:///${path.posix.join(PKG_DIR, layout.dir, file)}`,
+      content: contents.get(file),
     })),
   }),
 );
 console.log(
-  `extract-effect-dts: ${files.length} files from effect@${pkg.version} -> ${path.relative(process.cwd(), out)}`,
+  `extract-effect-dts: ${relFiles.length} files from effect@${pkg.version} -> ${path.relative(process.cwd(), out)}`,
 );
