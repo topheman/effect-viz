@@ -17,7 +17,7 @@ type OnboardingStep = Schema.Schema.Type<typeof OnboardingStep>;
 
 const OnboardingStored = Schema.Struct({
   completed: OnboardingStep,
-  version: Schema.Number,
+  version: Schema.Finite,
   date: Schema.String,
 });
 type OnboardingStored = Schema.Schema.Type<typeof OnboardingStored>;
