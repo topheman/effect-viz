@@ -1,4 +1,4 @@
-import { Effect, Fiber, Layer } from "effect";
+import { Effect, Fiber } from "effect";
 import {
   afterEach,
   beforeEach,
@@ -8,12 +8,10 @@ import {
   vi,
 } from "vite-plus/test";
 
-import { makeTraceEmitterLayer } from "@/runtime/tracedRunner";
+import { GatedScheduler } from "@/runtime/gatedScheduler";
+import { runProgramFork, withViz } from "@/runtime/runProgram";
 import type { TraceEmitter } from "@/runtime/traceEmitter";
 import { VirtualClock, type VirtualClockHost } from "@/runtime/virtualClock";
-import { makeVizClockLayer } from "@/runtime/vizClock";
-import { makeVizLayers } from "@/runtime/vizSupervisor";
-import { makeVizTracer } from "@/runtime/vizTracer";
 import type { TraceEvent } from "@/types/trace";
 
 import {
@@ -36,23 +34,15 @@ function start(effect: Effect.Effect<unknown, unknown, TraceEmitter>) {
   const events: TraceEvent[] = [];
   const clock = new VirtualClock({ rate: 1, origin: 0, host: fakeHost });
   const onEmit = (event: TraceEvent) => events.push(event);
-  const fiber = Effect.runFork(
-    Effect.scoped(effect).pipe(
-      Effect.provide(
-        Layer.mergeAll(
-          makeTraceEmitterLayer(onEmit),
-          makeVizLayers(onEmit, () => clock.now()),
-          Layer.setTracer(makeVizTracer(onEmit, () => clock.now())),
-          makeVizClockLayer(clock),
-        ),
-      ),
-    ) as Effect.Effect<unknown, unknown, never>,
+  const { fiber, promise } = runProgramFork(
+    withViz(effect, { onEmit, clock, scheduler: new GatedScheduler() }),
   );
+  promise.catch(() => {});
   return { clock, events, fiber };
 }
 
 /** Runs to completion, advancing virtual time as far as any example needs. */
-async function settle(fiber: Fiber.RuntimeFiber<unknown, unknown>) {
+async function settle(fiber: Fiber.Fiber<unknown, unknown>) {
   const done = Effect.runPromise(Fiber.join(fiber));
   await vi.advanceTimersByTimeAsync(10_000);
   return done;
@@ -100,19 +90,26 @@ describe("example programs", () => {
     expect(at).toEqual([500, 500, 1000, 1000, 1500]);
   });
 
-  it("boundedConcurrency: a coordinator forks the workers, which inherit the caller's context", async () => {
+  it("boundedConcurrency: the caller forks one fiber per task, two alive at a time", async () => {
     const { events, fiber } = start(boundedConcurrencyExample);
     await settle(fiber);
 
-    const forks = events.filter((e) => e.type === "fiber:fork");
-    const workers = forks.filter((f) => f.forkedBy !== f.parentId);
-    // One worker per concurrency slot; each pulls the next task when free.
-    expect(workers).toHaveLength(2);
-    const [coordinator, ...others] = new Set(workers.map((w) => w.forkedBy));
-    expect(others).toEqual([]);
-    const caller = forks.find((f) => f.fiberId === coordinator)?.parentId;
-    expect(caller).toBeDefined();
-    expect(workers.every((w) => w.parentId === caller)).toBe(true);
+    const [root, ...tasks] = events.filter((e) => e.type === "fiber:fork");
+    expect(tasks).toHaveLength(5);
+    expect(
+      tasks.every(
+        (f) => f.parentId === root.fiberId && f.forkedBy === root.fiberId,
+      ),
+    ).toBe(true);
+
+    let alive = 0;
+    let mostAlive = 0;
+    for (const event of events) {
+      if (event.type === "fiber:fork" && event.parentId !== undefined) alive++;
+      if (event.type === "fiber:end" && event.fiberId !== root.fiberId) alive--;
+      mostAlive = Math.max(mostAlive, alive);
+    }
+    expect(mostAlive).toBe(2);
   });
 
   it("interleaving: every fork is run by the fiber the child inherits from", async () => {
@@ -171,12 +168,12 @@ describe("example programs", () => {
       {
         label: "slow-task",
         result: "failure",
-        error: expect.stringContaining("Interrupted"),
+        error: expect.stringContaining("interrupted"),
       },
     ]);
   });
 
-  it("timeout: of the two fibers each deadline races, only a losing deadline exits interrupted", async () => {
+  it("timeout: of the two fibers each deadline races, the loser exits interrupted", async () => {
     const { events, fiber } = start(timeoutExample);
     await settle(fiber);
 
@@ -199,10 +196,8 @@ describe("example programs", () => {
       // quick-task: the work wins, so its deadline is interrupted.
       "fiber:end",
       "fiber:interrupt",
-      // slow-task: the work loses and is interrupted, yet Effect >= 3.22 runs it
-      // under Effect.exit, so its own exit is a success and the Supervisor can
-      // only report an end. The interruption shows on its span instead.
-      "fiber:end",
+      // slow-task: the deadline wins, so the work is interrupted.
+      "fiber:interrupt",
       "fiber:end",
     ]);
   });
@@ -210,7 +205,7 @@ describe("example programs", () => {
   it("deadlock: the program never finishes", async () => {
     const { fiber } = start(deadlockExample);
     await vi.advanceTimersByTimeAsync(10_000);
-    expect(fiber.unsafePoll()).toBeNull();
+    expect(fiber.pollUnsafe()).toBeUndefined();
     await Effect.runPromise(Fiber.interrupt(fiber));
   });
 });
