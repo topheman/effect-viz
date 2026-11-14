@@ -1,4 +1,4 @@
-import { Effect, Fiber, Layer } from "effect";
+import { Effect, Fiber } from "effect";
 import { useRef, useState } from "react";
 
 import type {
@@ -10,14 +10,10 @@ import { ContainerController } from "@/lib/containerController";
 import { MirroredClock } from "@/lib/mirroredClock";
 import { type ProgramKey, makeLoggerLayer, programs } from "@/lib/programs";
 import { GatedScheduler } from "@/runtime/gatedScheduler";
-import { runProgramFork } from "@/runtime/runProgram";
+import { runProgramFork, withViz } from "@/runtime/runProgram";
 import { Stepper, type StepOutcome } from "@/runtime/stepper";
-import { makeTraceEmitterLayer } from "@/runtime/tracedRunner";
 import { makeOriginTagger } from "@/runtime/traceOrigin";
 import { VirtualClock } from "@/runtime/virtualClock";
-import { makeVizClockLayer } from "@/runtime/vizClock";
-import { makeVizLayers } from "@/runtime/vizSupervisor";
-import { makeVizTracer } from "@/runtime/vizTracer";
 import { useFiberStore } from "@/stores/fiberStore";
 import { useTraceStore } from "@/stores/traceStore";
 import { useWebContainerLogsStore } from "@/stores/webContainerLogsStore";
@@ -52,9 +48,7 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
   const { addLog } = useWebContainerLogsStore();
 
   const [selectedProgram, setSelectedProgram] = useState<ProgramKey>("basic");
-  const runningFiberRef = useRef<Fiber.RuntimeFiber<unknown, unknown> | null>(
-    null,
-  );
+  const runningFiberRef = useRef<Fiber.Fiber<unknown, unknown> | null>(null);
   const stepperRef = useRef<Stepper | null>(null);
   /**
    * The container's half of the same three verbs. Outlives a single run — it is
@@ -177,18 +171,15 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
     startPaused: boolean;
     programKey: ProgramKey;
   }) {
-    const { rootEffect, requirements } = programs[programKey];
-    // `Effect.runFork` runs a fiber synchronously until its first yield, and the
-    // scheduler only governs resumption. Yielding first therefore hands the very
-    // first operation to the gate, so a paused start can be stepped from event
-    // one instead of after the opening burst.
-    const body = startPaused
-      ? Effect.zipRight(
-          Effect.yieldNow(),
-          rootEffect as Effect.Effect<unknown, unknown, unknown>,
-        )
-      : (rootEffect as Effect.Effect<unknown, unknown, unknown>);
-    const scoped = Effect.scoped(body);
+    const { requirements } = programs[programKey];
+    const rootEffect: Effect.Effect<unknown, unknown, unknown> =
+      programs[programKey].rootEffect;
+    // A paused gate already holds the root before its first operation. The
+    // leading yield gives a paused start a suspend and resume pair, which the
+    // log tags as the tool's and can hide.
+    const body: Effect.Effect<unknown, unknown, unknown> = startPaused
+      ? Effect.andThen(Effect.yieldNow, rootEffect)
+      : rootEffect;
     // A paused start injects a yield the program never wrote; the tagger marks
     // the suspend and resume it produces so the log can offer to hide them.
     const tagOrigin = makeOriginTagger({ startPaused });
@@ -208,7 +199,7 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
       clock: virtualClock,
       isFinished: () =>
         runningFiberRef.current !== null &&
-        runningFiberRef.current.unsafePoll() !== null,
+        runningFiberRef.current.pollUnsafe() !== undefined,
     });
     stepperRef.current = stepper;
     // The timeline follows this clock directly, so it freezes when the stepper
@@ -216,30 +207,20 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
     setNowSource(() => virtualClock.now());
     // Gate before the program is forked, so even its first task is held.
     if (startPaused) stepper.pause();
-    const now = () => virtualClock.now();
-    const traceLayer = makeTraceEmitterLayer(onEmit);
-    const supervisorLayer = makeVizLayers(onEmit, now);
     // Fallback Logger layer: logs to panel (addLog) instead of console, so mobile users see output
     const fallbackLoggerLayer = makeLoggerLayer((msg) =>
       addLog("output", `[logger] ${msg}`),
     );
-    const tracerLayer = Layer.setTracer(makeVizTracer(onEmit, now));
-    const clockLayer = makeVizClockLayer(virtualClock);
-    const allLayers = Layer.mergeAll(
-      traceLayer,
-      supervisorLayer,
-      tracerLayer,
-      clockLayer,
-      ...requirements,
-      fallbackLoggerLayer,
-    );
 
     onFirstChunk(); // No compile step on mobile; program runs immediately
-    const program = scoped.pipe(
-      Effect.withScheduler(scheduler),
-      Effect.provide(allLayers),
-    ) as Effect.Effect<unknown, unknown, never>;
-    const { fiber, promise } = runProgramFork(program, onEmit, now);
+    const { fiber, promise } = runProgramFork(
+      withViz(body, {
+        onEmit,
+        clock: virtualClock,
+        scheduler,
+        layers: [...requirements, fallbackLoggerLayer],
+      }),
+    );
     runningFiberRef.current = fiber;
 
     return promise.then(
