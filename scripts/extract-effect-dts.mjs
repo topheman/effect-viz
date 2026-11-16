@@ -3,17 +3,14 @@
  * Monaco editor on the fallback path (no WebContainer to read node_modules from).
  *
  * The files are kept one per module, at their node_modules paths, rather than
- * bundled into a single declaration: effect makes Option, Either and Context tags
- * yieldable in Effect.gen through `declare module "./Effect.js"` augmentations,
- * and the bundlers tried (rollup-plugin-dts, dts-bundle-generator, api-extractor)
- * either break those or refuse effect's `export * as` namespaces.
+ * bundled into a single declaration: the bundlers tried (rollup-plugin-dts,
+ * dts-bundle-generator, api-extractor) refuse effect's `export * as` namespaces.
  *
  * The files extracted are the root declaration and everything it reaches through
- * relative imports, located with the rule in src/effects/effectTypesLayout.ts, so
- * the script reads effect 3's layout (`dist/dts/`, `.js` specifiers) and effect
- * 4's (`dist/`, `.ts` specifiers, public files importing `internal/`) alike. A
- * layout change in an effect upgrade fails the build with a message naming what
- * moved, instead of shipping an editor without types.
+ * relative imports, located with the rule in src/effects/effectTypesLayout.ts:
+ * `dist/`, `.ts` specifiers, public files importing `internal/`. A layout change
+ * in an effect upgrade fails the build with a message naming what moved,
+ * instead of shipping an editor without types.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -88,32 +85,25 @@ const relFiles = [...contents.keys()].sort((a, b) =>
 );
 
 // Every top-level `effect/<Module>` must be extracted, as Monaco's `effect/*`
-// mapping points there: effect 3's explicit subpaths, effect 4's `./*` matches.
-// Effect 4's folder indexes (`effect/http`…) are left out to keep the file
-// small. Files effect does not ship (3.22.1's `./.index`) are skipped.
+// mapping points there: the files the `./*` pattern export matches. The folder
+// indexes (`effect/http`…), explicit subpaths, are left out to keep the file small.
 const subpathFiles = Object.entries(pkg.exports)
-  .filter(([key]) => key !== ".")
-  .flatMap(([key, target]) => {
+  .filter(([key]) => key.includes("*"))
+  .flatMap(([, target]) => {
     const types = exportTypesPath(target);
     if (types === undefined) return [];
-    const files = key.includes("*")
-      ? fs
-          .globSync(types, { cwd: path.resolve(PKG_DIR) })
-          .map((file) => file.split(path.sep).join("/"))
-      : [types];
-    return files.map((file) => ({
-      key: key.includes("*") ? file : key,
-      file: path.posix.relative(layout.dir, path.posix.normalize(file)),
-    }));
-  })
-  .filter(({ file }) => file.startsWith("../") || !file.includes("/"))
-  .filter(({ file }) => fs.existsSync(path.join(dtsDir, file)));
+    return fs
+      .globSync(types, { cwd: path.resolve(PKG_DIR) })
+      .map((file) =>
+        path.posix.relative(layout.dir, file.split(path.sep).join("/")),
+      );
+  });
 const extracted = new Set(relFiles);
-const missingSubpaths = subpathFiles.filter(({ file }) => !extracted.has(file));
+const missingSubpaths = subpathFiles.filter((file) => !extracted.has(file));
 if (missingSubpaths.length > 0) {
   fail(
     `these export subpaths are not reachable from ${layout.entry}:\n` +
-      missingSubpaths.map(({ key, file }) => `  ${key} -> ${file}`).join("\n"),
+      missingSubpaths.map((file) => `  ${file}`).join("\n"),
   );
 }
 
