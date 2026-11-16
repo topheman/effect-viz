@@ -2,7 +2,7 @@
  * Fiber lifecycle events (fork, suspend, resume, end, interrupt) read from the
  * Effect run loop through `Tracer.context`.
  *
- * Effect has no supervisor hook. What it does have is `Tracer.context`: the run
+ * Effect has no fiber lifecycle hook. What it does have is `Tracer.context`: the run
  * loop hands every primitive it evaluates to the tracer, together with the fiber
  * evaluating it, and the tracer evaluates it itself. Watching that stream tells
  * which fibers exist, which one is running, and when one stops. The pieces:

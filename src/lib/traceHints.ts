@@ -99,10 +99,11 @@ type Suspend = Extract<TraceEvent, { type: "fiber:suspend" }>;
 
 /**
  * Events stamped closer than this belong to one synchronous burst of the
- * runtime. Virtual time runs on with wall time (runtime/virtualClock.ts) and the
- * tracer, fiber lifecycle observer and runner each read it themselves, so a burst spans a few
- * milliseconds and span stamps can be a millisecond early. Speed never exceeds
- * 1, so a burst is no wider in virtual time; a shorter sleep reads as instant.
+ * runtime. Virtual time runs on with wall time (runtime/virtualClock.ts) and
+ * the tracer, fiber lifecycle observer and runner each read it themselves, so a
+ * burst spans a few milliseconds and span stamps can be a millisecond early.
+ * Speed never exceeds 1, so a burst is no wider in virtual time; a shorter
+ * sleep reads as instant.
  */
 const SAME_INSTANT_MS = 10;
 
