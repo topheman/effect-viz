@@ -30,7 +30,7 @@ flowchart TB
   emitter -->|"retry:attempt · finalizer<br/>acquire"| emit
 
   clock[("Virtual clock")] -.->|"timestamp"| emit
-  emit["onEmit + origin tag"]
+  emit["onEmit"]
 
   emit -->|"WebContainer: stdout TRACE_EVENT: lines<br/>fallback: direct call"| store["TraceStore · FiberStore"]
   store --> ui["Execution Log · Fiber Tree · Timeline<br/>(hints computed from the trace)"]
@@ -48,7 +48,6 @@ flowchart TB
 
 - **Filtering.** The tracer sees every fiber that runs under it, including the ones that build the program's layers. Those run with the `InProgram` reference off and are dropped, which is why fiber numbers can skip. Fibers forked by `Effect.race` or `Effect.all` belong to the program and stay visible.
 - **Virtual timestamps.** Every event is stamped on the virtual clock that slow mode and the stepper control, not on `Date.now()`, so a trace spans the same duration at any speed.
-- **Origin.** Starting a run paused injects an `Effect.yieldNow` before the program, which produces one `fiber:suspend` / `fiber:resume` pair that the program never wrote. That pair is tagged `origin: "tool"` and the log can hide it ([`traceOrigin.ts`](../src/runtime/traceOrigin.ts)).
 - **Hints.** The one-line explanations in the log are not emitted by anything. The UI computes them afterwards by matching patterns in the full trace ([`traceHints.ts`](../src/lib/traceHints.ts)).
 
 ## Two run paths, one event stream

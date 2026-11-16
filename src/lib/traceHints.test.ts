@@ -191,15 +191,6 @@ describe("traceHints", () => {
     expect(hints[4]).toBeUndefined();
   });
 
-  it("does not depend on which rows are displayed", () => {
-    const withToolYield: TraceEvent[] = [
-      fork("#0"),
-      { ...suspend("#0"), origin: "tool" },
-      { ...resume("#0"), origin: "tool" },
-    ];
-    expect(hintsOf(withToolYield)[1]).toBeDefined();
-  });
-
   describe("with indent by fiber", () => {
     it("adds the placement hints on their first occurrence", () => {
       const hints = hintsOf(basic, true);

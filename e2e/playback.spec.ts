@@ -61,6 +61,26 @@ test("a paused run moves only when stepped", async ({ page }) => {
   await expect(playbackStatus(page)).toHaveText("paused");
 });
 
+test("Step from idle starts the run paused, with only its root forked", async ({
+  page,
+}) => {
+  await openApp(page);
+  await stepButton(page).click();
+  await expect(playbackStatus(page)).toHaveText("paused", { timeout: 30_000 });
+  const started = await texts(page);
+  expect(started).toHaveLength(1);
+  expect(started[0]).toMatch(/^fiber:forked #\d+ \(root\)$/);
+
+  await stepButton(page).click();
+  await expect
+    .poll(async () => (await texts(page)).length)
+    .toBeGreaterThan(started.length);
+  await expect(playbackStatus(page)).toHaveText("paused");
+  const stepped = await texts(page);
+  expect(stepped.slice(0, started.length)).toEqual(started);
+  expect(stepped[1]).toMatch(/^effect:started /);
+});
+
 test("Step on a finished run starts a fresh one, paused", async ({ page }) => {
   await openApp(page);
   await runButton(page).click();
