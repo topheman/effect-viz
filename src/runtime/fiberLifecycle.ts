@@ -104,7 +104,6 @@ export function makeFiberLifecycle(
       type: "fiber:fork",
       fiberId,
       parentId: parent && fiberLabel(parent),
-      forkedBy: parent && fiberLabel(forker ?? parent),
       label: fiberId,
       timestamp: now(),
     });

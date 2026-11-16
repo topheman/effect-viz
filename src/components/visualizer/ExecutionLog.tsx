@@ -68,11 +68,7 @@ function formatEvent(
     }
     case "fiber:fork": {
       if (!event.parentId) return `fiber:forked ${event.fiberId} (root)`;
-      const by =
-        event.forkedBy && event.forkedBy !== event.parentId
-          ? `, by ${event.forkedBy}`
-          : "";
-      return `fiber:forked ${event.fiberId} (parent ${event.parentId}${by})`;
+      return `fiber:forked ${event.fiberId} (parent ${event.parentId})`;
     }
     case "fiber:end": {
       const forkEvent = events.find(

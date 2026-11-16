@@ -3,10 +3,9 @@ import type { TraceEvent } from "@/types/trace";
 /**
  * Depth of every fiber in a trace, following `parentId` up to a root at 0.
  *
- * `parentId` is the fiber the supervisor names as parent: the one whose
- * FiberRefs the child inherits, which is the tree the fiber tree view draws too.
- * A fiber whose parent was never recorded (the supervisor skips layer fibers)
- * counts as a root.
+ * `parentId` is the fiber that ran the fork, or else the one whose `Context` the
+ * child starts with: the tree the fiber tree view draws too. A fiber whose
+ * parent was never recorded (layer fibers are left out) counts as a root.
  */
 export function fiberDepths(
   events: readonly TraceEvent[],
@@ -30,9 +29,6 @@ export function eventDepth(
   event: TraceEvent,
   depths: ReadonlyMap<string, number>,
 ): number {
-  const fiberId =
-    event.type === "fiber:fork"
-      ? (event.forkedBy ?? event.parentId)
-      : event.fiberId;
+  const fiberId = event.type === "fiber:fork" ? event.parentId : event.fiberId;
   return fiberId === undefined ? 0 : (depths.get(fiberId) ?? 0);
 }

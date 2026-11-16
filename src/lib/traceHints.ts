@@ -22,7 +22,6 @@ export function traceHints(
     else hints.set(index, [text]);
   };
 
-  const endedAt = new Map<string, number>();
   const suspended = new Set<string>();
   const inFinalizerRun = (i: number) => {
     const event = events[i];
@@ -36,14 +35,7 @@ export function traceHints(
     const next = events[i + 1];
     switch (event.type) {
       case "fiber:suspend": {
-        if (endedAt.has(event.fiberId)) {
-          // The runtime calls onSuspend in a `finally` after every run slice,
-          // the last one included (`evaluateEffect`, internal/fiberRuntime.ts).
-          add(
-            i,
-            "Every run ends with a suspend, even the last; the root has none because the visualizer's hooks are unwound by then.",
-          );
-        } else if (
+        if (
           next?.type === "fiber:resume" &&
           next.fiberId === event.fiberId &&
           sameInstant(next.timestamp, event.timestamp)
@@ -68,7 +60,7 @@ export function traceHints(
         } else if (handoff) {
           add(
             i,
-            `${handoff.fiberId} ${endedAt.has(handoff.fiberId) ? "finished" : "parked"}, so the runtime ran the next ready fiber, ${event.fiberId}.`,
+            `${handoff.fiberId} parked, so the runtime ran the next ready fiber, ${event.fiberId}.`,
           );
         } else if (
           !(
@@ -82,10 +74,6 @@ export function traceHints(
         }
         break;
       }
-      case "fiber:end":
-      case "fiber:interrupt":
-        endedAt.set(event.fiberId, i);
-        break;
       case "effect:end":
         if (
           event.result === "failure" &&
@@ -112,7 +100,7 @@ type Suspend = Extract<TraceEvent, { type: "fiber:suspend" }>;
 /**
  * Events stamped closer than this belong to one synchronous burst of the
  * runtime. Virtual time runs on with wall time (runtime/virtualClock.ts) and the
- * tracer, supervisor and runner each read it themselves, so a burst spans a few
+ * tracer, fiber lifecycle observer and runner each read it themselves, so a burst spans a few
  * milliseconds and span stamps can be a millisecond early. Speed never exceeds
  * 1, so a burst is no wider in virtual time; a shorter sleep reads as instant.
  */
@@ -179,20 +167,6 @@ function addIndentHints(
       "Indent is fiber depth, not identity: sibling fibers share a column.",
     );
   }
-
-  events.forEach((event, i) => {
-    if (
-      event.type === "fiber:fork" &&
-      event.parentId &&
-      event.forkedBy &&
-      event.forkedBy !== event.parentId
-    ) {
-      add(
-        i,
-        `Indented with ${event.forkedBy}, which ran the fork; ${event.fiberId} itself sits under ${event.parentId}, whose context it inherits.`,
-      );
-    }
-  });
 
   const childEnd = firstIndex(
     (e) =>
