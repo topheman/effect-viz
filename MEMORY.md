@@ -182,7 +182,6 @@
 - `src/runtime/controlChannel.ts` - Command/reply codecs over container stdin/stdout (Phase 10)
 - `src/lib/mirroredClock.ts` - Page's model of the container's virtual clock (Phase 10)
 - `src/lib/containerController.ts` - Clicks → commands; steps resolve on reply (Phase 10)
-- `src/runtime/traceOrigin.ts` - makeOriginTagger: finds the injected yield (Phase 10)
 
 ## Learning Phases
 

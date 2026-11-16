@@ -118,7 +118,9 @@ describe.each(Object.keys(paths))("a run started paused, %s path", (path) => {
         outcomes.push(paused.stepper.step()._tag);
         await settle();
         const added = paused.events.slice(before);
-        if (outcomes.at(-1) !== "finished") {
+        if (i === 0) {
+          expect(added.map((event) => event.type)).toEqual(["effect:start"]);
+        } else if (outcomes.at(-1) !== "finished") {
           expect(added.length).toBeGreaterThan(0);
         }
         expect(added.filter(isSpan).length).toBeLessThanOrEqual(1);
