@@ -89,9 +89,7 @@ export function FiberStoreProvider({ children }: FiberStoreProviderProps) {
 
         case "fiber:suspend": {
           const fiberInfo = next.get(event.fiberId);
-          // Effect's Supervisor calls onSuspend both when a fiber yields (e.g. sleep)
-          // and when it completes (in a finally block). The latter would overwrite
-          // completed/interrupted with suspended. Only apply if not yet terminated.
+          // A fiber that has ended stays ended.
           if (
             fiberInfo &&
             fiberInfo.state !== "completed" &&

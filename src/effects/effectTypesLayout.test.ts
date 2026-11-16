@@ -116,10 +116,10 @@ describe("effectPaths", () => {
 });
 
 describe("__EFFECT_PATHS__", () => {
-  it("is what vite.config.ts injects for the installed effect 3", () => {
+  it("is what vite.config.ts injects for the installed effect 4", () => {
     expect(__EFFECT_PATHS__).toEqual({
-      effect: ["node_modules/effect/dist/dts/index.d.ts"],
-      "effect/*": ["node_modules/effect/dist/dts/*"],
+      effect: ["node_modules/effect/dist/index.d.ts"],
+      "effect/*": ["node_modules/effect/dist/*"],
     });
   });
 });

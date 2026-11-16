@@ -9,7 +9,7 @@ import {
 } from "vite-plus/test";
 
 import { VirtualClock, type VirtualClockHost } from "@/runtime/virtualClock";
-import { makeVizClockLayer } from "@/runtime/vizClock";
+import { makeVizClock } from "@/runtime/vizClock";
 
 /** Resolves the globals at call time so vitest's fake timers are picked up. */
 const fakeHost: VirtualClockHost = {
@@ -21,12 +21,12 @@ const fakeHost: VirtualClockHost = {
 
 function setup(rate: number) {
   const virtual = new VirtualClock({ rate, origin: 0, host: fakeHost });
-  const layer = makeVizClockLayer(virtual);
+  const withClock = Effect.provideService(Clock.Clock, makeVizClock(virtual));
   const run = <A>(effect: Effect.Effect<A>) =>
-    Effect.runPromise(effect.pipe(Effect.provide(layer)));
+    Effect.runPromise(withClock(effect));
   const fork = <A>(effect: Effect.Effect<A>) =>
-    Effect.runFork(effect.pipe(Effect.provide(layer)));
-  return { virtual, layer, run, fork };
+    Effect.runFork(withClock(effect));
+  return { virtual, run, fork };
 }
 
 describe("vizClock", () => {

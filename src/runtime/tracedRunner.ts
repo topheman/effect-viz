@@ -44,9 +44,9 @@ export const makeTraceEmitterLayer = (
  * - On each failure before the last, emits retry:attempt (id, label, attempt, lastError).
  * - When the effect finally succeeds or exhausts retries, emits effect:end with the same id.
  *
- * Uses Schedule.driver to step through the schedule (like Effect.retry). The schedule
- * consumes the error and decides whether to continue (with optional delay) or stop.
- * We use a loop instead of Effect.retry so we can observe each attempt and emit retry:attempt.
+ * Steps through the schedule the way Effect.retry does: each step consumes the error,
+ * sleeps for the computed delay, and fails once the schedule is done. A loop instead
+ * of Effect.retry lets us observe each attempt and emit retry:attempt.
  */
 export function retryWithTrace<A, E, R, X, R2>(
   effect: Effect.Effect<A, E, R>,
@@ -56,7 +56,7 @@ export function retryWithTrace<A, E, R, X, R2>(
   const id = randomUUID();
   return Effect.gen(function* () {
     yield* emitStart(id, label);
-    const driver = yield* Schedule.driver(schedule);
+    const step = yield* Schedule.toStepWithSleep(schedule);
     let attempt = 1;
 
     while (true) {
@@ -69,7 +69,7 @@ export function retryWithTrace<A, E, R, X, R2>(
 
       const lastError = Cause.squash(exit.cause) as E;
 
-      const nextExit = yield* Effect.exit(driver.next(lastError));
+      const nextExit = yield* Effect.exit(step(lastError));
       if (Exit.isSuccess(nextExit)) {
         yield* emitRetry(id, label, attempt, errorForTrace(lastError));
         attempt++;

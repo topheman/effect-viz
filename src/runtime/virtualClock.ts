@@ -43,9 +43,8 @@ const realClearTimeout = globalThis.clearTimeout.bind(globalThis);
 /**
  * Reads the current timestamp in epoch milliseconds on the virtual clock.
  *
- * Passed to the trace emitters that run outside an Effect context — `Supervisor`
- * callbacks and `runProgramFork` — so their timestamps are virtual like every
- * other event's. Code that *is* inside an Effect uses `Clock.currentTimeMillis`
+ * Passed to the trace emitters that run outside an Effect context — the
+ * tracer's callbacks — so their timestamps are virtual like every other event's. Code that *is* inside an Effect uses `Clock.currentTimeMillis`
  * instead.
  */
 export type Now = () => number;

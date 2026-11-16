@@ -2,7 +2,7 @@
  * Tags each trace event with who caused it: the program, or the visualizer.
  *
  * Only one thing in a run is ever the visualizer's. Starting paused injects an
- * `Effect.yieldNow()` before the program body, and the runtime yields for real,
+ * `Effect.yieldNow` before the program body, and the runtime yields for real,
  * so the trace gains a `fiber:suspend` and `fiber:resume` pair that the
  * program's author never wrote. A run started with Play has no injection, so
  * nothing is tagged. See `workshop/phase-10.md`.

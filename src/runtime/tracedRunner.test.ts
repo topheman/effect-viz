@@ -1,4 +1,4 @@
-import { Effect, Fiber, FiberId, Schedule } from "effect";
+import { Effect, Fiber, Schedule } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 
 import {
@@ -27,9 +27,9 @@ describe("traced helpers", () => {
       }),
     );
     const program = Effect.gen(function* () {
-      const child = yield* Effect.fork(work);
+      const child = yield* Effect.forkChild(work);
       yield* Fiber.join(child);
-      return FiberId.threadName(child.id());
+      return `#${child.id}`;
     }).pipe(Effect.provide(makeTraceEmitterLayer((e) => events.push(e))));
 
     const child = await Effect.runPromise(program);

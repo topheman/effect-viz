@@ -1,4 +1,4 @@
-import { Effect, Fiber, Layer } from "effect";
+import { Effect, Fiber } from "effect";
 import {
   afterEach,
   beforeEach,
@@ -9,12 +9,9 @@ import {
 } from "vite-plus/test";
 
 import { GatedScheduler } from "@/runtime/gatedScheduler";
+import { runProgramFork, withViz } from "@/runtime/runProgram";
 import { Stepper, type StepOutcome } from "@/runtime/stepper";
-import { makeTraceEmitterLayer } from "@/runtime/tracedRunner";
 import { VirtualClock, type VirtualClockHost } from "@/runtime/virtualClock";
-import { makeVizClockLayer } from "@/runtime/vizClock";
-import { makeVizLayers } from "@/runtime/vizSupervisor";
-import { makeVizTracer } from "@/runtime/vizTracer";
 import type { TraceEvent } from "@/types/trace";
 
 const fakeHost: VirtualClockHost = {
@@ -29,33 +26,26 @@ function setup() {
   const scheduler = new GatedScheduler();
   const clock = new VirtualClock({ rate: 1, origin: 0, host: fakeHost });
   const events: TraceEvent[] = [];
-  let fiber: Fiber.RuntimeFiber<unknown, unknown> | null = null;
+  let fiber: Fiber.Fiber<unknown, unknown> | null = null;
 
   const stepper = new Stepper({
     scheduler,
     clock,
-    isFinished: () => fiber !== null && fiber.unsafePoll() !== null,
+    isFinished: () => fiber !== null && fiber.pollUnsafe() !== undefined,
   });
 
-  const now = () => clock.now();
   const onEmit = (event: TraceEvent) => {
     events.push(event);
     stepper.noteEvent();
   };
 
   const run = (effect: Effect.Effect<unknown, unknown, never>) => {
-    const layers = Layer.mergeAll(
-      makeTraceEmitterLayer(onEmit),
-      makeVizLayers(onEmit, now),
-      Layer.setTracer(makeVizTracer(onEmit, now)),
-      makeVizClockLayer(clock),
+    const started = runProgramFork(
+      withViz(effect, { onEmit, clock, scheduler }),
     );
-    fiber = Effect.runFork(
-      Effect.scoped(effect).pipe(
-        Effect.withScheduler(scheduler),
-        Effect.provide(layers),
-      ) as Effect.Effect<unknown, unknown, never>,
-    );
+    // Failures are asserted through the trace, not the promise.
+    started.promise.catch(() => {});
+    fiber = started.fiber;
     return fiber;
   };
 
@@ -103,9 +93,9 @@ describe("Stepper", () => {
       run(
         Effect.gen(function* () {
           yield* Effect.withSpan("one")(Effect.void);
-          yield* Effect.yieldNow();
+          yield* Effect.yieldNow;
           yield* Effect.withSpan("two")(Effect.void);
-          yield* Effect.yieldNow();
+          yield* Effect.yieldNow;
           yield* Effect.withSpan("three")(Effect.void);
         }),
       );
@@ -117,6 +107,75 @@ describe("Stepper", () => {
 
       expect(outcome._tag).toBe("released");
       expect(stepper.eventCount).toBeGreaterThan(before);
+    });
+  });
+
+  describe("one click, one event", () => {
+    const spanEvents = (events: TraceEvent[]) =>
+      events.filter((e) => e.type === "effect:start" || e.type === "effect:end")
+        .length;
+
+    /**
+     * A paused fiber runs one operation per task, so a click stops at the first
+     * operation that draws something, and back-to-back spans take a click each.
+     */
+    it("shows at most one span event per click", async () => {
+      const { stepper, events, run } = setup();
+      // A synchronous program would finish inside runFork if not gated first.
+      stepper.pause();
+      run(
+        Effect.gen(function* () {
+          yield* Effect.withSpan("one")(Effect.void);
+          yield* Effect.withSpan("two")(Effect.void);
+          yield* Effect.withSpan("three")(Effect.void);
+        }),
+      );
+      await settle();
+
+      for (let i = 0; i < 50 && stepper.canStep(); i++) {
+        const before = spanEvents(events);
+        stepper.step();
+        await settle();
+        expect(spanEvents(events) - before).toBeLessThanOrEqual(1);
+      }
+      expect(spanEvents(events)).toBe(6);
+    });
+
+    /**
+     * More invisible operations between two spans than one click may release:
+     * the click ends with nothing shown, and the next one carries on from there.
+     */
+    it("resumes a long invisible stretch on the next click", async () => {
+      const { stepper, events, run } = setup();
+      // A synchronous program would finish inside runFork if not gated first.
+      stepper.pause();
+      run(
+        Effect.gen(function* () {
+          yield* Effect.withSpan("before")(Effect.void);
+          // `Effect.sync`, not `Effect.void`: a generator runs an `Exit` inline,
+          // so only a real primitive reaches the scheduler.
+          for (let i = 0; i < 5000; i++) yield* Effect.sync(() => i);
+          yield* Effect.withSpan("after")(Effect.void);
+        }),
+      );
+      await settle();
+
+      const started = (label: string) =>
+        events.some((e) => e.type === "effect:start" && e.label === label);
+      while (!started("before") || spanEvents(events) < 2) {
+        stepper.step();
+        await settle();
+      }
+
+      const before = events.length;
+      const outcome = stepper.step();
+      await settle();
+      expect(outcome).toEqual({ _tag: "released", tasks: 1000 });
+      expect(events.length).toBe(before);
+
+      const outcomes = await stepToEnd(stepper);
+      expect(started("after")).toBe(true);
+      expect(outcomes.at(-1)?._tag).toBe("finished");
     });
   });
 
@@ -160,7 +219,7 @@ describe("Stepper", () => {
 
       expect(outcomes.at(-1)?._tag).toBe("finished");
       expect(outcomes.some((o) => o._tag === "advancedClock")).toBe(true);
-      expect(fiber.unsafePoll()).not.toBeNull();
+      expect(fiber.pollUnsafe()).toBeDefined();
       expect(Date.now() - wallBefore).toBe(0);
     });
   });
@@ -334,7 +393,7 @@ describe("Stepper", () => {
       const scheduler = new GatedScheduler();
       const clock = new VirtualClock({ rate: 0, origin: 0, host: fakeHost });
       scheduler.pause();
-      scheduler.scheduleTask(() => {}, 0);
+      scheduler.makeDispatcher().scheduleTask(() => {}, 0);
       clock.sleep(1000, () => {});
 
       const stepper = new Stepper({
@@ -360,7 +419,7 @@ describe("Stepper", () => {
         clock,
         isFinished: () => false,
       });
-      scheduler.scheduleTask(() => stepper.noteEvent(), 0);
+      scheduler.makeDispatcher().scheduleTask(() => stepper.noteEvent(), 0);
 
       const outcome = stepper.step();
 
@@ -405,12 +464,7 @@ describe("Stepper", () => {
 
     it("reaches finished for a program that fails", async () => {
       const { stepper, run } = setup();
-      run(
-        Effect.fail("boom").pipe(
-          Effect.withSpan("doomed"),
-          Effect.catchAll(() => Effect.void),
-        ),
-      );
+      run(Effect.fail("boom").pipe(Effect.withSpan("doomed"), Effect.ignore));
       stepper.pause();
       await settle();
 
@@ -428,13 +482,13 @@ describe("Stepper", () => {
      */
     it("produces the same event order stepped as played", async () => {
       const program = Effect.gen(function* () {
-        const a = yield* Effect.fork(
+        const a = yield* Effect.forkChild(
           Effect.withSpan("worker-a")(Effect.sleep("10 millis")),
         );
-        const b = yield* Effect.fork(
+        const b = yield* Effect.forkChild(
           Effect.withSpan("worker-b")(Effect.sleep("20 millis")),
         );
-        const c = yield* Effect.fork(
+        const c = yield* Effect.forkChild(
           Effect.withSpan("worker-c")(Effect.sleep("5 millis")),
         );
         yield* Fiber.join(a);
@@ -455,6 +509,34 @@ describe("Stepper", () => {
       const steppedOrder = stepped.events.map((e) => e.type);
 
       expect(steppedOrder).toEqual(playedOrder);
+    });
+
+    it("keeps the order of the fibers an operator starts", async () => {
+      const task = (label: string) =>
+        Effect.withSpan(label)(
+          Effect.sleep("10 millis").pipe(Effect.as(label)),
+        );
+      const program = Effect.gen(function* () {
+        const winner = yield* Effect.race(task("first"), task("second"));
+        const all = yield* Effect.all([task("a"), task("b"), task("c")], {
+          concurrency: 2,
+        });
+        return [winner, ...all];
+      });
+      const spans = (events: ReadonlyArray<TraceEvent>) =>
+        events.flatMap((e) => (e.type === "effect:start" ? [e.label] : []));
+
+      const played = setup();
+      played.run(program);
+      await vi.advanceTimersByTimeAsync(100);
+
+      const stepped = setup();
+      stepped.run(program);
+      stepped.stepper.pause();
+      await settle();
+      await stepToEnd(stepped.stepper);
+
+      expect(spans(stepped.events)).toEqual(spans(played.events));
     });
   });
 

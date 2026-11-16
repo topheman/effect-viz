@@ -12,6 +12,10 @@
     "path": "file:///runtime/dateShim.d.ts"
   },
   {
+    "url": "/app/runtime/fiberLifecycle.d.ts",
+    "path": "file:///runtime/fiberLifecycle.d.ts"
+  },
+  {
     "url": "/app/runtime/gatedScheduler.d.ts",
     "path": "file:///runtime/gatedScheduler.d.ts"
   },
@@ -46,10 +50,6 @@
   {
     "url": "/app/runtime/vizClock.d.ts",
     "path": "file:///runtime/vizClock.d.ts"
-  },
-  {
-    "url": "/app/runtime/vizSupervisor.d.ts",
-    "path": "file:///runtime/vizSupervisor.d.ts"
   },
   {
     "url": "/app/runtime/vizTracer.d.ts",

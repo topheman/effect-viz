@@ -1,5 +1,6 @@
-import { Clock, Context, Effect, FiberId } from "effect";
+import { Clock, Context, Effect } from "effect";
 
+import { fiberLabel } from "@/runtime/fiberLifecycle";
 import type { TraceEvent } from "@/types/trace";
 
 /**
@@ -8,18 +9,17 @@ import type { TraceEvent } from "@/types/trace";
  * speed it was recorded at.
  *
  * These emitters run inside an Effect, so the clock is reachable directly. Where
- * it is not — the `Supervisor` callbacks and `runProgramFork` — virtual now is
- * injected instead, as a `Now`.
+ * it is not — the tracer's callbacks — virtual now is injected instead, as a `Now`.
  */
-export class TraceEmitter extends Context.Tag("TraceEmitter")<
+export class TraceEmitter extends Context.Service<
   TraceEmitter,
   {
     readonly emit: (event: TraceEvent) => Effect.Effect<void>;
   }
->() {}
+>()("TraceEmitter") {}
 
 /** The fiber running the emitter, so the event lands on the lane that did the work. */
-const currentFiberId = Effect.map(Effect.fiberId, FiberId.threadName);
+const currentFiberId = Effect.map(Effect.fiberId, (id) => fiberLabel({ id }));
 
 export const emitStart = (
   id: string,

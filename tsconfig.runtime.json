@@ -11,7 +11,7 @@
     "src/runtime/index.ts",
     "src/runtime/tracedRunner.ts",
     "src/runtime/traceEmitter.ts",
-    "src/runtime/vizSupervisor.ts",
+    "src/runtime/fiberLifecycle.ts",
     "src/lib/crypto.ts",
     "src/types/trace.ts"
   ]

@@ -44,7 +44,7 @@ export function installDateShim(virtual: VirtualClock): () => void {
     construct(target, args, newTarget) {
       // Only the zero-argument form means "now". `new Date(ms)` and
       // `new Date(y, m, d)` must keep their explicit meaning — Effect itself
-      // builds log timestamps with `new Date(clock.unsafeCurrentTimeMillis())`.
+      // builds log timestamps with `new Date(clock.currentTimeMillisUnsafe())`.
       const resolved = args.length === 0 ? [virtualNow()] : args;
       return Reflect.construct(target, resolved, newTarget);
     },

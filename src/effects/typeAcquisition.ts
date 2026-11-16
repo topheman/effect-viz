@@ -59,7 +59,7 @@ function acquireNodeModulesTypes(
         added.add(fullPath);
       }
     }
-  }).pipe(Effect.catchAll(() => Effect.void));
+  }).pipe(Effect.ignore);
 }
 
 /**
@@ -81,7 +81,7 @@ function acquireAppLibs(
         Effect.flatMap((content) =>
           Effect.sync(() => addExtraLib(content, path, monaco)),
         ),
-        Effect.catchAll(() => Effect.void),
+        Effect.ignore,
       );
     }
   });

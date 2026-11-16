@@ -17,7 +17,7 @@ Public APIs match Effect's naming (`retry`, `addFinalizer`, `acquireRelease`) so
 
 ### Why Real FiberIds?
 
-We use `Effect.fiberId` and `FiberId.threadName()` instead of custom UUIDs:
+We use the runtime's own fiber ids (`fiber.id`, printed as `#N`) instead of custom UUIDs:
 
 - Effect already tracks parent-child relationships
 - No need to reinvent fiber tracking

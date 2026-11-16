@@ -26,7 +26,7 @@ import { addFinalizer, acquireRelease, retry } from "@/runtime";
 /**
  * A basic example that demonstrates:
  * - Sequential effect execution with Effect.withSpan
- * - Concurrent fiber execution with Effect.fork
+ * - Concurrent fiber execution with Effect.forkChild
  * - Fiber joining (waiting for completion)
  */
 export const basicExample = Effect.gen(function* () {
@@ -36,13 +36,13 @@ export const basicExample = Effect.gen(function* () {
   );
 
   // Step 2: Fork two concurrent workers
-  const worker1 = yield* Effect.fork(
+  const worker1 = yield* Effect.forkChild(
     Effect.withSpan("worker-1-task")(
       Effect.sleep("1 second").pipe(Effect.as("Worker 1 complete")),
     ),
   );
 
-  const worker2 = yield* Effect.fork(
+  const worker2 = yield* Effect.forkChild(
     Effect.withSpan("worker-2-task")(
       Effect.sleep("1.5 seconds").pipe(Effect.as("Worker 2 complete")),
     ),
@@ -68,7 +68,7 @@ export const basicExample = Effect.gen(function* () {
  * Demonstrates a fiber that performs multiple sequential steps.
  */
 export const multiStepExample = Effect.gen(function* () {
-  const worker = yield* Effect.fork(
+  const worker = yield* Effect.forkChild(
     Effect.gen(function* () {
       yield* Effect.withSpan("step-1-prepare")(Effect.sleep("500 millis"));
       yield* Effect.withSpan("step-2-process")(Effect.sleep("500 millis"));
@@ -88,17 +88,17 @@ export const multiStepExample = Effect.gen(function* () {
  * Demonstrates nested fiber hierarchies (parent -> child -> grandchild).
  */
 export const nestedForksExample = Effect.gen(function* () {
-  const parent = yield* Effect.fork(
+  const parent = yield* Effect.forkChild(
     Effect.gen(function* () {
       yield* Effect.withSpan("parent-init")(Effect.succeed("parent started"));
 
       // Parent forks a child
-      const child = yield* Effect.fork(
+      const child = yield* Effect.forkChild(
         Effect.gen(function* () {
           yield* Effect.withSpan("child-init")(Effect.succeed("child started"));
 
           // Child forks a grandchild
-          const grandchild = yield* Effect.fork(
+          const grandchild = yield* Effect.forkChild(
             Effect.withSpan("grandchild-task")(
               Effect.sleep("500 millis").pipe(Effect.as("grandchild done")),
             ),
@@ -125,17 +125,17 @@ export const nestedForksExample = Effect.gen(function* () {
  * Demonstrates racing with explicit fiber forking.
  * First fiber to complete wins, the loser gets interrupted.
  *
- * Uses Effect.fork so both competing fibers are visible in the timeline.
+ * Uses Effect.forkChild so both competing fibers are visible in the timeline.
  */
 export const racingExample = Effect.gen(function* () {
   yield* Effect.withSpan("race-start")(Effect.succeed("starting race"));
 
   // Fork two fibers explicitly so we can visualize them
-  const fastRunner = yield* Effect.fork(
+  const fastRunner = yield* Effect.forkChild(
     Effect.sleep("1 second").pipe(Effect.as("Fast runner wins!")),
   );
 
-  const slowRunner = yield* Effect.fork(
+  const slowRunner = yield* Effect.forkChild(
     Effect.sleep("2 seconds").pipe(Effect.as("Slow runner wins!")),
   );
 
@@ -167,11 +167,11 @@ export const failureExample = Effect.gen(function* () {
   // Step 1: Setup succeeds
   yield* Effect.withSpan("setup")(Effect.succeed("ready"));
 
-  // Step 2: Risky step fails; catchAll recovers with a message
+  // Step 2: Risky step fails; Effect.catch recovers with a message
   const recovered = yield* Effect.withSpan("risky-step")(
     Effect.fail(new Error("Something went wrong")),
   ).pipe(
-    Effect.catchAll((err) =>
+    Effect.catch((err) =>
       Effect.succeed(`Recovered from: ${(err as Error).message}`),
     ),
   );
@@ -233,9 +233,8 @@ export const retryExponentialBackoffExample = Effect.gen(function* () {
   });
 
   // Step 3: retry with exponential backoff (100ms, 200ms, 400ms, ... between attempts)
-  const schedule = Schedule.addDelay(
-    Schedule.recurs(5),
-    (n) => `${100 * 2 ** n} millis`,
+  const schedule = Schedule.addDelay(Schedule.recurs(5), ({ output: n }) =>
+    Effect.succeed(`${100 * 2 ** n} millis` as const),
   );
   return yield* retry(flakyEffect, schedule, "flaky-task");
 });
@@ -299,7 +298,7 @@ interface Logger {
   readonly log: (message: string) => Effect.Effect<void>;
 }
 
-const Logger = Context.GenericTag<Logger>("app/Logger");
+const Logger = Context.Service<Logger>("app/Logger");
 
 /**
  * Create a Logger layer. Export for fallback mode
@@ -342,15 +341,15 @@ export const interleavingExample = Effect.gen(function* () {
         );
         // Hand the runtime back. Drop this line and the whole loop runs to the
         // end before the other fiber gets a single turn.
-        yield* Effect.yieldNow();
+        yield* Effect.yieldNow;
       }
       return `${label} done`;
     });
 
   // Neither fiber sleeps, yet they still alternate: Effect is concurrent, not
   // parallel, so a fiber keeps the runtime until it yields.
-  const a = yield* Effect.fork(worker("A"));
-  const b = yield* Effect.fork(worker("B"));
+  const a = yield* Effect.forkChild(worker("A"));
+  const b = yield* Effect.forkChild(worker("B"));
   return [yield* Fiber.join(a), yield* Fiber.join(b)];
 });
 
@@ -399,12 +398,12 @@ export const structuredInterruptionExample = Effect.gen(function* () {
       }),
     );
 
-  const parent = yield* Effect.fork(
+  const parent = yield* Effect.forkChild(
     Effect.scoped(
       Effect.gen(function* () {
         yield* addFinalizer(() => Effect.sync(() => {}), "parent-cleanup");
-        yield* Effect.fork(child("child-1"));
-        yield* Effect.fork(child("child-2"));
+        yield* Effect.forkChild(child("child-1"));
+        yield* Effect.forkChild(child("child-2"));
         yield* Effect.sleep("10 seconds");
       }),
     ),
@@ -426,13 +425,13 @@ export const structuredInterruptionExample = Effect.gen(function* () {
  * playback stretches the work and the deadline alike and the outcome holds.
  */
 export const timeoutExample = Effect.gen(function* () {
-  const withDeadline = (label: string, work: Duration.DurationInput) =>
+  const withDeadline = (label: string, work: Duration.Input) =>
     Effect.withSpan(label)(Effect.sleep(work)).pipe(
       Effect.timeout("1 second"),
       Effect.as(`${label} finished`),
       // A missed deadline fails the effect, so recover to keep going.
       // oxlint-disable-next-line effecttsgo/catch-to-or-else-succeed
-      Effect.catchAll(() => Effect.succeed(`${label} timed out`)),
+      Effect.catch(() => Effect.succeed(`${label} timed out`)),
     );
 
   const quick = yield* withDeadline("quick-task", "300 millis");
@@ -454,7 +453,7 @@ export const deadlockExample = Effect.gen(function* () {
   const first = yield* Deferred.make<string>();
   const second = yield* Deferred.make<string>();
 
-  yield* Effect.fork(
+  yield* Effect.forkChild(
     Effect.withSpan("waits-for-second")(
       Effect.gen(function* () {
         const value = yield* Deferred.await(second);
@@ -463,7 +462,7 @@ export const deadlockExample = Effect.gen(function* () {
     ),
   );
 
-  yield* Effect.fork(
+  yield* Effect.forkChild(
     Effect.withSpan("waits-for-first")(
       Effect.gen(function* () {
         const value = yield* Deferred.await(first);
@@ -504,13 +503,13 @@ export const rootEffect = Effect.gen(function* () {
   );
 
   // Step 2: Fork two concurrent workers
-  const worker1 = yield* Effect.fork(
+  const worker1 = yield* Effect.forkChild(
     Effect.withSpan("worker-1-task")(
       Effect.sleep("1 second").pipe(Effect.as("Worker 1 complete"))
     )
   );
 
-  const worker2 = yield* Effect.fork(
+  const worker2 = yield* Effect.forkChild(
     Effect.withSpan("worker-2-task")(
       Effect.sleep("1.5 seconds").pipe(Effect.as("Worker 2 complete"))
     )
@@ -529,7 +528,7 @@ export const rootEffect = Effect.gen(function* () {
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
+export const requirements: ReadonlyArray<Layer.Any> = [];
 `,
   },
   multiStep: {
@@ -540,7 +539,7 @@ export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
     source: `import { Effect, Fiber, Layer } from "effect";
 
 export const rootEffect = Effect.gen(function* () {
-  const worker = yield* Effect.fork(
+  const worker = yield* Effect.forkChild(
     Effect.gen(function* () {
       yield* Effect.withSpan("step-1-prepare")(Effect.sleep("500 millis"));
       yield* Effect.withSpan("step-2-process")(Effect.sleep("500 millis"));
@@ -553,7 +552,7 @@ export const rootEffect = Effect.gen(function* () {
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements: ReadonlyArray<Layer.Layer.Any> = [];`,
+export const requirements: ReadonlyArray<Layer.Any> = [];`,
   },
   nestedForks: {
     name: "Nested Forks",
@@ -563,17 +562,17 @@ export const requirements: ReadonlyArray<Layer.Layer.Any> = [];`,
     source: `import { Effect, Fiber, Layer } from "effect";
 
 export const rootEffect = Effect.gen(function* () {
-  const parent = yield* Effect.fork(
+  const parent = yield* Effect.forkChild(
     Effect.gen(function* () {
       yield* Effect.withSpan("parent-init")(Effect.succeed("parent started"));
 
       // Parent forks a child
-      const child = yield* Effect.fork(
+      const child = yield* Effect.forkChild(
         Effect.gen(function* () {
           yield* Effect.withSpan("child-init")(Effect.succeed("child started"));
 
           // Child forks a grandchild
-          const grandchild = yield* Effect.fork(
+          const grandchild = yield* Effect.forkChild(
             Effect.withSpan("grandchild-task")(
               Effect.sleep("500 millis").pipe(Effect.as("grandchild done"))
             )
@@ -593,7 +592,7 @@ export const rootEffect = Effect.gen(function* () {
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
+export const requirements: ReadonlyArray<Layer.Any> = [];
 `,
   },
   interleaving: {
@@ -612,20 +611,20 @@ export const rootEffect = Effect.gen(function* () {
         );
         // Hand the runtime back. Drop this line and the whole loop runs to the
         // end before the other fiber gets a single turn.
-        yield* Effect.yieldNow();
+        yield* Effect.yieldNow;
       }
       return \`\${label} done\`;
     });
 
   // Neither fiber sleeps, yet they still alternate: Effect is concurrent, not
   // parallel, so a fiber keeps the runtime until it yields.
-  const a = yield* Effect.fork(worker("A"));
-  const b = yield* Effect.fork(worker("B"));
+  const a = yield* Effect.forkChild(worker("A"));
+  const b = yield* Effect.forkChild(worker("B"));
   return [yield* Fiber.join(a), yield* Fiber.join(b)];
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
+export const requirements: ReadonlyArray<Layer.Any> = [];
 `,
   },
   racing: {
@@ -640,11 +639,11 @@ export const rootEffect = Effect.gen(function* () {
   yield* Effect.withSpan("race-start")(Effect.succeed("starting race"));
 
   // Fork two fibers explicitly so we can visualize them
-  const fastRunner = yield* Effect.fork(
+  const fastRunner = yield* Effect.forkChild(
     Effect.sleep("1 second").pipe(Effect.as("Fast runner wins!"))
   );
 
-  const slowRunner = yield* Effect.fork(
+  const slowRunner = yield* Effect.forkChild(
     Effect.sleep("2 seconds").pipe(Effect.as("Slow runner wins!"))
   );
 
@@ -661,7 +660,7 @@ export const rootEffect = Effect.gen(function* () {
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
+export const requirements: ReadonlyArray<Layer.Any> = [];
 `,
   },
   boundedConcurrency: {
@@ -689,7 +688,7 @@ export const rootEffect = Effect.gen(function* () {
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
+export const requirements: ReadonlyArray<Layer.Any> = [];
 `,
   },
   structuredInterruption: {
@@ -711,12 +710,12 @@ export const rootEffect = Effect.gen(function* () {
       })
     );
 
-  const parent = yield* Effect.fork(
+  const parent = yield* Effect.forkChild(
     Effect.scoped(
       Effect.gen(function* () {
         yield* addFinalizer(() => Effect.sync(() => {}), "parent-cleanup");
-        yield* Effect.fork(child("child-1"));
-        yield* Effect.fork(child("child-2"));
+        yield* Effect.forkChild(child("child-1"));
+        yield* Effect.forkChild(child("child-2"));
         yield* Effect.sleep("10 seconds");
       })
     )
@@ -730,7 +729,7 @@ export const rootEffect = Effect.gen(function* () {
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
+export const requirements: ReadonlyArray<Layer.Any> = [];
 `,
   },
   failureAndRecovery: {
@@ -744,11 +743,11 @@ export const rootEffect = Effect.gen(function* () {
   // Step 1: Setup succeeds
   yield* Effect.withSpan("setup")(Effect.succeed("ready"));
 
-  // Step 2: Risky step fails; catchAll recovers with a message
+  // Step 2: Risky step fails; Effect.catch recovers with a message
   const recovered = yield* Effect.withSpan("risky-step")(
     Effect.fail(new Error("Something went wrong"))
   ).pipe(
-    Effect.catchAll((err) =>
+    Effect.catch((err) =>
       Effect.succeed(\`Recovered from: \${(err as Error).message}\`)
     )
   );
@@ -762,7 +761,7 @@ export const rootEffect = Effect.gen(function* () {
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
+export const requirements: ReadonlyArray<Layer.Any> = [];
 `,
   },
   retry: {
@@ -793,7 +792,7 @@ export const rootEffect = Effect.gen(function* () {
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
+export const requirements: ReadonlyArray<Layer.Any> = [];
 `,
   },
   retryExponentialBackoff: {
@@ -822,13 +821,13 @@ export const rootEffect = Effect.gen(function* () {
   // Step 3: retry with exponential backoff (100ms, 200ms, 400ms, ... between attempts)
   const schedule = Schedule.addDelay(
     Schedule.recurs(5),
-    (n) => \`\${100 * 2 ** n} millis\`,
+    ({ output: n }) => Effect.succeed(\`\${100 * 2 ** n} millis\` as const),
   );
   return yield* retry(flakyEffect, schedule, "flaky-task");
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
+export const requirements: ReadonlyArray<Layer.Any> = [];
 `,
   },
   timeout: {
@@ -839,12 +838,12 @@ export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
     source: `import { Duration, Effect, Layer } from "effect";
 
 export const rootEffect = Effect.gen(function* () {
-  const withDeadline = (label: string, work: Duration.DurationInput) =>
+  const withDeadline = (label: string, work: Duration.Input) =>
     Effect.withSpan(label)(Effect.sleep(work)).pipe(
       Effect.timeout("1 second"),
       Effect.as(\`\${label} finished\`),
       // A missed deadline fails the effect, so recover to keep going.
-      Effect.catchAll(() => Effect.succeed(\`\${label} timed out\`))
+      Effect.catch(() => Effect.succeed(\`\${label} timed out\`))
     );
 
   // The deadline is read from the same clock the program sleeps on, so slowing
@@ -855,7 +854,7 @@ export const rootEffect = Effect.gen(function* () {
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
+export const requirements: ReadonlyArray<Layer.Any> = [];
 `,
   },
   basicFinalizers: {
@@ -883,7 +882,7 @@ export const rootEffect = Effect.scoped(
 );
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
+export const requirements: ReadonlyArray<Layer.Any> = [];
 `,
   },
   acquireRelease: {
@@ -914,7 +913,7 @@ export const rootEffect = Effect.scoped(
 );
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
+export const requirements: ReadonlyArray<Layer.Any> = [];
 `,
   },
   loggerWithRequirements: {
@@ -928,7 +927,7 @@ interface Logger {
   readonly log: (message: string) => Effect.Effect<void>;
 }
 
-const Logger = Context.GenericTag<Logger>("app/Logger");
+const Logger = Context.Service<Logger>("app/Logger");
 
 const makeLoggerLayer = (onLog: (msg: string) => void): Layer.Layer<Logger> =>
   Layer.succeed(Logger, {
@@ -946,7 +945,7 @@ export const rootEffect = Effect.gen(function* () {
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements: ReadonlyArray<Layer.Layer.Any> = [loggerLayer];
+export const requirements: ReadonlyArray<Layer.Any> = [loggerLayer];
 `,
   },
   deadlock: {
@@ -962,7 +961,7 @@ export const rootEffect = Effect.gen(function* () {
   const first = yield* Deferred.make<string>();
   const second = yield* Deferred.make<string>();
 
-  yield* Effect.fork(
+  yield* Effect.forkChild(
     Effect.withSpan("waits-for-second")(
       Effect.gen(function* () {
         const value = yield* Deferred.await(second);
@@ -971,7 +970,7 @@ export const rootEffect = Effect.gen(function* () {
     )
   );
 
-  yield* Effect.fork(
+  yield* Effect.forkChild(
     Effect.withSpan("waits-for-first")(
       Effect.gen(function* () {
         const value = yield* Deferred.await(first);
@@ -984,7 +983,7 @@ export const rootEffect = Effect.gen(function* () {
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
-export const requirements: ReadonlyArray<Layer.Layer.Any> = [];
+export const requirements: ReadonlyArray<Layer.Any> = [];
 `,
   },
 } as const;

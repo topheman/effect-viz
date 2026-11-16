@@ -161,7 +161,7 @@
 
 ## Key Files
 
-- `src/runtime/vizSupervisor.ts` - VizSupervisor, makeVizLayers (Phase 6+8: onSuspend/onResume)
+- `src/runtime/fiberLifecycle.ts` - fiber fork/suspend/resume/end from `Tracer.context` (Effect 4 migration)
 - `src/runtime/vizTracer.ts` - makeVizTracer (Phase 7)
 - `src/runtime/runProgram.ts` - runProgramFork (root fiber emission)
 - `src/types/trace.ts` - TraceEvent definitions (fiber:suspend/resume, finalizer, acquire)

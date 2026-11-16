@@ -64,9 +64,7 @@ function buildTimelineSegments(events: TraceEvent[]): FiberLane[] {
       case "fiber:suspend": {
         const lane = lanes.get(event.fiberId);
         const currentState = fiberStates.get(event.fiberId);
-        // Effect's Supervisor calls onSuspend both when a fiber yields (e.g. sleep)
-        // and when it completes (in a finally block). The latter would overwrite
-        // completed/interrupted with suspended. Only apply if not yet terminated.
+        // A fiber that has ended stays ended.
         if (
           lane &&
           currentState &&

@@ -1,4 +1,4 @@
-import { Effect, Fiber } from "effect";
+import { Clock, Effect, Fiber, Scheduler } from "effect";
 import {
   afterEach,
   beforeEach,
@@ -10,7 +10,7 @@ import {
 
 import { GatedScheduler } from "@/runtime/gatedScheduler";
 import { VirtualClock, type VirtualClockHost } from "@/runtime/virtualClock";
-import { makeVizClockLayer } from "@/runtime/vizClock";
+import { makeVizClock } from "@/runtime/vizClock";
 
 const fakeHost: VirtualClockHost = {
   now: () => Date.now(),
@@ -25,8 +25,11 @@ function setup(rate = 1) {
   const run = <A>(effect: Effect.Effect<A>) =>
     Effect.runFork(
       effect.pipe(
-        Effect.withScheduler(scheduler),
-        Effect.provide(makeVizClockLayer(virtual)),
+        Effect.provideService(
+          Clock.Clock,
+          makeVizClock(virtual, (resume) => scheduler.wake(resume)),
+        ),
+        Effect.provideService(Scheduler.Scheduler, scheduler),
       ),
     );
   return { scheduler, virtual, run };
@@ -51,9 +54,9 @@ describe("GatedScheduler", () => {
       const fiber = run(
         Effect.gen(function* () {
           steps.push("a");
-          yield* Effect.yieldNow();
+          yield* Effect.yieldNow;
           steps.push("b");
-          yield* Effect.yieldNow();
+          yield* Effect.yieldNow;
           steps.push("c");
         }),
       );
@@ -68,8 +71,8 @@ describe("GatedScheduler", () => {
       const { scheduler, run } = setup();
       run(
         Effect.gen(function* () {
-          yield* Effect.yieldNow();
-          yield* Effect.yieldNow();
+          yield* Effect.yieldNow;
+          yield* Effect.yieldNow;
         }),
       );
 
@@ -81,9 +84,8 @@ describe("GatedScheduler", () => {
   describe("paused", () => {
     /**
      * Pause does not stop the program instantly. The task already handed to
-     * Effect's scheduler is out of our hands, so it runs, and it carries the
-     * fiber to its first natural yield point — hence "a". The continuation
-     * comes back to us and waits there.
+     * Effect's scheduler is out of our hands, so it runs, but the fiber asks to
+     * yield before its next operation and comes back to us — hence only "a".
      */
     it("stops the program and queues its next task", async () => {
       const { scheduler, run } = setup();
@@ -91,7 +93,7 @@ describe("GatedScheduler", () => {
       run(
         Effect.gen(function* () {
           steps.push("a");
-          yield* Effect.yieldNow();
+          yield* Effect.yieldNow;
           steps.push("b");
         }),
       );
@@ -123,9 +125,9 @@ describe("GatedScheduler", () => {
       run(
         Effect.gen(function* () {
           steps.push("a");
-          yield* Effect.yieldNow();
+          yield* Effect.yieldNow;
           steps.push("b");
-          yield* Effect.yieldNow();
+          yield* Effect.yieldNow;
           steps.push("c");
         }),
       );
@@ -154,9 +156,9 @@ describe("GatedScheduler", () => {
       run(
         Effect.gen(function* () {
           steps.push("a");
-          yield* Effect.yieldNow();
+          yield* Effect.yieldNow;
           steps.push("b");
-          yield* Effect.yieldNow();
+          yield* Effect.yieldNow;
           steps.push("c");
         }),
       );
@@ -182,7 +184,7 @@ describe("GatedScheduler", () => {
         Effect.gen(function* () {
           for (let i = 0; i < totalSteps; i++) {
             steps.push(String(i));
-            yield* Effect.yieldNow();
+            yield* Effect.yieldNow;
           }
         }),
       );
@@ -212,9 +214,9 @@ describe("GatedScheduler", () => {
       run(
         Effect.gen(function* () {
           steps.push("a");
-          yield* Effect.yieldNow();
+          yield* Effect.yieldNow;
           steps.push("b");
-          yield* Effect.yieldNow();
+          yield* Effect.yieldNow;
           steps.push("c");
         }),
       );
@@ -234,10 +236,10 @@ describe("GatedScheduler", () => {
       const fiber = run(
         Effect.gen(function* () {
           // Joined, so the children must finish before the root does.
-          const w1 = yield* Effect.fork(
+          const w1 = yield* Effect.forkChild(
             Effect.sync(() => steps.push("worker-1")),
           );
-          const w2 = yield* Effect.fork(
+          const w2 = yield* Effect.forkChild(
             Effect.sync(() => steps.push("worker-2")),
           );
           yield* Fiber.join(w1);
@@ -291,6 +293,31 @@ describe("GatedScheduler", () => {
 
       expect(steps).toEqual(["before"]);
       expect(scheduler.queuedCount).toBeGreaterThan(0);
+
+      scheduler.releaseUntil(() => steps.length > 1);
+      expect(steps).toEqual(["before", "after"]);
+    });
+
+    /**
+     * A timer of the virtual clock coming due while paused only queues its
+     * fiber. The fiber here never asks to yield, so the gate alone holds it.
+     */
+    it("holds a timer's wake-up until the next step", async () => {
+      const { scheduler, run } = setup();
+      const steps: string[] = [];
+      run(
+        Effect.gen(function* () {
+          steps.push("before");
+          yield* Effect.sleep("1 second");
+          steps.push("after");
+        }).pipe(Effect.provideService(Scheduler.PreventSchedulerYield, true)),
+      );
+      await settle();
+      scheduler.pause();
+
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(steps).toEqual(["before"]);
+      expect(scheduler.queuedCount).toBe(1);
 
       scheduler.releaseUntil(() => steps.length > 1);
       expect(steps).toEqual(["before", "after"]);
@@ -351,8 +378,8 @@ describe("GatedScheduler", () => {
       const { scheduler, run } = setup();
       run(
         Effect.gen(function* () {
-          yield* Effect.yieldNow();
-          yield* Effect.yieldNow();
+          yield* Effect.yieldNow;
+          yield* Effect.yieldNow;
         }),
       );
 
