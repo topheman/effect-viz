@@ -17,7 +17,7 @@ import { useLogView } from "@/hooks/useLogView";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { EVENT_GROUPS, type EventGroup, eventGroup } from "@/lib/eventGroups";
 import { eventDepth, fiberDepths } from "@/lib/fiberDepth";
-import { traceHints } from "@/lib/traceHints";
+import { hintText, traceHints } from "@/lib/traceHints";
 import { cn } from "@/lib/utils";
 import { useTraceStore } from "@/stores/traceStore";
 import type {
@@ -244,6 +244,10 @@ export function ExecutionLog() {
   const depths = indentByFiber ? fiberDepths(events) : null;
   // Detected on the full trace, so hiding rows never changes which hints fire.
   const hints = explain ? traceHints(events, { indentByFiber }) : null;
+  // A hint names another row by the number the log shows for it.
+  const rowNumbers = new Map(
+    visible.map(({ index }, position) => [index, position + 1]),
+  );
 
   const toggleHint = (index: number) => {
     const next = new Set(expanded);
@@ -401,7 +405,9 @@ export function ExecutionLog() {
             {visible.map(({ event, index }, position) => {
               const emojiInfo = getEventEmoji(event);
               const depth = depths ? eventDepth(event, depths) : 0;
-              const hint = hints?.get(index);
+              const rowHints = hints?.get(index);
+              const hint =
+                rowHints && hintText(rowHints, (i) => rowNumbers.get(i));
               const hintId = `execution-log-hint-${index}`;
               return (
                 <div

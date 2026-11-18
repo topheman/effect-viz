@@ -192,9 +192,42 @@ describe("ExecutionLog hints", () => {
     expect(icon).toHaveAttribute("aria-expanded", "true");
     expect(icon).toHaveAttribute("title", "Hide explanation");
     expect(
-      screen.getByText("Indented with the fiber that forked it", {
-        exact: false,
-      }),
+      screen.getByText("Indent is fiber depth", { exact: false }),
+    ).toBeInTheDocument();
+  });
+
+  it("names a row a hint points at by its visible number, or not at all when it is hidden", async () => {
+    const handoff: TraceEvent[] = [
+      { type: "fiber:suspend", fiberId: "#0", timestamp: 0 },
+      { type: "fiber:resume", fiberId: "#1", timestamp: 0 },
+    ];
+    render(
+      <TraceStoreProvider>
+        <Seed with={handoff} />
+        <ExecutionLog />
+      </TraceStoreProvider>,
+    );
+    await userEvent.click(
+      screen.getAllByRole("button", { name: "Explain this event" })[0],
+    );
+    expect(
+      screen.getByText(
+        "The fork only queues #1: it first runs at [6], once #0 yields.",
+      ),
+    ).toBeInTheDocument();
+
+    await toggleOption("Spans 1");
+    expect(
+      screen.getByText(
+        "The fork only queues #1: it first runs at [5], once #0 yields.",
+      ),
+    ).toBeInTheDocument();
+
+    await toggleOption("Scheduling 2");
+    expect(
+      screen.getByText(
+        "The fork only queues #1: it first runs once #0 yields.",
+      ),
     ).toBeInTheDocument();
   });
 
@@ -205,7 +238,7 @@ describe("ExecutionLog hints", () => {
         <ExecutionLog />
       </TraceStoreProvider>,
     );
-    const row = screen.getByText("fiber:forked #1 (parent #0)");
+    const row = screen.getByText("effect:started on-child");
 
     await userEvent.click(row);
     expect(
