@@ -52,14 +52,16 @@ export interface FiberForkEvent {
   timestamp: number;
 }
 
-/** Event fired when a fiber completes */
+/** Event fired when a fiber ends on its own, succeeding or failing; an interrupted fiber emits `fiber:interrupt` instead. */
 export interface FiberEndEvent {
   type: "fiber:end";
   fiberId: string;
+  /** `"failure"` when the fiber failed or died, its cause holding more than interrupts */
+  result: "success" | "failure";
   timestamp: number;
 }
 
-/** Event fired when a fiber is interrupted */
+/** Event fired when a fiber is interrupted, its cause holding only interrupts */
 export interface FiberInterruptEvent {
   type: "fiber:interrupt";
   fiberId: string;
@@ -136,7 +138,12 @@ export type TraceEvent =
  * Possible states a fiber can be in.
  * Used by the FiberTreeView to show fiber lifecycle.
  */
-export type FiberState = "running" | "suspended" | "completed" | "interrupted";
+export type FiberState =
+  | "running"
+  | "suspended"
+  | "completed"
+  | "failed"
+  | "interrupted";
 
 /**
  * Information about a fiber for visualization.
@@ -153,7 +160,7 @@ export interface FiberInfo {
   label?: string;
   /** When the fiber was forked */
   startTime: number;
-  /** When the fiber ended (if completed/interrupted) */
+  /** When the fiber ended (if completed, failed or interrupted) */
   endTime?: number;
   /** Child fiber IDs */
   children: string[];

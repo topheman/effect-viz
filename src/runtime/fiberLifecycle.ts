@@ -16,7 +16,9 @@
  *   stack (`forEach` starts its next worker from the observer of the one that
  *   ended) gets the fiber that last forked with its `Context`: a child starts
  *   with its parent's.
- * - **End and interrupt**: `fiber.addObserver`, registered at discovery.
+ * - **End and interrupt**: `fiber.addObserver`, registered at discovery. An
+ *   exit whose cause holds only interrupts is an interruption; any other
+ *   failure, a mixed cause included, is the fiber failing on its own.
  * - **Suspend and resume**: a primitive returning the run loop's `Yield`
  *   sentinel stops the fiber, to wait or because it is done. A fiber that is
  *   done yields its `Exit`, and is not suspended: the runtime may still
@@ -27,7 +29,7 @@
  * forced yield (`Scheduler.shouldYield`) is neither a suspend nor a resume here:
  * the fiber was never off the CPU from the program's point of view.
  */
-import { Context, Exit, Fiber } from "effect";
+import { Cause, Context, Exit, Fiber } from "effect";
 import type { Tracer } from "effect";
 
 import type { Now } from "@/runtime/virtualClock";
@@ -114,11 +116,18 @@ export function makeFiberLifecycle(
   const observeExit = (fiber: AnyFiber) => {
     fiber.addObserver((exit) => {
       running.delete(fiber);
-      onEmit({
-        type: Exit.isSuccess(exit) ? "fiber:end" : "fiber:interrupt",
-        fiberId: fiberLabel(fiber),
-        timestamp: now(),
-      });
+      const fiberId = fiberLabel(fiber);
+      const timestamp = now();
+      onEmit(
+        Exit.isFailure(exit) && Cause.hasInterruptsOnly(exit.cause)
+          ? { type: "fiber:interrupt", fiberId, timestamp }
+          : {
+              type: "fiber:end",
+              fiberId,
+              result: Exit.isSuccess(exit) ? "success" : "failure",
+              timestamp,
+            },
+      );
     });
   };
 

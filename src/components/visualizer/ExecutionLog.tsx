@@ -72,7 +72,8 @@ function formatEvent(
       const forkEvent = events.find(
         (e) => e.type === "fiber:fork" && e.fiberId === event.fiberId,
       ) as FiberForkEvent | undefined;
-      return `fiber:ended ${event.fiberId}${forkEvent?.parentId ? ` (parent ${forkEvent.parentId})` : " (root)"}`;
+      const verb = event.result === "success" ? "ended" : "failed";
+      return `fiber:${verb} ${event.fiberId}${forkEvent?.parentId ? ` (parent ${forkEvent.parentId})` : " (root)"}`;
     }
     case "fiber:interrupt":
       return `fiber:interrupted ${event.fiberId}`;
@@ -112,7 +113,9 @@ function getEventEmoji(event: TraceEvent): { emoji: string; label: string } {
     case "fiber:resume":
       return { emoji: "▶️", label: "Fiber resume" };
     case "fiber:end":
-      return { emoji: "🏁", label: "Fiber ended" };
+      return event.result === "success"
+        ? { emoji: "🏁", label: "Fiber ended" }
+        : { emoji: "❌", label: "Fiber failed" };
     case "fiber:interrupt":
       return { emoji: "⛔", label: "Fiber interrupted" };
     case "effect:start":
@@ -150,7 +153,7 @@ function getEventColor(event: TraceEvent): string {
     case "fiber:fork":
       return "text-violet-500";
     case "fiber:end":
-      return "text-violet-400";
+      return event.result === "success" ? "text-violet-400" : "text-red-400";
     case "fiber:interrupt":
       return "text-orange-400";
     case "fiber:suspend":

@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 
+import { endState, isEnded } from "@/lib/fiberState";
 import type { FiberInfo, FiberState, TraceEvent } from "@/types/trace";
 
 function createFiberInfo(fiberInfo: FiberInfo): FiberInfo {
@@ -71,18 +72,11 @@ export function FiberStoreProvider({ children }: FiberStoreProviderProps) {
           break;
         }
 
-        case "fiber:end": {
-          const fiberInfo = next.get(event.fiberId);
-          if (fiberInfo) {
-            next.set(event.fiberId, { ...fiberInfo, state: "completed" });
-          }
-          break;
-        }
-
+        case "fiber:end":
         case "fiber:interrupt": {
           const fiberInfo = next.get(event.fiberId);
           if (fiberInfo) {
-            next.set(event.fiberId, { ...fiberInfo, state: "interrupted" });
+            next.set(event.fiberId, { ...fiberInfo, state: endState(event) });
           }
           break;
         }
@@ -90,11 +84,7 @@ export function FiberStoreProvider({ children }: FiberStoreProviderProps) {
         case "fiber:suspend": {
           const fiberInfo = next.get(event.fiberId);
           // A fiber that has ended stays ended.
-          if (
-            fiberInfo &&
-            fiberInfo.state !== "completed" &&
-            fiberInfo.state !== "interrupted"
-          ) {
+          if (fiberInfo && !isEnded(fiberInfo.state)) {
             next.set(event.fiberId, { ...fiberInfo, state: "suspended" });
           }
           break;
@@ -206,7 +196,9 @@ export function getFiberStateColor(state: FiberState): string {
       return "text-yellow-400";
     case "completed":
       return "text-blue-400";
-    case "interrupted":
+    case "failed":
       return "text-red-400";
+    case "interrupted":
+      return "text-orange-400";
   }
 }

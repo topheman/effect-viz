@@ -24,6 +24,7 @@ const resume = (fiberId: string, timestamp = 0): TraceEvent => ({
 const end = (fiberId: string, timestamp = 0): TraceEvent => ({
   type: "fiber:end",
   fiberId,
+  result: "success",
   timestamp,
 });
 const interrupt = (fiberId: string, timestamp = 0): TraceEvent => ({

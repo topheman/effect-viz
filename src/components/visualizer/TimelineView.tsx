@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { endState, isEnded } from "@/lib/fiberState";
 import { computeTickInterval } from "@/lib/timelineTime";
 import { cn } from "@/lib/utils";
 import { useTraceStore } from "@/stores/traceStore";
@@ -65,12 +66,7 @@ function buildTimelineSegments(events: TraceEvent[]): FiberLane[] {
         const lane = lanes.get(event.fiberId);
         const currentState = fiberStates.get(event.fiberId);
         // A fiber that has ended stays ended.
-        if (
-          lane &&
-          currentState &&
-          currentState.state !== "completed" &&
-          currentState.state !== "interrupted"
-        ) {
+        if (lane && currentState && !isEnded(currentState.state)) {
           // Close the running segment
           lane.segments.push({
             fiberId: event.fiberId,
@@ -107,26 +103,7 @@ function buildTimelineSegments(events: TraceEvent[]): FiberLane[] {
         break;
       }
 
-      case "fiber:end": {
-        const lane = lanes.get(event.fiberId);
-        const currentState = fiberStates.get(event.fiberId);
-        if (lane && currentState) {
-          // Close the current segment
-          lane.segments.push({
-            fiberId: event.fiberId,
-            state: currentState.state,
-            startTime: currentState.since,
-            endTime: timestamp,
-          });
-          // Mark fiber as completed (no longer ongoing)
-          fiberStates.set(event.fiberId, {
-            state: "completed",
-            since: timestamp,
-          });
-        }
-        break;
-      }
-
+      case "fiber:end":
       case "fiber:interrupt": {
         const lane = lanes.get(event.fiberId);
         const currentState = fiberStates.get(event.fiberId);
@@ -138,9 +115,9 @@ function buildTimelineSegments(events: TraceEvent[]): FiberLane[] {
             startTime: currentState.since,
             endTime: timestamp,
           });
-          // Mark fiber as interrupted (no longer ongoing)
+          // The fiber is no longer ongoing
           fiberStates.set(event.fiberId, {
-            state: "interrupted",
+            state: endState(event),
             since: timestamp,
           });
         }
@@ -150,7 +127,7 @@ function buildTimelineSegments(events: TraceEvent[]): FiberLane[] {
   }
 
   // Add ongoing segments for fibers still running/suspended
-  // OR add final state markers for completed/interrupted fibers
+  // OR add final state markers for ended fibers
   for (const [fiberId, state] of fiberStates) {
     const lane = lanes.get(fiberId);
     if (!lane) continue;
@@ -163,7 +140,7 @@ function buildTimelineSegments(events: TraceEvent[]): FiberLane[] {
         startTime: state.since,
         endTime: null, // ongoing
       });
-    } else if (state.state === "completed" || state.state === "interrupted") {
+    } else if (isEnded(state.state)) {
       // Fiber finished - add a small marker segment to show final state
       // Use a minimal duration so it's visible as a cap at the end
       lane.segments.push({
@@ -189,8 +166,10 @@ function getSegmentColor(state: FiberState): string {
       return "bg-yellow-500";
     case "completed":
       return "bg-blue-500";
-    case "interrupted":
+    case "failed":
       return "bg-red-500";
+    case "interrupted":
+      return "bg-orange-500";
   }
 }
 
@@ -319,10 +298,9 @@ function FiberLaneRow({
           const segmentDuration = segmentEnd - segmentStart;
           const width = (segmentDuration / duration) * 100;
 
-          // Final state markers (completed/interrupted) have zero duration
+          // Final state markers have zero duration
           // Give them a minimum width so they're visible
-          const isFinalMarker =
-            segment.state === "completed" || segment.state === "interrupted";
+          const isFinalMarker = isEnded(segment.state);
           const isOngoing = segment.endTime === null;
 
           return (
@@ -469,6 +447,10 @@ export function TimelineView({
               </div>
               <div className="flex items-center gap-1">
                 <div className="h-2 w-3 rounded bg-red-500" />
+                <span className="text-muted-foreground">Failed</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="h-2 w-3 rounded bg-orange-500" />
                 <span className="text-muted-foreground">Interrupted</span>
               </div>
             </div>
