@@ -153,13 +153,12 @@ export function traceHints(
           );
         } else if (
           waited &&
-          !(
-            prev?.type === "fiber:suspend" &&
-            prev.fiberId === event.fiberId &&
-            sameInstant(prev.timestamp, event.timestamp)
+          !sameInstant(
+            lastSuspend.get(event.fiberId)!.timestamp,
+            event.timestamp,
           )
         ) {
-          // A resume in the same instant as its own suspend is explained there.
+          // A resume in the same instant as its suspend shows no wait to explain.
           add(i, "Time the fiber spent parked.");
         }
         break;

@@ -89,7 +89,7 @@ function formatEvent(
           (e): e is FiberSuspendEvent =>
             e.type === "fiber:suspend" && e.fiberId === event.fiberId,
         );
-      // A resume in the same burst as its suspend shows no wait, as its hint says.
+      // A resume in the same instant as its suspend waited for nothing.
       if (!lastSuspend || sameInstant(lastSuspend.timestamp, event.timestamp)) {
         return `fiber:resume ${event.fiberId}`;
       }

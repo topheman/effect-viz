@@ -206,6 +206,17 @@ describe("traceHints", () => {
     );
   });
 
+  it("does not call a resume in the same instant as its suspend parked", () => {
+    const hints = hintsOf([
+      fork("#0"),
+      start("span", "#0"),
+      suspend("#0", 300),
+      succeeded("span", "#0", 301),
+      resume("#0", 302),
+    ]);
+    expect(hints[4]).toBeUndefined();
+  });
+
   it("explains the start of a retry attempt after the schedule's delay", () => {
     const hints = hintsOf([
       fork("#0"),
