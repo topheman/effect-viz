@@ -296,6 +296,19 @@ describe("traceHints", () => {
       expect(hints[6]).toBeUndefined();
     });
 
+    it("leaves an interrupt alone while the parent is not running", () => {
+      const hints = hintsOf([
+        fork("#0"),
+        fork("#1", "#0"),
+        resume("#1"),
+        suspend("#1"),
+        suspend("#0"),
+        interrupt("#1", 300),
+        resume("#0", 300),
+      ]);
+      expect(hints[5]).toBeUndefined();
+    });
+
     it("says a fiber that catches an interrupted span carries on", () => {
       // Effect.interrupt caught inside the fiber: the span ends interrupted, the fiber goes on.
       const hints = hintsOf([
@@ -385,6 +398,31 @@ describe("traceHints", () => {
       resume("#2", 500),
     ]);
     expect(hints[7]).toBe("#1 ending started the next task; #0 stays parked.");
+  });
+
+  it("leaves a fork alone when the parent runs or the ended fiber is not a sibling", () => {
+    const running = hintsOf([
+      fork("#0"),
+      fork("#1", "#0"),
+      resume("#1"),
+      suspend("#1"),
+      suspend("#0"),
+      resume("#0", 500),
+      end("#1", 500),
+      fork("#2", "#0"),
+      resume("#2", 500),
+    ]);
+    expect(running[7]).toBeUndefined();
+    const stranger = hintsOf([
+      fork("#0"),
+      fork("#9"),
+      resume("#9"),
+      suspend("#0"),
+      end("#9", 500),
+      fork("#2", "#0"),
+      resume("#2", 500),
+    ]);
+    expect(stranger[5]).toBeUndefined();
   });
 
   it("explains finalizers only when several run together", () => {

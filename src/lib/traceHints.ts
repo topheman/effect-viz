@@ -6,6 +6,7 @@ import { eventDepth, fiberDepths } from "./fiberDepth";
 export interface Hint {
   /** The text, where `[N]` stands for the number of the row `ref` points at. */
   text: string;
+  /** The row `[N]` stands for. */
   ref?: {
     /** Index in the full trace of the row the text points at. */
     index: number;
