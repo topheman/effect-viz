@@ -44,7 +44,7 @@ const failed = (id: string, fiberId: string, timestamp = 0): TraceEvent => ({
   id,
   fiberId,
   result: "failure",
-  error: "interrupted",
+  error: "boom",
   timestamp,
 });
 const interrupted = (

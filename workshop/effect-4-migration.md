@@ -56,7 +56,7 @@ An interrupted fiber still ends with `fiber:interrupt`. One fiber ends different
 
 ## The examples, before and after
 
-Every example was run under both versions with the same virtual clock, and the traces compared with fiber ids renumbered by first appearance. All fifteen still end the way they did, and their spans, retries, finalizers and acquisitions are the same. What differs is the fiber rows, for these reasons:
+Every example was run under both versions with the same virtual clock, and the traces compared with fiber ids renumbered by first appearance. All fifteen still end the way they did, and their spans, retries, finalizers and acquisitions are the same, apart from how an interrupted span ends (see [Tracing](#tracing)). What differs is the fiber rows, for these reasons:
 
 - **An ended fiber no longer suspends.** Effect 3's `Supervisor` reported a `fiber:suspend` right after every `fiber:end`. The yield that ends a fiber is not a suspension, and the tracer drops it. Every example with a forked fiber loses those rows.
 - **The root starts running.** The root is discovered on its first primitive, so its trace opens with its fork and no resume.
