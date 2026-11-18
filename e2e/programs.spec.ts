@@ -88,9 +88,12 @@ const programs: Record<string, (rows: LogRow[]) => void> = {
   },
 
   racing: (rows) => {
-    at(rows, "effect:ended race-join [success]");
-    // The slow runner loses and is interrupted.
-    expect(count(rows, /^fiber:interrupted /)).toBeGreaterThanOrEqual(1);
+    // The slow runner loses: race interrupts it without the program asking.
+    inOrder(
+      rows,
+      "effect:ended fast-runner [success]",
+      "effect:interrupted slow-runner",
+    );
   },
 
   boundedConcurrency: (rows) => {

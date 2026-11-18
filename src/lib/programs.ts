@@ -122,33 +122,19 @@ export const nestedForksExample = Effect.gen(function* () {
 // =============================================================================
 
 /**
- * Demonstrates racing with explicit fiber forking.
- * First fiber to complete wins, the loser gets interrupted.
- *
- * Uses Effect.forkChild so both competing fibers are visible in the timeline.
+ * Two runners raced against each other: the first to succeed wins.
+ * Effect.race forks a fiber per runner itself and interrupts the loser as soon
+ * as the winner succeeds, so the program never touches a fiber.
  */
 export const racingExample = Effect.gen(function* () {
-  yield* Effect.withSpan("race-start")(Effect.succeed("starting race"));
+  const runner = (label: string, time: Duration.Input) =>
+    Effect.withSpan(label)(Effect.sleep(time)).pipe(Effect.as(`${label} wins`));
 
-  // Fork two fibers explicitly so we can visualize them
-  const fastRunner = yield* Effect.forkChild(
-    Effect.sleep("1 second").pipe(Effect.as("Fast runner wins!")),
+  // The slow runner is still asleep when the fast one wins: race interrupts it.
+  return yield* Effect.race(
+    runner("fast-runner", "1 second"),
+    runner("slow-runner", "2 seconds"),
   );
-
-  const slowRunner = yield* Effect.forkChild(
-    Effect.sleep("2 seconds").pipe(Effect.as("Slow runner wins!")),
-  );
-
-  // Race by joining both - Effect.race returns when first completes
-  const winner = yield* Effect.withSpan("race-join")(
-    Effect.race(Fiber.join(fastRunner), Fiber.join(slowRunner)),
-  );
-
-  // Interrupt both fibers (winner already done, loser gets interrupted)
-  yield* Fiber.interrupt(fastRunner);
-  yield* Fiber.interrupt(slowRunner);
-
-  return winner;
 });
 
 // =============================================================================
@@ -629,34 +615,21 @@ export const requirements: ReadonlyArray<Layer.Any> = [];
   },
   racing: {
     name: "Racing",
-    description:
-      "Two fibers racing - first to complete wins, loser interrupted",
+    description: "Two fibers racing - first to succeed wins, loser interrupted",
     rootEffect: racingExample,
     requirements: [] as const,
-    source: `import { Effect, Fiber, Layer } from "effect";
+    source: `import { Duration, Effect, Layer } from "effect";
 
 export const rootEffect = Effect.gen(function* () {
-  yield* Effect.withSpan("race-start")(Effect.succeed("starting race"));
+  const runner = (label: string, time: Duration.Input) =>
+    Effect.withSpan(label)(Effect.sleep(time)).pipe(Effect.as(\`\${label} wins\`));
 
-  // Fork two fibers explicitly so we can visualize them
-  const fastRunner = yield* Effect.forkChild(
-    Effect.sleep("1 second").pipe(Effect.as("Fast runner wins!"))
+  // Effect.race forks a fiber per runner and interrupts the loser as soon as the
+  // winner succeeds: the slow runner is still asleep when the fast one wins.
+  return yield* Effect.race(
+    runner("fast-runner", "1 second"),
+    runner("slow-runner", "2 seconds")
   );
-
-  const slowRunner = yield* Effect.forkChild(
-    Effect.sleep("2 seconds").pipe(Effect.as("Slow runner wins!"))
-  );
-
-  // Race by joining both - Effect.race returns when first completes
-  const winner = yield* Effect.withSpan("race-join")(
-    Effect.race(Fiber.join(fastRunner), Fiber.join(slowRunner))
-  );
-
-  // Interrupt both fibers (winner already done, loser gets interrupted)
-  yield* Fiber.interrupt(fastRunner);
-  yield* Fiber.interrupt(slowRunner);
-
-  return winner;
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
