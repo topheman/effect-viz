@@ -407,17 +407,18 @@ export const structuredInterruptionExample = Effect.gen(function* () {
 
 /**
  * A deadline that interrupts work which takes too long.
- * Effect.timeout reads the same clock the program sleeps on, so slowing
+ * Effect.timeoutOrElse reads the same clock the program sleeps on, so slowing
  * playback stretches the work and the deadline alike and the outcome holds.
  */
 export const timeoutExample = Effect.gen(function* () {
   const withDeadline = (label: string, work: Duration.Input) =>
     Effect.withSpan(label)(Effect.sleep(work)).pipe(
-      Effect.timeout("1 second"),
       Effect.as(`${label} finished`),
-      // A missed deadline fails the effect, so recover to keep going.
-      // oxlint-disable-next-line effecttsgo/catch-to-or-else-succeed
-      Effect.catch(() => Effect.succeed(`${label} timed out`)),
+      // A missed deadline interrupts the work, then the fallback runs instead.
+      Effect.timeoutOrElse({
+        duration: "1 second",
+        orElse: () => Effect.succeed(`${label} timed out`),
+      }),
     );
 
   const quick = yield* withDeadline("quick-task", "300 millis");
@@ -813,10 +814,12 @@ export const requirements: ReadonlyArray<Layer.Any> = [];
 export const rootEffect = Effect.gen(function* () {
   const withDeadline = (label: string, work: Duration.Input) =>
     Effect.withSpan(label)(Effect.sleep(work)).pipe(
-      Effect.timeout("1 second"),
       Effect.as(\`\${label} finished\`),
-      // A missed deadline fails the effect, so recover to keep going.
-      Effect.catch(() => Effect.succeed(\`\${label} timed out\`))
+      // A missed deadline interrupts the work, then the fallback runs instead.
+      Effect.timeoutOrElse({
+        duration: "1 second",
+        orElse: () => Effect.succeed(\`\${label} timed out\`),
+      })
     );
 
   // The deadline is read from the same clock the program sleeps on, so slowing
