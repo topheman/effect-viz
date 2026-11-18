@@ -109,8 +109,8 @@ const programs: Record<string, (rows: LogRow[]) => void> = {
 
   structuredInterruption: (rows) => {
     // Interrupting the parent reaches both children, which it never names.
-    at(rows, "effect:ended child-1 [interrupted]");
-    at(rows, "effect:ended child-2 [interrupted]");
+    at(rows, "effect:interrupted child-1");
+    at(rows, "effect:interrupted child-2");
     at(rows, "finalizer parent-cleanup");
     at(rows, "finalizer child-1-cleanup");
     at(rows, "finalizer child-2-cleanup");
@@ -138,8 +138,8 @@ const programs: Record<string, (rows: LogRow[]) => void> = {
 
   timeout: (rows) => {
     at(rows, "effect:ended quick-task [success]");
-    // The deadline interrupts the slow task, which ends its span interrupted.
-    at(rows, "effect:ended slow-task [interrupted]");
+    // The deadline interrupts the slow task, whose span ends interrupted.
+    at(rows, "effect:interrupted slow-task");
   },
 
   basicFinalizers: (rows) => {

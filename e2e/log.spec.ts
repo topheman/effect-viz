@@ -43,7 +43,7 @@ test("filters hide their group of events", async ({ page }) => {
 
 test("explains a span that interruption ended", async ({ page }) => {
   await runToEnd(page, "structuredInterruption");
-  await expect(await explainRow(page, "effect:ended child-1")).toHaveText(
+  await expect(await explainRow(page, "effect:interrupted child-1")).toHaveText(
     "Interruption ends the open span as a failure.",
   );
 });

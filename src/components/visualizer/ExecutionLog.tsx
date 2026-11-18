@@ -62,7 +62,8 @@ function formatEvent(
       const startEffect = events.find(
         (e) => e.type === "effect:start" && e.id === event.id,
       ) as EffectStartEvent | undefined;
-      return `effect:ended ${startEffect?.label ?? event.id}`;
+      const verb = event.result === "interrupted" ? "interrupted" : "ended";
+      return `effect:${verb} ${startEffect?.label ?? event.id}`;
     }
     case "fiber:fork": {
       if (!event.parentId) return `fiber:forked ${event.fiberId} (root)`;
@@ -122,11 +123,10 @@ function getEventEmoji(event: TraceEvent): { emoji: string; label: string } {
       return { emoji: "🚀", label: "Effect started" };
     case "effect:end":
       return {
-        emoji: { success: "✅", failure: "❌", interrupted: "⛔" }[
-          event.result
-        ],
-        label: `Effect ended (${event.result})`,
-      };
+        success: { emoji: "✅", label: "Effect ended (success)" },
+        failure: { emoji: "❌", label: "Effect ended (failure)" },
+        interrupted: { emoji: "⛔", label: "Effect interrupted" },
+      }[event.result];
     case "retry:attempt":
       return { emoji: "🔄", label: "Retry attempt" };
     case "finalizer":

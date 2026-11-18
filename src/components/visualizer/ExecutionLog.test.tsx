@@ -125,14 +125,14 @@ describe("ExecutionLog", () => {
     const spans: TraceEvent[] = [
       {
         type: "effect:start",
-        id: "a",
+        id: "risky",
         fiberId: "#1",
         label: "risky",
         timestamp: 0,
       },
       {
         type: "effect:end",
-        id: "a",
+        id: "risky",
         fiberId: "#1",
         result: "failure",
         error: "boom",
@@ -140,14 +140,14 @@ describe("ExecutionLog", () => {
       },
       {
         type: "effect:start",
-        id: "b",
+        id: "slow",
         fiberId: "#2",
         label: "slow",
         timestamp: 0,
       },
       {
         type: "effect:end",
-        id: "b",
+        id: "slow",
         fiberId: "#2",
         result: "interrupted",
         timestamp: 0,
@@ -163,8 +163,10 @@ describe("ExecutionLog", () => {
       screen.getByRole("img", { name: "Effect ended (failure)" }),
     ).toBeVisible();
     expect(
-      screen.getByRole("img", { name: "Effect ended (interrupted)" }),
+      screen.getByRole("img", { name: "Effect interrupted" }),
     ).toBeVisible();
+    expect(screen.getByText("effect:ended risky")).toBeInTheDocument();
+    expect(screen.getByText("effect:interrupted slow")).toBeInTheDocument();
   });
 });
 
