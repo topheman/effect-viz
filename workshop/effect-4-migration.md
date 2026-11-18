@@ -52,7 +52,7 @@ An interrupted fiber still ends with `fiber:interrupt`. One fiber ends different
 
 ## Tracing
 
-`Tracer.make` takes the same `span` function as before, and `vizTracer.ts` still turns each `Effect.withSpan` into an `effect:start` and an `effect:end`, stamped with the clock the runtime passes in. The spans the Execution Log shows are unchanged in every example. The tracer now also provides `context`, which is where the fiber lifecycle comes from (see [Fibers and the Supervisor](#fibers-and-the-supervisor)).
+`Tracer.make` takes the same `span` function as before, and `vizTracer.ts` still turns each `Effect.withSpan` into an `effect:start` and an `effect:end`, stamped with the clock the runtime passes in. A span's `effect:end` carries `result: "interrupted"` when its exit's cause holds only interrupts, the same rule as a fiber's end: a span cut short by interruption, such as the children of Structured Interruption or Timeout's slow task, is not one that failed, and a mixed cause still counts as a failure. The tracer now also provides `context`, which is where the fiber lifecycle comes from (see [Fibers and the Supervisor](#fibers-and-the-supervisor)).
 
 ## The examples, before and after
 

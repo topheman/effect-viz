@@ -122,11 +122,10 @@ function getEventEmoji(event: TraceEvent): { emoji: string; label: string } {
       return { emoji: "🚀", label: "Effect started" };
     case "effect:end":
       return {
-        emoji: event.result === "success" ? "✅" : "❌",
-        label:
-          event.result === "success"
-            ? "Effect ended (success)"
-            : "Effect ended (failure)",
+        emoji: { success: "✅", failure: "❌", interrupted: "⛔" }[
+          event.result
+        ],
+        label: `Effect ended (${event.result})`,
       };
     case "retry:attempt":
       return { emoji: "🔄", label: "Retry attempt" };
@@ -149,7 +148,11 @@ function getEventColor(event: TraceEvent): string {
     case "effect:start":
       return "text-blue-400";
     case "effect:end":
-      return event.result === "success" ? "text-green-400" : "text-red-400";
+      return {
+        success: "text-green-400",
+        failure: "text-red-400",
+        interrupted: "text-orange-400",
+      }[event.result];
     case "fiber:fork":
       return "text-violet-500";
     case "fiber:end":

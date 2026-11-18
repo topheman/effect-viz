@@ -47,6 +47,17 @@ const failed = (id: string, fiberId: string, timestamp = 0): TraceEvent => ({
   error: "interrupted",
   timestamp,
 });
+const interrupted = (
+  id: string,
+  fiberId: string,
+  timestamp = 0,
+): TraceEvent => ({
+  type: "effect:end",
+  id,
+  fiberId,
+  result: "interrupted",
+  timestamp,
+});
 const finalizer = (
   label: string,
   fiberId: string,
@@ -131,6 +142,17 @@ describe("traceHints", () => {
     expect(hints[2]).toBe("Interruption ends the open span as a failure.");
   });
 
+  it("explains an interrupted span the way it explains a failed one", () => {
+    const hints = hintsOf([
+      fork("#0"),
+      start("child", "#0"),
+      interrupted("child", "#0", 300),
+      finalizer("cleanup", "#0", 300),
+      interrupt("#0", 300),
+    ]);
+    expect(hints[2]).toBe("Interruption ends the open span as a failure.");
+  });
+
   it("explains a failed span that interruption closed on a slow machine", () => {
     const hints = hintsOf([
       fork("#0"),
@@ -157,7 +179,7 @@ describe("traceHints", () => {
       resume("#1", 6.1),
       suspend("#1", 6.2),
       resume("#0", 313.656),
-      failed("child-1", "#0", 314.708),
+      interrupted("child-1", "#0", 314.708),
       finalizer("child-1-cleanup", "#0", 315.769),
       interrupt("#0", 316.144),
     ]);

@@ -13,7 +13,7 @@ export interface EffectStartEvent {
   timestamp: number;
 }
 
-/** Event fired when an effect completes */
+/** Event fired when a span ends: it succeeded, failed, or was interrupted, its cause holding only interrupts */
 export type EffectEndEvent =
   | {
       type: "effect:end";
@@ -30,6 +30,13 @@ export type EffectEndEvent =
       result: "failure";
       timestamp: number;
       error: unknown;
+    }
+  | {
+      type: "effect:end";
+      id: string;
+      fiberId: string;
+      result: "interrupted";
+      timestamp: number;
     };
 
 export interface RetryAttemptEvent {

@@ -124,7 +124,7 @@ export async function startProgram(page: Page, key: string) {
 }
 
 export interface LogRow {
-  /** The row as a user reads it, with `[success]` or `[failure]` appended to a span's end, which only the icon shows. */
+  /** The row as a user reads it, with `[success]`, `[failure]` or `[interrupted]` appended to a span's end, which only the icon shows. */
   text: string;
   /** Horizontal position of the row's icon, which moves right with fiber depth. */
   indent: number;
@@ -140,7 +140,7 @@ export async function logRows(page: Page): Promise<LogRow[]> {
       .filter((icon) => icon.checkVisibility())
       .map((icon) => {
         const label = icon.getAttribute("aria-label") ?? "";
-        const result = /\((success|failure)\)$/.exec(label)?.[1];
+        const result = /\((success|failure|interrupted)\)$/.exec(label)?.[1];
         const text = icon.nextElementSibling?.textContent ?? "";
         return {
           text: result ? `${text} [${result}]` : text,
