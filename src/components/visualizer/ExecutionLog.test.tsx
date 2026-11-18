@@ -41,9 +41,9 @@ const events: TraceEvent[] = [
   },
 ];
 
-function Seed() {
+function Seed({ with: extra = [] }: { with?: TraceEvent[] }) {
   const { addEvent } = useTraceStore();
-  useEffect(() => events.forEach(addEvent), [addEvent]);
+  useEffect(() => [...events, ...extra].forEach(addEvent), [addEvent, extra]);
   return null;
 }
 
@@ -103,6 +103,22 @@ describe("ExecutionLog", () => {
     );
     expect(screen.getByText("fiber:forked #0 (root)")).toBeInTheDocument();
     expect(screen.getByText("fiber:forked #1 (parent #0)")).toBeInTheDocument();
+  });
+
+  it("tells a fiber that failed from one that was interrupted", () => {
+    const ends: TraceEvent[] = [
+      { type: "fiber:end", fiberId: "#1", result: "failure", timestamp: 0 },
+      { type: "fiber:interrupt", fiberId: "#2", timestamp: 0 },
+    ];
+    render(
+      <TraceStoreProvider>
+        <Seed with={ends} />
+        <ExecutionLog />
+      </TraceStoreProvider>,
+    );
+    expect(screen.getByRole("img", { name: "Fiber failed" })).toBeVisible();
+    expect(screen.getByText("fiber:failed #1 (parent #0)")).toBeInTheDocument();
+    expect(screen.getByText("fiber:interrupted #2")).toBeInTheDocument();
   });
 });
 

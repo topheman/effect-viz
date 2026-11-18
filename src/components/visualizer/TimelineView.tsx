@@ -115,7 +115,6 @@ function buildTimelineSegments(events: TraceEvent[]): FiberLane[] {
             startTime: currentState.since,
             endTime: timestamp,
           });
-          // The fiber is no longer ongoing
           fiberStates.set(event.fiberId, {
             state: endState(event),
             since: timestamp,

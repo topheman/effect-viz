@@ -52,7 +52,7 @@ export interface FiberForkEvent {
   timestamp: number;
 }
 
-/** Event fired when a fiber ends on its own, succeeding or failing; an interrupted fiber emits `fiber:interrupt` instead. */
+/** Event fired when a fiber succeeds or fails on its own */
 export interface FiberEndEvent {
   type: "fiber:end";
   fiberId: string;

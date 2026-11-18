@@ -20,7 +20,7 @@ Effect 4 has no `Supervisor`. What it has is `Tracer.context`: before evaluating
 
 - A fiber seen for the first time is a fork. When the primitive that returned it was a public fork (`forkChild`, `forkDetach`, `forkIn`, `forkScoped`), the parent is the fiber that ran it. When the runtime forks it from inside one of its own operators (`race`, `forEach` with concurrency, parallel finalizers), the child starts running synchronously, inside its parent's primitive, so the parent is the fiber still on the stack. An operator can also start a fiber with no fiber on the stack: `forEach` starts its next worker from the observer of the one that ended. A child starts with its parent's `Context`, so that worker's parent is the fiber that last forked with the same `Context`.
 - A primitive that returns the run loop's `Yield` sentinel stops the fiber: that is a suspend, and the fiber's next primitive is its resume. A fiber that is done yields its `Exit` instead, which is not a suspend: the runtime may evaluate it once more, to interrupt the children it leaves, before it ends.
-- `fiber.addObserver` reports the end, as `fiber:end` on success and `fiber:interrupt` otherwise.
+- `fiber.addObserver` reports the end: `fiber:interrupt` when the exit's cause holds only interrupts (`Cause.hasInterruptsOnly`), and otherwise `fiber:end` with a `result` of `success` or `failure`. A fiber that fails or dies on its own is not an interrupted one, even when interrupts sit in its cause next to the failure.
 
 The root needs no special case any more. It is simply the one fiber discovered with no parent, and it is already running when it is discovered, so its trace starts with a fork and no resume.
 
