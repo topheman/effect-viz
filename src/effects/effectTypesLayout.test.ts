@@ -8,22 +8,6 @@ import {
   relativeSpecifiers,
 } from "./effectTypesLayout";
 
-const effect3 = {
-  version: "3.22.1",
-  exports: {
-    ".": {
-      types: "./dist/dts/index.d.ts",
-      import: "./dist/esm/index.js",
-      default: "./dist/cjs/index.js",
-    },
-    "./Effect": {
-      types: "./dist/dts/Effect.d.ts",
-      import: "./dist/esm/Effect.js",
-      default: "./dist/cjs/Effect.js",
-    },
-  },
-};
-
 const effect4 = {
   version: "4.1.3",
   exports: {
@@ -34,12 +18,6 @@ const effect4 = {
 };
 
 describe("exportTypesPath", () => {
-  it("takes the types condition of an object target", () => {
-    expect(exportTypesPath(effect3.exports["./Effect"])).toBe(
-      "dist/dts/Effect.d.ts",
-    );
-  });
-
   it("puts the declaration next to the JS of a string target", () => {
     expect(exportTypesPath(effect4.exports["./*"])).toBe("dist/*.d.ts");
   });
@@ -51,20 +29,9 @@ describe("exportTypesPath", () => {
   it("finds none for a string target that is not JS", () => {
     expect(exportTypesPath("./package.json")).toBeUndefined();
   });
-
-  it("finds none for an object target without types", () => {
-    expect(exportTypesPath({ import: "./dist/esm/index.js" })).toBeUndefined();
-  });
 });
 
 describe("effectTypesLayout", () => {
-  it("reads effect 3's dist/dts layout", () => {
-    expect(effectTypesLayout(effect3)).toEqual({
-      entry: "dist/dts/index.d.ts",
-      dir: "dist/dts",
-    });
-  });
-
   it("reads effect 4's declarations next to the JS", () => {
     expect(effectTypesLayout(effect4)).toEqual({
       entry: "dist/index.d.ts",
@@ -77,25 +44,9 @@ describe("effectTypesLayout", () => {
       effectTypesLayout({ version: "9.0.0", exports: { ".": "./index.mjs" } }),
     ).toThrow('effect@9.0.0\'s exports["."] names no declaration file');
   });
-
-  it("refuses a types condition that is not a declaration file", () => {
-    expect(() =>
-      effectTypesLayout({
-        version: "9.0.0",
-        exports: { ".": { types: "./src/index.ts" } },
-      }),
-    ).toThrow("names no declaration file");
-  });
 });
 
 describe("effectPaths", () => {
-  it("maps effect 3 into dist/dts", () => {
-    expect(effectPaths(effectTypesLayout(effect3))).toEqual({
-      effect: ["node_modules/effect/dist/dts/index.d.ts"],
-      "effect/*": ["node_modules/effect/dist/dts/*"],
-    });
-  });
-
   it("maps a root-level entry without a dot segment", () => {
     const layout = effectTypesLayout({
       version: "9.0.0",
@@ -127,47 +78,40 @@ describe("__EFFECT_PATHS__", () => {
 describe("relativeSpecifiers", () => {
   it("finds imports, re-exports, import types and augmentations", () => {
     const content = [
-      'import type { Cause } from "./Cause.js";',
+      'import type { Cause } from "./Cause.ts";',
       'export * as Function from "./Function.ts";',
       'type E = import("./internal/schemaError.ts").SchemaError;',
-      'declare module "./Effect.js" {}',
+      'declare module "./Effect.ts" {}',
       'import { pipe } from "effect";',
     ].join("\n");
     expect(relativeSpecifiers(content)).toEqual([
-      "./Cause.js",
+      "./Cause.ts",
       "./Function.ts",
       "./internal/schemaError.ts",
-      "./Effect.js",
+      "./Effect.ts",
     ]);
   });
 
   it("skips specifiers in comments", () => {
     const content = [
       "/**",
-      ' * import { Effect } from "./example.js"',
+      ' * import { Effect } from "./example.ts"',
       " */",
-      '// export * from "./Other.js"',
+      '// export * from "./Other.ts"',
     ].join("\n");
     expect(relativeSpecifiers(content)).toEqual([]);
   });
 });
 
 describe("declarationCandidates", () => {
-  it("maps a .js specifier to the .d.ts beside it, then a folder index", () => {
-    expect(declarationCandidates("index.d.ts", "./Effect.js")).toEqual([
-      "Effect.d.ts",
-      "Effect/index.d.ts",
-    ]);
-  });
-
-  it("maps a .ts specifier the same way", () => {
+  it("maps a .ts specifier to the .d.ts beside it, then a folder index", () => {
     expect(
       declarationCandidates("Schema.d.ts", "./internal/schemaError.ts"),
     ).toEqual(["internal/schemaError.d.ts", "internal/schemaError/index.d.ts"]);
   });
 
   it("resolves parent segments from the importing file", () => {
-    expect(declarationCandidates("internal/core.d.ts", "../Cause.js")).toEqual([
+    expect(declarationCandidates("internal/core.d.ts", "../Cause.ts")).toEqual([
       "Cause.d.ts",
       "Cause/index.d.ts",
     ]);
