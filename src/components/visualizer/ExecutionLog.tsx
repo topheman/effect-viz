@@ -17,7 +17,7 @@ import { useLogView } from "@/hooks/useLogView";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { EVENT_GROUPS, type EventGroup, eventGroup } from "@/lib/eventGroups";
 import { eventDepth, fiberDepths } from "@/lib/fiberDepth";
-import { hintText, traceHints } from "@/lib/traceHints";
+import { hintText, sameInstant, traceHints } from "@/lib/traceHints";
 import { cn } from "@/lib/utils";
 import { useTraceStore } from "@/stores/traceStore";
 import type {
@@ -89,7 +89,10 @@ function formatEvent(
           (e): e is FiberSuspendEvent =>
             e.type === "fiber:suspend" && e.fiberId === event.fiberId,
         );
-      if (!lastSuspend) return `fiber:resume ${event.fiberId}`;
+      // A resume in the same burst as its suspend shows no wait, as its hint says.
+      if (!lastSuspend || sameInstant(lastSuspend.timestamp, event.timestamp)) {
+        return `fiber:resume ${event.fiberId}`;
+      }
       const durationMs = event.timestamp - lastSuspend.timestamp;
       return `fiber:resume ${event.fiberId} (after ${formatDuration(durationMs)})`;
     }

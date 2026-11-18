@@ -274,7 +274,8 @@ export function hintText(
  */
 const SAME_INSTANT_MS = 10;
 
-function sameInstant(a: number, b: number): boolean {
+/** Whether two timestamps belong to one synchronous burst of the runtime. */
+export function sameInstant(a: number, b: number): boolean {
   return Math.abs(a - b) < SAME_INSTANT_MS;
 }
 

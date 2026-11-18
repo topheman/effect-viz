@@ -231,6 +231,25 @@ describe("ExecutionLog hints", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows how long a fiber was parked unless it resumed in the same instant", () => {
+    const resumes: TraceEvent[] = [
+      { type: "fiber:suspend", fiberId: "#0", timestamp: 0 },
+      { type: "fiber:resume", fiberId: "#0", timestamp: 1 },
+      { type: "fiber:suspend", fiberId: "#0", timestamp: 1 },
+      { type: "fiber:resume", fiberId: "#0", timestamp: 301 },
+    ];
+    render(
+      <TraceStoreProvider>
+        <Seed with={resumes} />
+        <ExecutionLog />
+      </TraceStoreProvider>,
+    );
+    expect(screen.getByText("fiber:resume #0")).toBeInTheDocument();
+    expect(
+      screen.getByText("fiber:resume #0 (after 300ms)"),
+    ).toBeInTheDocument();
+  });
+
   it("toggles a hint by tapping its row on touch devices only", async () => {
     render(
       <TraceStoreProvider>
