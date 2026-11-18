@@ -76,7 +76,7 @@ export function traceHints(
       }
       case "effect:end":
         if (
-          event.result === "failure" &&
+          event.result !== "success" &&
           interruptedNext(events, i, event.fiberId)
         ) {
           add(i, "Interruption ends the open span as a failure.");

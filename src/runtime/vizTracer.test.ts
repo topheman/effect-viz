@@ -31,6 +31,15 @@ const lifecycle = (events: TraceEvent[]) =>
         : [e.type, e.fiberId],
     );
 
+/** Each span's label and how it ended. */
+const spanEnds = (events: TraceEvent[]) => {
+  const labels = new Map<string, string>();
+  return events.flatMap((e) => {
+    if (e.type === "effect:start") labels.set(e.id, e.label);
+    return e.type === "effect:end" ? [[labels.get(e.id), e.result]] : [];
+  });
+};
+
 describe("makeVizTracer", () => {
   it("stamps a span's start and end with the fiber that entered it", async () => {
     const { events, result } = await trace(
@@ -55,6 +64,44 @@ describe("makeVizTracer", () => {
       ["effect:start", result.child],
       ["effect:end", result.child],
     ]);
+  });
+
+  it("ends a span interrupted mid-sleep as interrupted", async () => {
+    const { events } = await trace(
+      Effect.gen(function* () {
+        const child = yield* Effect.forkChild(
+          Effect.withSpan("slow")(Effect.sleep("1 hour")),
+        );
+        yield* Effect.yieldNow;
+        yield* Fiber.interrupt(child);
+      }),
+    );
+
+    expect(spanEnds(events)).toEqual([["slow", "interrupted"]]);
+  });
+
+  it("ends a span that fails as a failure", async () => {
+    const { events } = await trace(
+      Effect.withSpan("risky")(Effect.fail("boom")).pipe(Effect.exit),
+    );
+
+    expect(spanEnds(events)).toEqual([["risky", "failure"]]);
+  });
+
+  it("ends an interrupted span whose finalizer dies as a failure", async () => {
+    const { events } = await trace(
+      Effect.gen(function* () {
+        const child = yield* Effect.forkChild(
+          Effect.withSpan("guarded")(
+            Effect.never.pipe(Effect.ensuring(Effect.die("finalizer"))),
+          ),
+        );
+        yield* Effect.yieldNow;
+        yield* Fiber.interrupt(child);
+      }),
+    );
+
+    expect(spanEnds(events)).toEqual([["guarded", "failure"]]);
   });
 
   // A forked fiber's first run is a resume, the way it is for the runtime.

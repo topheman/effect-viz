@@ -132,7 +132,7 @@ describe("example programs", () => {
     });
   });
 
-  it("timeout: the work that overruns the deadline reports its interruption as a span failure", async () => {
+  it("timeout: the work that overruns the deadline ends its span interrupted", async () => {
     const { events, fiber } = start(timeoutExample);
     await settle(fiber);
 
@@ -144,19 +144,11 @@ describe("example programs", () => {
     );
     const spans = events
       .filter((event) => event.type === "effect:end")
-      .map((event) => ({
-        label: labels.get(event.id),
-        result: event.result,
-        error: event.result === "failure" ? String(event.error) : "",
-      }));
+      .map((event) => ({ label: labels.get(event.id), result: event.result }));
 
     expect(spans).toEqual([
-      { label: "quick-task", result: "success", error: "" },
-      {
-        label: "slow-task",
-        result: "failure",
-        error: expect.stringContaining("interrupted"),
-      },
+      { label: "quick-task", result: "success" },
+      { label: "slow-task", result: "interrupted" },
     ]);
   });
 

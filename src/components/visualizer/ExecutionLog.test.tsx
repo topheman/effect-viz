@@ -120,6 +120,54 @@ describe("ExecutionLog", () => {
     expect(screen.getByText("fiber:failed #1 (parent #0)")).toBeInTheDocument();
     expect(screen.getByText("fiber:interrupted #2")).toBeInTheDocument();
   });
+
+  it("tells a span that failed from one that was interrupted", () => {
+    const spans: TraceEvent[] = [
+      {
+        type: "effect:start",
+        id: "risky",
+        fiberId: "#1",
+        label: "risky",
+        timestamp: 0,
+      },
+      {
+        type: "effect:end",
+        id: "risky",
+        fiberId: "#1",
+        result: "failure",
+        error: "boom",
+        timestamp: 0,
+      },
+      {
+        type: "effect:start",
+        id: "slow",
+        fiberId: "#2",
+        label: "slow",
+        timestamp: 0,
+      },
+      {
+        type: "effect:end",
+        id: "slow",
+        fiberId: "#2",
+        result: "interrupted",
+        timestamp: 0,
+      },
+    ];
+    render(
+      <TraceStoreProvider>
+        <Seed with={spans} />
+        <ExecutionLog />
+      </TraceStoreProvider>,
+    );
+    expect(
+      screen.getByRole("img", { name: "Effect ended (failure)" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("img", { name: "Effect interrupted" }),
+    ).toBeVisible();
+    expect(screen.getByText("effect:ended risky")).toBeInTheDocument();
+    expect(screen.getByText("effect:interrupted slow")).toBeInTheDocument();
+  });
 });
 
 describe("ExecutionLog hints", () => {

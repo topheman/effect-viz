@@ -52,11 +52,11 @@ An interrupted fiber still ends with `fiber:interrupt`. One fiber ends different
 
 ## Tracing
 
-`Tracer.make` takes the same `span` function as before, and `vizTracer.ts` still turns each `Effect.withSpan` into an `effect:start` and an `effect:end`, stamped with the clock the runtime passes in. The spans the Execution Log shows are unchanged in every example. The tracer now also provides `context`, which is where the fiber lifecycle comes from (see [Fibers and the Supervisor](#fibers-and-the-supervisor)).
+`Tracer.make` takes the same `span` function as before, and `vizTracer.ts` still turns each `Effect.withSpan` into an `effect:start` and an `effect:end`, stamped with the clock the runtime passes in. A span's `effect:end` carries `result: "interrupted"` when its exit's cause holds only interrupts, the same rule as a fiber's end: a span cut short by interruption, such as the children of Structured Interruption or Timeout's slow task, is not one that failed, and a mixed cause still counts as a failure. The tracer now also provides `context`, which is where the fiber lifecycle comes from (see [Fibers and the Supervisor](#fibers-and-the-supervisor)).
 
 ## The examples, before and after
 
-Every example was run under both versions with the same virtual clock, and the traces compared with fiber ids renumbered by first appearance. All fifteen still end the way they did, and their spans, retries, finalizers and acquisitions are the same. What differs is the fiber rows, for these reasons:
+Every example was run under both versions with the same virtual clock, and the traces compared with fiber ids renumbered by first appearance. All fifteen still end the way they did, and their spans, retries, finalizers and acquisitions are the same, apart from how an interrupted span ends (see [Tracing](#tracing)). What differs is the fiber rows, for these reasons:
 
 - **An ended fiber no longer suspends.** Effect 3's `Supervisor` reported a `fiber:suspend` right after every `fiber:end`. The yield that ends a fiber is not a suspension, and the tracer drops it. Every example with a forked fiber loses those rows.
 - **The root starts running.** The root is discovered on its first primitive, so its trace opens with its fork and no resume.

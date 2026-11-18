@@ -62,7 +62,8 @@ function formatEvent(
       const startEffect = events.find(
         (e) => e.type === "effect:start" && e.id === event.id,
       ) as EffectStartEvent | undefined;
-      return `effect:ended ${startEffect?.label ?? event.id}`;
+      const verb = event.result === "interrupted" ? "interrupted" : "ended";
+      return `effect:${verb} ${startEffect?.label ?? event.id}`;
     }
     case "fiber:fork": {
       if (!event.parentId) return `fiber:forked ${event.fiberId} (root)`;
@@ -122,12 +123,10 @@ function getEventEmoji(event: TraceEvent): { emoji: string; label: string } {
       return { emoji: "🚀", label: "Effect started" };
     case "effect:end":
       return {
-        emoji: event.result === "success" ? "✅" : "❌",
-        label:
-          event.result === "success"
-            ? "Effect ended (success)"
-            : "Effect ended (failure)",
-      };
+        success: { emoji: "✅", label: "Effect ended (success)" },
+        failure: { emoji: "❌", label: "Effect ended (failure)" },
+        interrupted: { emoji: "⛔", label: "Effect interrupted" },
+      }[event.result];
     case "retry:attempt":
       return { emoji: "🔄", label: "Retry attempt" };
     case "finalizer":
@@ -149,7 +148,11 @@ function getEventColor(event: TraceEvent): string {
     case "effect:start":
       return "text-blue-400";
     case "effect:end":
-      return event.result === "success" ? "text-green-400" : "text-red-400";
+      return {
+        success: "text-green-400",
+        failure: "text-red-400",
+        interrupted: "text-orange-400",
+      }[event.result];
     case "fiber:fork":
       return "text-violet-500";
     case "fiber:end":

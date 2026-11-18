@@ -30,7 +30,7 @@ runtime code myself; that phase is over, and the rules below replace it.
 ```ts
 type TraceEvent =
   | { type: "effect:start"; id: string; label: string }
-  | { type: "effect:end"; id: string; result: "success" | "failure" }
+  | { type: "effect:end"; id: string; result: "success" | "failure" | "interrupted" }
   | { type: "fiber:fork"; fiberId: string; parentId?: string }
   | { type: "fiber:end"; fiberId: string; result: "success" | "failure" }
   | { type: "fiber:interrupt"; fiberId: string }

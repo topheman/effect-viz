@@ -1,7 +1,11 @@
 import { Cause, Exit, Fiber, Tracer } from "effect";
 
 import { randomUUID } from "@/lib/crypto";
-import { fiberLabel, makeFiberLifecycle } from "@/runtime/fiberLifecycle";
+import {
+  fiberLabel,
+  isInterruption,
+  makeFiberLifecycle,
+} from "@/runtime/fiberLifecycle";
 import type { Now } from "@/runtime/virtualClock";
 import type { TraceEvent } from "@/types/trace";
 
@@ -48,6 +52,7 @@ export function makeVizTracer(
       fiberId,
       timestamp: toMillis(options.startTime, now),
     });
+    const ended = { type: "effect:end", id, fiberId } as const;
     const attributes = new Map<string, unknown>();
     return {
       _tag: "Span",
@@ -62,18 +67,19 @@ export function makeVizTracer(
       sampled: options.sampled,
       kind: options.kind,
       end(endTime, exit) {
-        const { result, value, error } = Exit.isSuccess(exit)
-          ? ({ result: "success", value: exit.value } as const)
-          : ({ result: "failure", error: Cause.squash(exit.cause) } as const);
-        onEmit({
-          type: "effect:end",
-          id,
-          fiberId,
-          result,
-          value,
-          error,
-          timestamp: toMillis(endTime, now),
-        });
+        const timestamp = toMillis(endTime, now);
+        onEmit(
+          Exit.isSuccess(exit)
+            ? { ...ended, result: "success", value: exit.value, timestamp }
+            : isInterruption(exit)
+              ? { ...ended, result: "interrupted", timestamp }
+              : {
+                  ...ended,
+                  result: "failure",
+                  error: Cause.squash(exit.cause),
+                  timestamp,
+                },
+        );
       },
       attribute(key, value) {
         attributes.set(key, value);

@@ -17,8 +17,7 @@
  *   ended) gets the fiber that last forked with its `Context`: a child starts
  *   with its parent's.
  * - **End and interrupt**: `fiber.addObserver`, registered at discovery. An
- *   exit whose cause holds only interrupts is an interruption; any other
- *   failure, a mixed cause included, is the fiber failing on its own.
+ *   exit is an interruption as `isInterruption` reads it.
  * - **Suspend and resume**: a primitive returning the run loop's `Yield`
  *   sentinel stops the fiber, to wait or because it is done. A fiber that is
  *   done yields its `Exit`, and is not suspended: the runtime may still
@@ -54,6 +53,14 @@ const yieldedValue = (fiber: AnyFiber): unknown =>
 /** A fiber's id the way the visualizer prints it. */
 export const fiberLabel = (fiber: { readonly id: number }): string =>
   `#${fiber.id}`;
+
+/**
+ * Whether an exit is an interruption: its cause holds only interrupts. Any
+ * other failure, a mixed cause included, is the fiber or span failing on its
+ * own, even when interrupts sit in its cause next to the failure.
+ */
+export const isInterruption = (exit: Exit.Exit<unknown, unknown>): boolean =>
+  Exit.isFailure(exit) && Cause.hasInterruptsOnly(exit.cause);
 
 /**
  * Whether a fiber belongs to the program rather than to the building of its
@@ -119,7 +126,7 @@ export function makeFiberLifecycle(
       const fiberId = fiberLabel(fiber);
       const timestamp = now();
       onEmit(
-        Exit.isFailure(exit) && Cause.hasInterruptsOnly(exit.cause)
+        isInterruption(exit)
           ? { type: "fiber:interrupt", fiberId, timestamp }
           : {
               type: "fiber:end",
