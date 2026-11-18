@@ -32,7 +32,7 @@ type TraceEvent =
   | { type: "effect:start"; id: string; label: string }
   | { type: "effect:end"; id: string; result: "success" | "failure" }
   | { type: "fiber:fork"; fiberId: string; parentId?: string }
-  | { type: "fiber:end"; fiberId: string }
+  | { type: "fiber:end"; fiberId: string; result: "success" | "failure" }
   | { type: "fiber:interrupt"; fiberId: string }
   | { type: "fiber:suspend"; fiberId: string; duration: number }
   | { type: "sleep:end"; fiberId: string }

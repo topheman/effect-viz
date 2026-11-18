@@ -141,6 +141,72 @@ describe("makeVizTracer", () => {
     expect(lifecycle(events)).toContainEqual(["fiber:interrupt", result]);
   });
 
+  it("reports a fiber that fails on its own as failed, not interrupted", async () => {
+    const { events, result } = await trace(
+      Effect.gen(function* () {
+        const failing = yield* Effect.forkChild(Effect.fail("boom"));
+        const dying = yield* Effect.forkChild(Effect.die("bug"));
+        yield* Fiber.await(failing);
+        yield* Fiber.await(dying);
+        return [`#${failing.id}`, `#${dying.id}`];
+      }),
+    );
+
+    const ends = events.filter(
+      (e) =>
+        (e.type === "fiber:end" || e.type === "fiber:interrupt") &&
+        result.includes(e.fiberId),
+    );
+    expect(ends).toEqual(
+      result.map((fiberId) =>
+        expect.objectContaining({
+          type: "fiber:end",
+          fiberId,
+          result: "failure",
+        }),
+      ),
+    );
+  });
+
+  it("reports an interrupted fiber whose finalizer dies as failed", async () => {
+    const { events, result } = await trace(
+      Effect.gen(function* () {
+        const child = yield* Effect.forkChild(
+          Effect.never.pipe(Effect.ensuring(Effect.die("finalizer"))),
+        );
+        yield* Effect.yieldNow;
+        yield* Fiber.interrupt(child);
+        return `#${child.id}`;
+      }),
+    );
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "fiber:end",
+        fiberId: result,
+        result: "failure",
+      }),
+    );
+  });
+
+  it("reports a fiber that succeeds as ended with a success", async () => {
+    const { events, result } = await trace(
+      Effect.gen(function* () {
+        const child = yield* Effect.forkChild(Effect.void);
+        yield* Fiber.join(child);
+        return `#${child.id}`;
+      }),
+    );
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "fiber:end",
+        fiberId: result,
+        result: "success",
+      }),
+    );
+  });
+
   it("leaves out the fibers that build layers, not the program's", async () => {
     class Greeting extends Context.Service<Greeting, string>()("Greeting") {}
     const layer = Layer.effect(

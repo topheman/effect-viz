@@ -43,7 +43,15 @@ describe("eventDepth", () => {
 
   it("draws other events on their own fiber", () => {
     expect(
-      eventDepth({ type: "fiber:end", fiberId: "#1", timestamp: 0 }, depths),
+      eventDepth(
+        {
+          type: "fiber:end",
+          fiberId: "#1",
+          result: "success",
+          timestamp: 0,
+        },
+        depths,
+      ),
     ).toBe(1);
   });
 });
