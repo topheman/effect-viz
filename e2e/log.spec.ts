@@ -41,9 +41,19 @@ test("filters hide their group of events", async ({ page }) => {
   expect(rows.filter((row) => row.startsWith("fiber:forked "))).toHaveLength(4);
 });
 
-test("explains a span that interruption ended", async ({ page }) => {
+test("ties a span that interruption ended to its fiber's interrupt row", async ({
+  page,
+}) => {
   await runToEnd(page, "structuredInterruption");
-  await expect(await explainRow(page, "effect:interrupted child-1")).toHaveText(
-    "Interruption ends the open span as a failure.",
+  const hint = await explainRow(page, "effect:interrupted child-1");
+  await expect(hint).toHaveText(
+    /^The runtime closed this span with an interruption: it neither succeeded nor failed\. Its fiber #\d+ is interrupted at \[\d+\]\.$/,
   );
+
+  const [, fiberId, row] =
+    /Its fiber (#\d+) is interrupted at \[(\d+)\]/.exec(
+      (await hint.textContent()) ?? "",
+    ) ?? [];
+  const rows = await logRows(page);
+  expect(rows[Number(row) - 1].text).toBe(`fiber:interrupted ${fiberId}`);
 });

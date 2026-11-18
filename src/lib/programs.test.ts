@@ -9,8 +9,7 @@ import {
 } from "vite-plus/test";
 
 import { GatedScheduler } from "@/runtime/gatedScheduler";
-import { runProgramFork, withViz } from "@/runtime/runProgram";
-import type { TraceEmitter } from "@/runtime/traceEmitter";
+import { runProgramFork, type VizOptions, withViz } from "@/runtime/runProgram";
 import { VirtualClock, type VirtualClockHost } from "@/runtime/virtualClock";
 import type { TraceEvent } from "@/types/trace";
 
@@ -18,9 +17,11 @@ import {
   boundedConcurrencyExample,
   deadlockExample,
   interleavingExample,
+  programs,
   structuredInterruptionExample,
   timeoutExample,
 } from "./programs";
+import { hintText, traceHints } from "./traceHints";
 
 const fakeHost: VirtualClockHost = {
   now: () => Date.now(),
@@ -30,12 +31,20 @@ const fakeHost: VirtualClockHost = {
 };
 
 /** Runs an example the way the app does, on a clock the test can advance. */
-function start(effect: Effect.Effect<unknown, unknown, TraceEmitter>) {
+function start(
+  effect: Effect.Effect<unknown, unknown, unknown>,
+  layers: VizOptions["layers"] = [],
+) {
   const events: TraceEvent[] = [];
   const clock = new VirtualClock({ rate: 1, origin: 0, host: fakeHost });
   const onEmit = (event: TraceEvent) => events.push(event);
   const { fiber, promise } = runProgramFork(
-    withViz(effect, { onEmit, clock, scheduler: new GatedScheduler() }),
+    withViz(effect, {
+      onEmit,
+      clock,
+      scheduler: new GatedScheduler(),
+      layers,
+    }),
   );
   promise.catch(() => {});
   return { clock, events, fiber };
@@ -186,5 +195,221 @@ describe("example programs", () => {
     await vi.advanceTimersByTimeAsync(10_000);
     expect(fiber.pollUnsafe()).toBeUndefined();
     await Effect.runPromise(Fiber.interrupt(fiber));
+  });
+});
+
+/** Renames fibers `#1`, `#2`… in order of appearance, so a trace does not depend on the tests run before it. */
+function renumberFibers(events: readonly TraceEvent[]): TraceEvent[] {
+  const ids = new Map<string, string>();
+  const id = (fiberId: string) => {
+    if (!ids.has(fiberId)) ids.set(fiberId, `#${ids.size + 1}`);
+    return ids.get(fiberId) ?? fiberId;
+  };
+  return events.map((event) =>
+    event.type === "fiber:fork" && event.parentId
+      ? { ...event, fiberId: id(event.fiberId), parentId: id(event.parentId) }
+      : { ...event, fiberId: id(event.fiberId) },
+  );
+}
+
+/** Hints of every example, keyed by row number with nothing filtered. */
+const expectedHints: Record<keyof typeof programs, Record<number, string>> = {
+  basic: {
+    4: "The fork only queues #2: it first runs at [8], once #1 yields.",
+    5: "The fork only queues #3: it first runs at [11], once #2 yields.",
+    8: "#1 gave up the thread, so the runtime ran #2, first in the queue. Indent is fiber depth, not identity: sibling fibers share a column.",
+    11: "#2 gave up the thread, so the runtime ran #3, first in the queue.",
+    13: "Async boundary: the fiber parks and frees the thread.",
+    14: "Time the fiber spent parked.",
+    17: "#2's end resumed #1, which was waiting on it.",
+    20: "Async boundary: the fiber parks and frees the thread.",
+    21: "Time the fiber spent parked.",
+    24: "#3's end resumed #1, which was waiting on it.",
+  },
+  multiStep: {
+    2: "The fork only queues #2: it first runs at [4], once #1 yields.",
+    4: "#1 gave up the thread, so the runtime ran #2, first in the queue. Indent is fiber depth, not identity: sibling fibers share a column.",
+    6: "Async boundary: the fiber parks and frees the thread.",
+    7: "Time the fiber spent parked.",
+    10: "Async boundary: the fiber parks and frees the thread.",
+    11: "Time the fiber spent parked.",
+    14: "Async boundary: the fiber parks and frees the thread.",
+    15: "Time the fiber spent parked.",
+    18: "#2's end resumed #1, which was waiting on it.",
+  },
+  nestedForks: {
+    2: "The fork only queues #2: it first runs at [4], once #1 yields.",
+    4: "#1 gave up the thread, so the runtime ran #2, first in the queue. Indent is fiber depth, not identity: sibling fibers share a column.",
+    7: "The fork only queues #3: it first runs at [9], once #2 yields.",
+    9: "#2 gave up the thread, so the runtime ran #3, first in the queue.",
+    12: "The fork only queues #4: it first runs at [14], once #3 yields.",
+    14: "#3 gave up the thread, so the runtime ran #4, first in the queue.",
+    16: "Async boundary: the fiber parks and frees the thread.",
+    17: "Time the fiber spent parked.",
+    20: "#4's end resumed #3, which was waiting on it.",
+    22: "#3's end resumed #2, which was waiting on it.",
+    24: "#2's end resumed #1, which was waiting on it.",
+  },
+  interleaving: {
+    2: "The fork only queues #2: it first runs at [5], once #1 yields.",
+    3: "The fork only queues #3: it first runs at [9], once #2 yields.",
+    5: "#1 gave up the thread, so the runtime ran #2, first in the queue. Indent is fiber depth, not identity: sibling fibers share a column.",
+    9: "#2 gave up the thread, so the runtime ran #3, first in the queue.",
+    13: "#3 gave up the thread, so the runtime ran #2, first in the queue.",
+    17: "#2 gave up the thread, so the runtime ran #3, first in the queue.",
+    21: "#3 gave up the thread, so the runtime ran #2, first in the queue.",
+    25: "#2 gave up the thread, so the runtime ran #3, first in the queue.",
+    29: "#3 gave up the thread, so the runtime ran #2, first in the queue.",
+    31: "#2's end resumed #1, which was waiting on it.",
+    33: "#1 gave up the thread, so the runtime ran #3, first in the queue.",
+    35: "#3's end resumed #1, which was waiting on it.",
+  },
+  racing: {
+    4: "The fork only queues #2: it first runs at [14], once #1 yields.",
+    5: "The fork only queues #3: it first runs at [16], once #2 yields.",
+    8: "#4 runs at once: this fork starts the child itself instead of queuing it. Indent is fiber depth, not identity: sibling fibers share a column.",
+    9: "Async boundary: the fiber parks and frees the thread.",
+    11: "#5 runs at once: this fork starts the child itself instead of queuing it.",
+    12: "Async boundary: the fiber parks and frees the thread.",
+    14: "#1 gave up the thread, so the runtime ran #2, first in the queue.",
+    16: "#2 gave up the thread, so the runtime ran #3, first in the queue.",
+    17: "Async boundary: the fiber parks and frees the thread.",
+    18: "Time the fiber spent parked.",
+    20: "#2's end resumed #4, which was waiting on it.",
+    22: "#4's end resumed #1, which was waiting on it.",
+    23: "Time the fiber spent parked.",
+    24: "#1 interrupts its child #5 before moving on.",
+    26: "Time the fiber spent parked.",
+    27: "#3 is interrupted before #1 ends.",
+  },
+  boundedConcurrency: {
+    3: "#2 runs at once: this fork starts the child itself instead of queuing it. Indent is fiber depth, not identity: sibling fibers share a column.",
+    5: "Async boundary: the fiber parks and frees the thread.",
+    7: "#3 runs at once: this fork starts the child itself instead of queuing it.",
+    9: "Async boundary: the fiber parks and frees the thread.",
+    10: "Async boundary: the fiber parks and frees the thread.",
+    11: "Time the fiber spent parked.",
+    14: "#2 ending started the next task; #1 stays parked.",
+    15: "#4 runs at once: this fork starts the child itself instead of queuing it.",
+    17: "Async boundary: the fiber parks and frees the thread.",
+    18: "Time the fiber spent parked.",
+    21: "#3 ending started the next task; #1 stays parked.",
+    22: "#5 runs at once: this fork starts the child itself instead of queuing it.",
+    24: "Async boundary: the fiber parks and frees the thread.",
+    25: "Time the fiber spent parked.",
+    28: "#4 ending started the next task; #1 stays parked.",
+    29: "#6 runs at once: this fork starts the child itself instead of queuing it.",
+    31: "Async boundary: the fiber parks and frees the thread.",
+    32: "Time the fiber spent parked.",
+    35: "Time the fiber spent parked.",
+    38: "#6's end resumed #1, which was waiting on it.",
+  },
+  structuredInterruption: {
+    2: "The fork only queues #2: it first runs at [4], once #1 yields.",
+    4: "#1 gave up the thread, so the runtime ran #2, first in the queue. Indent is fiber depth, not identity: sibling fibers share a column.",
+    5: "The fork only queues #3: it first runs at [8], once #2 yields.",
+    6: "The fork only queues #4: it first runs at [11], once #3 yields.",
+    8: "#2 gave up the thread, so the runtime ran #3, first in the queue.",
+    11: "#3 gave up the thread, so the runtime ran #4, first in the queue.",
+    13: "Async boundary: the fiber parks and frees the thread.",
+    14: "Time the fiber spent parked.",
+    15: "Time the fiber spent parked.",
+    16: "Interruption still closes the scope, so the finalizer runs.",
+    17: "Time the fiber spent parked.",
+    18: "The runtime closed this span with an interruption: it neither succeeded nor failed. Its fiber #3 is interrupted at [20].",
+    19: "Interruption still closes the scope, so the finalizer runs.",
+    20: "#3 is interrupted before #2 ends.",
+    21: "Time the fiber spent parked.",
+    22: "The runtime closed this span with an interruption: it neither succeeded nor failed. Its fiber #4 is interrupted at [24].",
+    23: "Interruption still closes the scope, so the finalizer runs.",
+    24: "#4 is interrupted before #2 ends.",
+    25: "#2 is interrupted before #1 ends.",
+  },
+  failureAndRecovery: {
+    5: "The failure was handled: the fiber carries on.",
+  },
+  retry: {
+    3: "The fiber gave up the thread and got it back at [4], in the same instant: nothing else was ready to run.",
+    5: "The schedule's delay is over: the next attempt starts here.",
+    6: "The fiber gave up the thread and got it back at [7], in the same instant: nothing else was ready to run.",
+    8: "The schedule's delay is over: the next attempt starts here.",
+  },
+  retryExponentialBackoff: {
+    3: "Async boundary: the fiber parks and frees the thread.",
+    4: "Time the fiber spent parked.",
+    5: "The schedule's delay is over: the next attempt starts here.",
+    6: "Async boundary: the fiber parks and frees the thread.",
+    7: "Time the fiber spent parked.",
+    8: "The schedule's delay is over: the next attempt starts here.",
+    9: "Async boundary: the fiber parks and frees the thread.",
+    10: "Time the fiber spent parked.",
+    11: "The schedule's delay is over: the next attempt starts here.",
+    12: "Async boundary: the fiber parks and frees the thread.",
+    13: "Time the fiber spent parked.",
+    14: "The schedule's delay is over: the next attempt starts here.",
+  },
+  timeout: {
+    3: "#2 runs at once: this fork starts the child itself instead of queuing it. Indent is fiber depth, not identity: sibling fibers share a column.",
+    5: "Async boundary: the fiber parks and frees the thread.",
+    7: "#3 runs at once: this fork starts the child itself instead of queuing it.",
+    8: "Async boundary: the fiber parks and frees the thread.",
+    9: "Async boundary: the fiber parks and frees the thread.",
+    10: "Time the fiber spent parked.",
+    13: "#2's end resumed #1, which was waiting on it.",
+    14: "Time the fiber spent parked.",
+    15: "#1 interrupts its child #3 before moving on.",
+    17: "#4 runs at once: this fork starts the child itself instead of queuing it.",
+    19: "Async boundary: the fiber parks and frees the thread.",
+    21: "#5 runs at once: this fork starts the child itself instead of queuing it.",
+    22: "Async boundary: the fiber parks and frees the thread.",
+    23: "Async boundary: the fiber parks and frees the thread.",
+    24: "Time the fiber spent parked.",
+    26: "#5's end resumed #1, which was waiting on it.",
+    27: "Time the fiber spent parked.",
+    28: "The runtime closed this span with an interruption: it neither succeeded nor failed. Its fiber #4 is interrupted at [29].",
+    29: "#4 is interrupted before #1 ends.",
+  },
+  basicFinalizers: {
+    6: "Finalizers run in reverse order of registration.",
+    7: "Finalizers run in reverse order of registration.",
+    8: "Finalizers run in reverse order of registration.",
+  },
+  acquireRelease: {},
+  loggerWithRequirements: {},
+  deadlock: {
+    2: "The fork only queues #2: it first runs at [5], once #1 yields.",
+    3: "The fork only queues #3: it first runs at [8], once #2 yields.",
+    5: "#1 gave up the thread, so the runtime ran #2, first in the queue. Indent is fiber depth, not identity: sibling fibers share a column.",
+    8: "#2 gave up the thread, so the runtime ran #3, first in the queue.",
+    10: "Async boundary: the fiber parks and frees the thread.",
+  },
+};
+
+describe("example program hints", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it.each(Object.entries(programs))("%s", async (name, program) => {
+    const { events, fiber } = start(program.rootEffect, program.requirements);
+    await vi.advanceTimersByTimeAsync(10_000);
+    // Deadlock never ends: read its trace before stopping it adds rows.
+    const trace = renumberFibers(events);
+    await Effect.runPromise(Fiber.interrupt(fiber));
+
+    const hints = traceHints(trace, { indentByFiber: true });
+    const texts = Object.fromEntries(
+      [...hints].map(([index, row]) => [
+        index + 1,
+        hintText(row, (ref) => ref + 1),
+      ]),
+    );
+    expect(texts).toEqual(expectedHints[name as keyof typeof programs]);
   });
 });
