@@ -111,16 +111,16 @@ type AcquireEvent =
     };
 
 /**
- * Who caused an event: the program under observation, or the visualizer itself.
- *
- * Starting a run paused injects an `Effect.yieldNow` before the program body,
- * and the runtime yields for real — so the trace contains a suspend and resume
- * pair that the program's author never wrote. Absent means `"program"`, which
- * keeps the common case unannotated.
+ * Who wrote a line on the WebContainer's stdout: the program, or the visualizer,
+ * whose control commands the process's terminal echoes back.
  */
 export type TraceOrigin = "program" | "tool";
 
-type TraceEventBody =
+/**
+ * Union type of all possible trace events.
+ * This forms the event model for the visualizer.
+ */
+export type TraceEvent =
   | EffectStartEvent
   | EffectEndEvent
   | FiberForkEvent
@@ -131,12 +131,6 @@ type TraceEventBody =
   | RetryAttemptEvent
   | FinalizerEvent
   | AcquireEvent;
-
-/**
- * Union type of all possible trace events.
- * This forms the event model for the visualizer.
- */
-export type TraceEvent = TraceEventBody & { origin?: TraceOrigin };
 
 /**
  * Possible states a fiber can be in.

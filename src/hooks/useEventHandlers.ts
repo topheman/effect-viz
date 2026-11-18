@@ -12,7 +12,6 @@ import { type ProgramKey, makeLoggerLayer, programs } from "@/lib/programs";
 import { GatedScheduler } from "@/runtime/gatedScheduler";
 import { runProgramFork, withViz } from "@/runtime/runProgram";
 import { Stepper, type StepOutcome } from "@/runtime/stepper";
-import { makeOriginTagger } from "@/runtime/traceOrigin";
 import { VirtualClock } from "@/runtime/virtualClock";
 import { useFiberStore } from "@/stores/fiberStore";
 import { useTraceStore } from "@/stores/traceStore";
@@ -174,20 +173,10 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
     const { requirements } = programs[programKey];
     const rootEffect: Effect.Effect<unknown, unknown, unknown> =
       programs[programKey].rootEffect;
-    // A paused gate already holds the root before its first operation. The
-    // leading yield gives a paused start a suspend and resume pair, which the
-    // log tags as the tool's and can hide.
-    const body: Effect.Effect<unknown, unknown, unknown> = startPaused
-      ? Effect.andThen(Effect.yieldNow, rootEffect)
-      : rootEffect;
-    // A paused start injects a yield the program never wrote; the tagger marks
-    // the suspend and resume it produces so the log can offer to hide them.
-    const tagOrigin = makeOriginTagger({ startPaused });
     const onEmit = (event: TraceEvent) => {
       if (!isCurrentRun()) return;
-      const tagged = tagOrigin(event);
-      addEvent(tagged); // For ExecutionLog
-      processEvent(tagged); // For FiberTreeView
+      addEvent(event); // For ExecutionLog
+      processEvent(event); // For FiberTreeView
       stepperRef.current?.noteEvent(); // A step runs until this moves
     };
     // Same virtual clock as the WebContainer path, so both record virtual
@@ -205,7 +194,9 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
     // The timeline follows this clock directly, so it freezes when the stepper
     // does and jumps when a step moves virtual time.
     setNowSource(() => virtualClock.now());
-    // Gate before the program is forked, so even its first task is held.
+    // Gate before the program is forked: the root's first primitive emits its
+    // fork, then the gated scheduler's `shouldYield` holds it, a forced yield
+    // that emits no suspend or resume (see runtime/fiberLifecycle.ts).
     if (startPaused) stepper.pause();
     // Fallback Logger layer: logs to panel (addLog) instead of console, so mobile users see output
     const fallbackLoggerLayer = makeLoggerLayer((msg) =>
@@ -214,7 +205,7 @@ export function useEventHandlers(webContainer?: WebContainerBridge | null) {
 
     onFirstChunk(); // No compile step on mobile; program runs immediately
     const { fiber, promise } = runProgramFork(
-      withViz(body, {
+      withViz(rootEffect, {
         onEmit,
         clock: virtualClock,
         scheduler,

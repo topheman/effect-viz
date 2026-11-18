@@ -15,12 +15,10 @@ import {
 } from "@/components/ui/popover";
 import { useLogView } from "@/hooks/useLogView";
 import { useOnboarding } from "@/hooks/useOnboarding";
-import { useShowInternals } from "@/hooks/useShowInternals";
 import { EVENT_GROUPS, type EventGroup, eventGroup } from "@/lib/eventGroups";
 import { eventDepth, fiberDepths } from "@/lib/fiberDepth";
 import { traceHints } from "@/lib/traceHints";
 import { cn } from "@/lib/utils";
-import { isToolEvent } from "@/runtime/traceOrigin";
 import { useTraceStore } from "@/stores/traceStore";
 import type {
   EffectStartEvent,
@@ -208,7 +206,6 @@ const PHONE_LANDSCAPE_QUERY = "(max-width: 767px) and (max-height: 500px)";
 
 export function ExecutionLog() {
   const { events } = useTraceStore();
-  const [showInternals, setShowInternals] = useShowInternals();
   const [{ indentByFiber, explain, hidden }, updateView] = useLogView();
   const { currentStep: onboardingStep, completeStep } = useOnboarding();
   // Keyed by the run's first event: row indices mean nothing in the next run.
@@ -222,17 +219,14 @@ export function ExecutionLog() {
   // its left gives the popover the full viewport height.
   const [optionsSide, setOptionsSide] = useState<"bottom" | "left">("bottom");
 
-  const toolEventCount = events.filter(isToolEvent).length;
   // Positions in the full list are kept: formatEvent pairs an event with its
   // start, and a duration measured against a filtered list would be wrong.
   const visible = events
     .map((event, index) => ({ event, index }))
-    .filter(({ event }) => showInternals || !isToolEvent(event))
     .filter(({ event }) => !hidden.has(eventGroup(event)));
   const hiddenCount = events.length - visible.length;
   const groupCounts = new Map<EventGroup, number>();
   for (const event of events) {
-    if (!showInternals && isToolEvent(event)) continue;
     const group = eventGroup(event);
     groupCounts.set(group, (groupCounts.get(group) ?? 0) + 1);
   }
@@ -358,12 +352,6 @@ export function ExecutionLog() {
                     onChange={() => toggleGroup(group)}
                   />
                 ))}
-                <OptionRow
-                  label="Visualizer events"
-                  count={toolEventCount}
-                  checked={showInternals}
-                  onChange={() => setShowInternals(!showInternals)}
-                />
               </fieldset>
             </PopoverContent>
           </Popover>
@@ -412,15 +400,10 @@ export function ExecutionLog() {
               return (
                 <div
                   key={`${event.type}-${event.timestamp}-${index}`}
-                  className={cn(
-                    `
-                      border-b border-border/50 py-1.5
-                      last:border-b-0
-                    `,
-                    // Dimmed rather than styled apart: it is a real event that
-                    // really happened, just not one the program asked for.
-                    isToolEvent(event) && "opacity-60",
-                  )}
+                  className={`
+                    border-b border-border/50 py-1.5
+                    last:border-b-0
+                  `}
                   // On touch devices a tap anywhere on the row toggles its hint:
                   // the icon is too small a target for a finger. The browser
                   // sends no click once a touch turns into a scroll. With a

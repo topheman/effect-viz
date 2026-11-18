@@ -1,16 +1,8 @@
 /**
- * Whether the visualizer shows what *it* is doing, alongside what the program
- * does.
+ * Whether the WebContainer console shows the control commands the page sends
+ * the container, which the process's terminal echoes back.
  *
- * Two panels have something to hide. The Execution Log carries the suspend and
- * resume pair produced by the yield injected into a paused start; the console
- * carries the control commands the page sends the container, echoed back by the
- * process's terminal. From the user's side that is one question — am I looking
- * at my program, or at the tool — so it is one preference rather than a
- * checkbox in each panel.
- *
- * Kept outside React because both panels ask independently and must agree. The
- * answer survives a reload: someone who turned the internals on is usually
+ * The answer survives a reload: someone who turned the internals on is usually
  * looking into how the thing works, and will want them again.
  */
 import { useSyncExternalStore } from "react";

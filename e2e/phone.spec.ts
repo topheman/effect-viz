@@ -4,6 +4,7 @@ import {
   openApp,
   playbackStatus,
   runButton,
+  stepButton,
   test,
 } from "./utils";
 
@@ -63,4 +64,24 @@ test("a phone opens the version pill", async ({ page }) => {
   await expect(
     page.getByRole("navigation", { name: "Effect versions" }).getByRole("link"),
   ).toBeVisible();
+});
+
+// The phone runs programs in the browser rather than in a WebContainer, so this
+// covers the other run path than playback.spec.ts's paused start.
+test("a phone started with Step logs only the root's fork", async ({
+  page,
+}) => {
+  await openApp(page);
+  await stepButton(page).tap();
+  await expect(playbackStatus(page)).toHaveText("paused", { timeout: 30_000 });
+  const texts = async () => (await logRows(page)).map((row) => row.text);
+  const started = await texts();
+  expect(started).toHaveLength(1);
+  expect(started[0]).toMatch(/^fiber:forked #\d+ \(root\)$/);
+
+  await stepButton(page).tap();
+  await expect
+    .poll(async () => (await texts()).at(1))
+    .toMatch(/^effect:started /);
+  await expect(playbackStatus(page)).toHaveText("paused");
 });
