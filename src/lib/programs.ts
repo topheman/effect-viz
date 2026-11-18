@@ -202,14 +202,14 @@ export const retryExample = Effect.gen(function* () {
 
 /**
  * Demonstrates retry with exponential backoff.
- * Same structure as retryExample but Schedule.addDelay adds 100ms, 200ms, 400ms between attempts.
+ * Same structure as retryExample, with 100ms, 200ms, 400ms… between attempts.
  * Timeline shows fiber:suspend during the delays.
  */
 export const retryExponentialBackoffExample = Effect.gen(function* () {
   // Step 1: Ref to count attempts
   const attempts = yield* Ref.make(0);
 
-  // Step 2: Effect that fails when count < 3, then succeeds
+  // Step 2: Effect that fails four times, then succeeds
   const flakyEffect = Effect.gen(function* () {
     const n = yield* Ref.updateAndGet(attempts, (x) => x + 1);
     if (n < 5) {
@@ -218,9 +218,9 @@ export const retryExponentialBackoffExample = Effect.gen(function* () {
     return "success";
   });
 
-  // Step 3: retry with exponential backoff (100ms, 200ms, 400ms, ... between attempts)
-  const schedule = Schedule.addDelay(Schedule.recurs(5), ({ output: n }) =>
-    Effect.succeed(`${100 * 2 ** n} millis` as const),
+  // Step 3: delays double from 100ms (exponential); upTo stops after 5 retries
+  const schedule = Schedule.exponential("100 millis").pipe(
+    Schedule.upTo({ times: 5 }),
   );
   return yield* retry(flakyEffect, schedule, "flaky-task");
 });
@@ -783,7 +783,7 @@ export const rootEffect = Effect.gen(function* () {
   // Step 1: Ref to count attempts
   const attempts = yield* Ref.make(0);
 
-  // Step 2: Effect that fails when count < 3, then succeeds
+  // Step 2: Effect that fails four times, then succeeds
   const flakyEffect = Effect.gen(function* () {
     const n = yield* Ref.updateAndGet(attempts, (x) => x + 1);
     if (n < 5) {
@@ -792,10 +792,9 @@ export const rootEffect = Effect.gen(function* () {
     return "success";
   });
 
-  // Step 3: retry with exponential backoff (100ms, 200ms, 400ms, ... between attempts)
-  const schedule = Schedule.addDelay(
-    Schedule.recurs(5),
-    ({ output: n }) => Effect.succeed(\`\${100 * 2 ** n} millis\` as const),
+  // Step 3: delays double from 100ms (exponential); upTo stops after 5 retries
+  const schedule = Schedule.exponential("100 millis").pipe(
+    Schedule.upTo({ times: 5 })
   );
   return yield* retry(flakyEffect, schedule, "flaky-task");
 });
