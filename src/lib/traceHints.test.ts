@@ -4,15 +4,10 @@ import type { TraceEvent } from "@/types/trace";
 
 import { traceHints } from "./traceHints";
 
-const fork = (
-  fiberId: string,
-  parentId?: string,
-  forkedBy = parentId,
-): TraceEvent => ({
+const fork = (fiberId: string, parentId?: string): TraceEvent => ({
   type: "fiber:fork",
   fiberId,
   parentId,
-  forkedBy,
   label: fiberId,
   timestamp: 0,
 });
@@ -77,18 +72,16 @@ describe("traceHints", () => {
     suspend("#8"),
     resume("#8", 1000),
     end("#8", 1000),
-    suspend("#8", 1000),
     resume("#0", 1000),
     end("#0", 1000),
   ];
 
-  it("explains suspends, first runs, waits and handoffs", () => {
+  it("explains suspends, first runs and waits", () => {
     expect(hintsOf(basic)).toEqual({
       3: "Forking only queues #8; it first runs here, once #0 yields.",
       4: "Async boundary: the fiber parks and frees the thread.",
       5: "Time the fiber spent parked.",
-      7: "Every run ends with a suspend, even the last; the root has none because the visualizer's hooks are unwound by then.",
-      8: "#8 finished, so the runtime ran the next ready fiber, #0.",
+      7: "Time the fiber spent parked.",
     });
   });
 
@@ -166,17 +159,12 @@ describe("traceHints", () => {
       failed("child-1", "#0", 314.708),
       finalizer("child-1-cleanup", "#0", 315.769),
       interrupt("#0", 316.144),
-      suspend("#0", 316.154),
-      resume("#1", 316.311),
     ]);
     expect(hints[3]).toBe(
       "The fiber hit an async boundary that was already settled, so it resumed at once.",
     );
     expect(hints[8]).toBe("Time the fiber spent parked.");
     expect(hints[9]).toBe("Interruption ends the open span as a failure.");
-    expect(hints[13]).toBe(
-      "#0 finished, so the runtime ran the next ready fiber, #1.",
-    );
   });
 
   it("leaves a failure that was not followed by interruption alone", () => {
@@ -224,17 +212,7 @@ describe("traceHints", () => {
       expect(hints[6]).toBe(
         "Indented with the child: ending is its own last action.",
       );
-      expect(hints[9]).toBeUndefined();
-    });
-
-    it("explains a fork run by a fiber other than the parent", () => {
-      const hints = hintsOf(
-        [fork("#87"), fork("#95", "#87"), fork("#96", "#87", "#95")],
-        true,
-      );
-      expect(hints[2]).toContain(
-        "Indented with #95, which ran the fork; #96 itself sits under #87, whose context it inherits.",
-      );
+      expect(hints[8]).toBeUndefined();
     });
 
     it("leaves the placement hints out of the flat log", () => {

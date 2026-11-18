@@ -96,11 +96,7 @@ describe("example programs", () => {
 
     const [root, ...tasks] = events.filter((e) => e.type === "fiber:fork");
     expect(tasks).toHaveLength(5);
-    expect(
-      tasks.every(
-        (f) => f.parentId === root.fiberId && f.forkedBy === root.fiberId,
-      ),
-    ).toBe(true);
+    expect(tasks.every((f) => f.parentId === root.fiberId)).toBe(true);
 
     let alive = 0;
     let mostAlive = 0;
@@ -110,15 +106,6 @@ describe("example programs", () => {
       mostAlive = Math.max(mostAlive, alive);
     }
     expect(mostAlive).toBe(2);
-  });
-
-  it("interleaving: every fork is run by the fiber the child inherits from", async () => {
-    const { events, fiber } = start(interleavingExample);
-    await settle(fiber);
-
-    const forks = events.filter((e) => e.type === "fiber:fork");
-    expect(forks.length).toBeGreaterThan(0);
-    expect(forks.every((f) => f.forkedBy === f.parentId)).toBe(true);
   });
 
   it("structuredInterruption: children and their finalizers unwind with the parent", async () => {

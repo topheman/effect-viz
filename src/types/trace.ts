@@ -46,14 +46,8 @@ export interface RetryAttemptEvent {
 export interface FiberForkEvent {
   type: "fiber:fork";
   fiberId: string;
-  /** Fiber whose context (FiberRefs, services) the child inherits */
+  /** Fiber that ran the fork, or else the one whose `Context` the child starts with. Absent for the root. */
   parentId?: string;
-  /**
-   * Fiber whose code ran the fork. Usually `parentId`, but an operator can fork
-   * on another fiber's behalf: `forEach` with concurrency has a coordinator
-   * fork workers that inherit the caller's context. Absent for the root.
-   */
-  forkedBy?: string;
   label: string;
   timestamp: number;
 }
