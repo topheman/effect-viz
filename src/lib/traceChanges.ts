@@ -8,11 +8,15 @@ export type TraceChangeKind =
   | "synchronous-interruption"
   /** A joiner resumes inside its child's end, ahead of a fiber already queued. */
   | "joiner-runs-first"
-  /** An operator's fork starts the child at once instead of queuing it. */
+  /** A fork starts the child at once instead of queuing it, as `race`, `timeout` and concurrent `Effect.all` do. */
   | "fork-runs-at-once"
   /** A concurrent `Effect.all` or `forEach` forks a fiber per element, the next from the end of the last. */
   | "fiber-per-element"
-  /** A retry with no delay still sleeps for zero, suspending between attempts. */
+  /**
+   * A retry with no delay still sleeps for zero, suspending between attempts.
+   * A delay shorter than `sameInstant`'s tolerance reads as zero too: the
+   * trace does not carry the delay.
+   */
   | "zero-sleep-retry";
 
 /** Every occurrence of one kind of change in a trace. */
@@ -78,7 +82,16 @@ export function traceChanges(events: readonly TraceEvent[]): TraceChange[] {
           running.push(event.fiberId);
           break;
         }
-        if (next?.type === "fiber:resume" && next.fiberId === event.fiberId) {
+        // A child interrupted before its first step resumes only to unwind:
+        // that is the interruption, not the fork running it.
+        if (
+          next?.type === "fiber:resume" &&
+          next.fiberId === event.fiberId &&
+          !(
+            events[i + 2]?.type === "fiber:interrupt" &&
+            events[i + 2].fiberId === event.fiberId
+          )
+        ) {
           add("fork-runs-at-once", [i, i + 1], [parent, event.fiberId]);
         }
         if (
@@ -133,7 +146,6 @@ export function traceChanges(events: readonly TraceEvent[]): TraceChange[] {
         const suspended = lastSuspend.get(event.fiberId);
         if (
           prev?.type === "fiber:resume" &&
-          prev.fiberId === event.fiberId &&
           suspended !== undefined &&
           sameInstant(events[suspended].timestamp, prev.timestamp)
         ) {
@@ -167,7 +179,9 @@ export function traceChanges(events: readonly TraceEvent[]): TraceChange[] {
  * behind it.
  *
  * A fiber was waiting for its turn when it suspended before `end` and resumes
- * after it in the same instant as its suspend: a yield, not a timer.
+ * after it in the same instant as its suspend: a yield, not a timer. It must
+ * get its turn once the joiner has left the stack; a fiber resumed inside the
+ * joiner's step was woken by the joiner, not queued behind it.
  */
 function queuedBehindJoiner(
   events: readonly TraceEvent[],
@@ -179,13 +193,11 @@ function queuedBehindJoiner(
   const resumed = events[end + 1];
   if (
     resumed?.type !== "fiber:resume" ||
-    parentOf.get(ended.fiberId) !== resumed.fiberId ||
-    !sameInstant(ended.timestamp, resumed.timestamp)
+    parentOf.get(ended.fiberId) !== resumed.fiberId
   ) {
     return undefined;
   }
   for (const [fiberId, suspended] of lastSuspend) {
-    if (fiberId === resumed.fiberId) continue;
     const row = events.findIndex(
       (e, j) => j > end + 1 && e.fiberId === fiberId,
     );
@@ -193,12 +205,34 @@ function queuedBehindJoiner(
     const after = events[row];
     if (
       after.type === "fiber:resume" &&
+      joinerLeft(events, end + 2, row, resumed.fiberId) &&
       sameInstant(events[suspended].timestamp, after.timestamp)
     ) {
       return { joiner: resumed.fiberId, fiberId, row };
     }
   }
   return undefined;
+}
+
+/** Whether `fiberId` suspends or ends between rows `from` and `to`, `to` excluded. */
+function joinerLeft(
+  events: readonly TraceEvent[],
+  from: number,
+  to: number,
+  fiberId: string,
+): boolean {
+  for (let j = from; j < to; j++) {
+    const event = events[j];
+    if (
+      event.fiberId === fiberId &&
+      (event.type === "fiber:suspend" ||
+        event.type === "fiber:end" ||
+        event.type === "fiber:interrupt")
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function isLifecycle(event: TraceEvent): boolean {

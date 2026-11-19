@@ -39,6 +39,13 @@ const finalizer = (fiberId: string, timestamp = 0): TraceEvent => ({
   label: `${fiberId}-cleanup`,
   timestamp,
 });
+const start = (id: string, fiberId: string): TraceEvent => ({
+  type: "effect:start",
+  id,
+  fiberId,
+  label: id,
+  timestamp: 0,
+});
 const retried = (fiberId: string, timestamp = 0): TraceEvent => ({
   type: "retry:attempt",
   id: "task",
@@ -135,6 +142,20 @@ describe("traceChanges", () => {
     });
   });
 
+  it("reports a child interrupted before its first step as an interruption, not a fork", () => {
+    expect(
+      traceChanges([
+        fork("#1"),
+        fork("#2", "#1"),
+        resume("#2"),
+        interrupt("#2"),
+        end("#1"),
+      ]),
+    ).toEqual([
+      { kind: "synchronous-interruption", rows: [2, 3], fibers: ["#1", "#2"] },
+    ]);
+  });
+
   describe("joiner-runs-first", () => {
     const yielding = [
       fork("#1"),
@@ -205,6 +226,69 @@ describe("traceChanges", () => {
     });
   });
 
+  describe("joiner-runs-first, not", () => {
+    it("is not a fiber the joiner wakes inside its own step", () => {
+      expect(
+        traceChanges([
+          fork("#1"),
+          fork("#2", "#1"),
+          fork("#3", "#1"),
+          suspend("#1"),
+          resume("#2"),
+          suspend("#2"),
+          resume("#3"),
+          end("#3"),
+          resume("#1"),
+          resume("#2"),
+          interrupt("#2"),
+          end("#1"),
+        ]).map((change) => change.kind),
+      ).toEqual(["synchronous-interruption"]);
+    });
+
+    it("is not a fiber whose next row after the end is not a resume", () => {
+      expect(
+        traceChanges([
+          fork("#1"),
+          fork("#2", "#1"),
+          fork("#3", "#1"),
+          suspend("#3"),
+          resume("#3"),
+          suspend("#1"),
+          resume("#2"),
+          end("#2"),
+          resume("#1"),
+          suspend("#1"),
+          start("work", "#3"),
+          end("#3"),
+          resume("#1"),
+          end("#1"),
+        ]),
+      ).toEqual([]);
+    });
+
+    it("is not a sibling resumed after the end of a fiber that is not the joiner's child", () => {
+      expect(
+        traceChanges([
+          fork("#1"),
+          fork("#2"),
+          fork("#3", "#1"),
+          suspend("#1"),
+          resume("#2"),
+          suspend("#2"),
+          resume("#3"),
+          suspend("#3"),
+          resume("#2"),
+          end("#2"),
+          resume("#1"),
+          suspend("#1"),
+          resume("#3"),
+          end("#3"),
+        ]),
+      ).toEqual([]);
+    });
+  });
+
   describe("fork-runs-at-once", () => {
     it("is a fork whose child resumes on the next row", () => {
       expect(
@@ -235,6 +319,23 @@ describe("traceChanges", () => {
     });
   });
 
+  it("fork-runs-at-once is not a fork followed by another fiber's resume", () => {
+    expect(
+      traceChanges([
+        fork("#1"),
+        fork("#2", "#1"),
+        suspend("#1"),
+        resume("#2"),
+        suspend("#2"),
+        resume("#2", 500),
+        end("#2", 500),
+        fork("#3", "#2"),
+        resume("#1", 500),
+        end("#1", 500),
+      ]),
+    ).toEqual([]);
+  });
+
   describe("fiber-per-element", () => {
     const pool = (parentState: TraceEvent) => [
       fork("#1"),
@@ -254,6 +355,21 @@ describe("traceChanges", () => {
 
     it("is not a fork the running parent makes itself", () => {
       expect(traceChanges(pool(resume("#1")))).toEqual([]);
+    });
+
+    it("is not a fork that follows the end of a fiber from another parent", () => {
+      expect(
+        traceChanges([
+          fork("#1"),
+          fork("#9"),
+          fork("#2", "#9"),
+          suspend("#2"),
+          suspend("#1"),
+          resume("#2", 500),
+          end("#2", 500),
+          fork("#3", "#1"),
+        ]),
+      ).toEqual([]);
     });
   });
 
@@ -275,19 +391,36 @@ describe("traceChanges", () => {
     it("is not a retry that waited for the schedule's delay", () => {
       expect(traceChanges(retry(100))).toEqual([]);
     });
+
+    it("is not an attempt that does not follow its fiber's resume", () => {
+      expect(
+        traceChanges([
+          fork("#1"),
+          suspend("#1"),
+          resume("#1"),
+          start("work", "#1"),
+          retried("#1"),
+          end("#1"),
+        ]),
+      ).toEqual([]);
+    });
   });
 
-  it("lists kinds by the first row that shows each", () => {
+  it("lists kinds by the first row that shows each, not by when each is found", () => {
     const kinds = traceChanges([
       fork("#1"),
-      suspend("#1"),
-      resume("#1"),
-      retried("#1"),
       fork("#2", "#1"),
+      suspend("#1"),
       resume("#2"),
-      end("#2"),
-      end("#1"),
+      suspend("#2"),
+      resume("#1", 300),
+      resume("#2", 300),
+      fork("#3", "#2"),
+      resume("#3", 300),
+      end("#3", 300),
+      interrupt("#2", 300),
+      end("#1", 300),
     ]).map((change) => change.kind);
-    expect(kinds).toEqual(["zero-sleep-retry", "fork-runs-at-once"]);
+    expect(kinds).toEqual(["synchronous-interruption", "fork-runs-at-once"]);
   });
 });
