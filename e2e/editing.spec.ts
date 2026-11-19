@@ -19,15 +19,18 @@ test("an edited program runs as edited", async ({ page }) => {
   // reach.
   await page
     .locator(".view-line")
-    .filter({ visible: true, hasText: "Schedule.recurs(5)" })
+    .filter({ visible: true, hasText: "Schedule.upTo({ times: 5 })" })
     .click();
   await page.keyboard.press("End");
+  await page.keyboard.press("ArrowLeft");
   await page.keyboard.press("ArrowLeft");
   await page.keyboard.press("ArrowLeft");
   await page.keyboard.press("Backspace");
   await page.keyboard.type("3");
   await expect(
-    page.locator(".view-line").filter({ hasText: "Schedule.recurs(3)" }),
+    page
+      .locator(".view-line")
+      .filter({ hasText: "Schedule.upTo({ times: 3 })" }),
   ).toBeVisible();
 
   await runButton(page).click();

@@ -78,7 +78,7 @@ async function handleBefore(page: Page, panelText: string): Promise<Point> {
  *
  * `within` disambiguates: pass a longer string that contains `needle` when the
  * needle alone would match somewhere else on screen. Searching for "5" in the
- * retry program finds `if (n < 5)` long before `Schedule.recurs(5)`.
+ * retry program finds `if (n < 5)` long before `Schedule.upTo({ times: 5 })`.
  */
 export async function locateText(
   page: Page | Frame,
@@ -415,7 +415,7 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
   // `flakyEffect` only succeeds once n >= 5, and the `if (n < 5)` guard is left
   // alone, so cutting the schedule to three retries makes failure certain.
   const recurs = await revealText(page, cursor, "5", {
-    within: "Schedule.recurs(5)",
+    within: "Schedule.upTo({ times: 5 })",
   });
   await cursor.doubleClick({ x: recurs.x + 3, y: recurs.y });
   // The pointer sits on the digit it selected; moving it off shows the

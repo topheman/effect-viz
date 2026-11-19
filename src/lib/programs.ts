@@ -122,33 +122,19 @@ export const nestedForksExample = Effect.gen(function* () {
 // =============================================================================
 
 /**
- * Demonstrates racing with explicit fiber forking.
- * First fiber to complete wins, the loser gets interrupted.
- *
- * Uses Effect.forkChild so both competing fibers are visible in the timeline.
+ * Two runners raced against each other: the first to succeed wins.
+ * Effect.race forks a fiber per runner itself and interrupts the loser as soon
+ * as the winner succeeds, so the program never touches a fiber.
  */
 export const racingExample = Effect.gen(function* () {
-  yield* Effect.withSpan("race-start")(Effect.succeed("starting race"));
+  const runner = (label: string, time: Duration.Input) =>
+    Effect.withSpan(label)(Effect.sleep(time)).pipe(Effect.as(`${label} wins`));
 
-  // Fork two fibers explicitly so we can visualize them
-  const fastRunner = yield* Effect.forkChild(
-    Effect.sleep("1 second").pipe(Effect.as("Fast runner wins!")),
+  // The slow runner is still asleep when the fast one wins: race interrupts it.
+  return yield* Effect.race(
+    runner("fast-runner", "1 second"),
+    runner("slow-runner", "2 seconds"),
   );
-
-  const slowRunner = yield* Effect.forkChild(
-    Effect.sleep("2 seconds").pipe(Effect.as("Slow runner wins!")),
-  );
-
-  // Race by joining both - Effect.race returns when first completes
-  const winner = yield* Effect.withSpan("race-join")(
-    Effect.race(Fiber.join(fastRunner), Fiber.join(slowRunner)),
-  );
-
-  // Interrupt both fibers (winner already done, loser gets interrupted)
-  yield* Fiber.interrupt(fastRunner);
-  yield* Fiber.interrupt(slowRunner);
-
-  return winner;
 });
 
 // =============================================================================
@@ -216,14 +202,14 @@ export const retryExample = Effect.gen(function* () {
 
 /**
  * Demonstrates retry with exponential backoff.
- * Same structure as retryExample but Schedule.addDelay adds 100ms, 200ms, 400ms between attempts.
+ * Same structure as retryExample, with 100ms, 200ms, 400ms… between attempts.
  * Timeline shows fiber:suspend during the delays.
  */
 export const retryExponentialBackoffExample = Effect.gen(function* () {
   // Step 1: Ref to count attempts
   const attempts = yield* Ref.make(0);
 
-  // Step 2: Effect that fails when count < 3, then succeeds
+  // Step 2: Effect that fails four times, then succeeds
   const flakyEffect = Effect.gen(function* () {
     const n = yield* Ref.updateAndGet(attempts, (x) => x + 1);
     if (n < 5) {
@@ -232,9 +218,9 @@ export const retryExponentialBackoffExample = Effect.gen(function* () {
     return "success";
   });
 
-  // Step 3: retry with exponential backoff (100ms, 200ms, 400ms, ... between attempts)
-  const schedule = Schedule.addDelay(Schedule.recurs(5), ({ output: n }) =>
-    Effect.succeed(`${100 * 2 ** n} millis` as const),
+  // Step 3: delays double from 100ms (exponential); upTo stops after 5 retries
+  const schedule = Schedule.exponential("100 millis").pipe(
+    Schedule.upTo({ times: 5 }),
   );
   return yield* retry(flakyEffect, schedule, "flaky-task");
 });
@@ -421,17 +407,18 @@ export const structuredInterruptionExample = Effect.gen(function* () {
 
 /**
  * A deadline that interrupts work which takes too long.
- * Effect.timeout reads the same clock the program sleeps on, so slowing
+ * Effect.timeoutOrElse reads the same clock the program sleeps on, so slowing
  * playback stretches the work and the deadline alike and the outcome holds.
  */
 export const timeoutExample = Effect.gen(function* () {
   const withDeadline = (label: string, work: Duration.Input) =>
     Effect.withSpan(label)(Effect.sleep(work)).pipe(
-      Effect.timeout("1 second"),
       Effect.as(`${label} finished`),
-      // A missed deadline fails the effect, so recover to keep going.
-      // oxlint-disable-next-line effecttsgo/catch-to-or-else-succeed
-      Effect.catch(() => Effect.succeed(`${label} timed out`)),
+      // A missed deadline interrupts the work, then the fallback runs instead.
+      Effect.timeoutOrElse({
+        duration: "1 second",
+        orElse: () => Effect.succeed(`${label} timed out`),
+      }),
     );
 
   const quick = yield* withDeadline("quick-task", "300 millis");
@@ -629,34 +616,21 @@ export const requirements: ReadonlyArray<Layer.Any> = [];
   },
   racing: {
     name: "Racing",
-    description:
-      "Two fibers racing - first to complete wins, loser interrupted",
+    description: "Two fibers racing - first to succeed wins, loser interrupted",
     rootEffect: racingExample,
     requirements: [] as const,
-    source: `import { Effect, Fiber, Layer } from "effect";
+    source: `import { Duration, Effect, Layer } from "effect";
 
 export const rootEffect = Effect.gen(function* () {
-  yield* Effect.withSpan("race-start")(Effect.succeed("starting race"));
+  const runner = (label: string, time: Duration.Input) =>
+    Effect.withSpan(label)(Effect.sleep(time)).pipe(Effect.as(\`\${label} wins\`));
 
-  // Fork two fibers explicitly so we can visualize them
-  const fastRunner = yield* Effect.forkChild(
-    Effect.sleep("1 second").pipe(Effect.as("Fast runner wins!"))
+  // Effect.race forks a fiber per runner and interrupts the loser as soon as the
+  // winner succeeds: the slow runner is still asleep when the fast one wins.
+  return yield* Effect.race(
+    runner("fast-runner", "1 second"),
+    runner("slow-runner", "2 seconds")
   );
-
-  const slowRunner = yield* Effect.forkChild(
-    Effect.sleep("2 seconds").pipe(Effect.as("Slow runner wins!"))
-  );
-
-  // Race by joining both - Effect.race returns when first completes
-  const winner = yield* Effect.withSpan("race-join")(
-    Effect.race(Fiber.join(fastRunner), Fiber.join(slowRunner))
-  );
-
-  // Interrupt both fibers (winner already done, loser gets interrupted)
-  yield* Fiber.interrupt(fastRunner);
-  yield* Fiber.interrupt(slowRunner);
-
-  return winner;
 });
 
 // Declare the layers your program needs - the visualizer provides them to the Effect runtime.
@@ -809,7 +783,7 @@ export const rootEffect = Effect.gen(function* () {
   // Step 1: Ref to count attempts
   const attempts = yield* Ref.make(0);
 
-  // Step 2: Effect that fails when count < 3, then succeeds
+  // Step 2: Effect that fails four times, then succeeds
   const flakyEffect = Effect.gen(function* () {
     const n = yield* Ref.updateAndGet(attempts, (x) => x + 1);
     if (n < 5) {
@@ -818,10 +792,9 @@ export const rootEffect = Effect.gen(function* () {
     return "success";
   });
 
-  // Step 3: retry with exponential backoff (100ms, 200ms, 400ms, ... between attempts)
-  const schedule = Schedule.addDelay(
-    Schedule.recurs(5),
-    ({ output: n }) => Effect.succeed(\`\${100 * 2 ** n} millis\` as const),
+  // Step 3: delays double from 100ms (exponential); upTo stops after 5 retries
+  const schedule = Schedule.exponential("100 millis").pipe(
+    Schedule.upTo({ times: 5 })
   );
   return yield* retry(flakyEffect, schedule, "flaky-task");
 });
@@ -840,10 +813,12 @@ export const requirements: ReadonlyArray<Layer.Any> = [];
 export const rootEffect = Effect.gen(function* () {
   const withDeadline = (label: string, work: Duration.Input) =>
     Effect.withSpan(label)(Effect.sleep(work)).pipe(
-      Effect.timeout("1 second"),
       Effect.as(\`\${label} finished\`),
-      // A missed deadline fails the effect, so recover to keep going.
-      Effect.catch(() => Effect.succeed(\`\${label} timed out\`))
+      // A missed deadline interrupts the work, then the fallback runs instead.
+      Effect.timeoutOrElse({
+        duration: "1 second",
+        orElse: () => Effect.succeed(\`\${label} timed out\`),
+      })
     );
 
   // The deadline is read from the same clock the program sleeps on, so slowing
