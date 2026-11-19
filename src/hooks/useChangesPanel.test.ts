@@ -5,7 +5,6 @@ import type { TraceEvent } from "@/types/trace";
 
 import {
   resetChangesPanel,
-  selectChange,
   toggleChangesPanel,
   useChangesPanel,
 } from "./useChangesPanel";
@@ -17,9 +16,9 @@ const run = (): TraceEvent[] => [
 beforeEach(() => resetChangesPanel());
 
 describe("useChangesPanel", () => {
-  it("starts on the tree with nothing selected", () => {
+  it("starts on the tree", () => {
     const { result } = renderHook(() => useChangesPanel(run()));
-    expect(result.current).toEqual({ open: false, selected: null });
+    expect(result.current).toBe(false);
   });
 
   it("opens and goes back to the tree", () => {
@@ -27,21 +26,10 @@ describe("useChangesPanel", () => {
     const { result } = renderHook(() => useChangesPanel(events));
 
     act(() => toggleChangesPanel(events));
-    expect(result.current.open).toBe(true);
+    expect(result.current).toBe(true);
 
     act(() => toggleChangesPanel(events));
-    expect(result.current.open).toBe(false);
-  });
-
-  it("selects a change and clears it when selected again", () => {
-    const events = run();
-    const { result } = renderHook(() => useChangesPanel(events));
-
-    act(() => selectChange(events, "fork-runs-at-once"));
-    expect(result.current.selected).toBe("fork-runs-at-once");
-
-    act(() => selectChange(events, "fork-runs-at-once"));
-    expect(result.current.selected).toBe(null);
+    expect(result.current).toBe(false);
   });
 
   it("is shared by every mounted copy of the card", () => {
@@ -51,19 +39,25 @@ describe("useChangesPanel", () => {
 
     act(() => toggleChangesPanel(events));
 
-    expect(first.current.open).toBe(true);
-    expect(second.current.open).toBe(true);
+    expect(first.current).toBe(true);
+    expect(second.current).toBe(true);
   });
 
   it("starts a new run on the tree", () => {
-    const events = run();
-    act(() => {
-      toggleChangesPanel(events);
-      selectChange(events, "fork-runs-at-once");
-    });
+    act(() => toggleChangesPanel(run()));
 
     const { result } = renderHook(() => useChangesPanel(run()));
 
-    expect(result.current).toEqual({ open: false, selected: null });
+    expect(result.current).toBe(false);
+  });
+
+  it("opens on a new run when the button is pressed there", () => {
+    act(() => toggleChangesPanel(run()));
+    const events = run();
+    const { result } = renderHook(() => useChangesPanel(events));
+
+    act(() => toggleChangesPanel(events));
+
+    expect(result.current).toBe(true);
   });
 });

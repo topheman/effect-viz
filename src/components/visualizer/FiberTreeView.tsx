@@ -7,11 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  selectChange,
-  toggleChangesPanel,
-  useChangesPanel,
-} from "@/hooks/useChangesPanel";
+import { toggleChangesPanel, useChangesPanel } from "@/hooks/useChangesPanel";
 import { targetLogRow } from "@/hooks/useLogTarget";
 import { useLogView } from "@/hooks/useLogView";
 import { setVisualizerTab } from "@/hooks/useVisualizerTab";
@@ -35,25 +31,18 @@ import type { TraceEvent } from "@/types/trace";
 function FiberNode({
   node,
   depth = 0,
-  highlighted,
 }: {
   node: FiberTreeNode;
   depth?: number;
-  highlighted: ReadonlySet<string>;
 }) {
   const { fiber, children } = node;
   const isSuspended = fiber.state === "suspended";
-  const isHighlighted = highlighted.has(fiber.id);
 
   return (
     <div className="font-mono text-sm">
       <div
         data-testid="fiber-node"
-        data-highlighted={isHighlighted || undefined}
-        className={cn(
-          "flex items-center gap-2 rounded-sm py-1",
-          isHighlighted && "bg-primary/15",
-        )}
+        className="flex items-center gap-2 py-1"
         style={{ paddingLeft: `${depth * 16}px` }}
       >
         {/* Connector line for non-root nodes */}
@@ -87,12 +76,7 @@ function FiberNode({
 
       {/* Render children recursively */}
       {children.map((child) => (
-        <FiberNode
-          key={child.fiber.id}
-          node={child}
-          depth={depth + 1}
-          highlighted={highlighted}
-        />
+        <FiberNode key={child.fiber.id} node={child} depth={depth + 1} />
       ))}
     </div>
   );
@@ -102,12 +86,10 @@ function FiberNode({
 function ChangesPanel({
   changes,
   events,
-  selected,
   linksActive,
 }: {
   changes: TraceChange[];
   events: TraceEvent[];
-  selected: TraceChange["kind"] | null;
   linksActive: boolean;
 }) {
   const [{ hidden }] = useLogView();
@@ -143,32 +125,18 @@ function ChangesPanel({
       <ul className="mt-2 space-y-2">
         {changes.map((change) => {
           const text = TRACE_CHANGE_TEXT[change.kind];
-          const isSelected = selected === change.kind;
           const rows = change.rows.flatMap((index) => {
             const number = rowNumbers.get(index);
             return number === undefined ? [] : [{ index, number }];
           });
           return (
-            <li
-              key={change.kind}
-              className={cn(
-                "rounded-md border p-2 transition-colors",
-                isSelected ? "border-primary bg-primary/5" : "border-border",
-              )}
-            >
-              <button
-                type="button"
-                aria-pressed={isSelected}
-                onClick={() => selectChange(events, change.kind)}
-                className="w-full cursor-pointer text-left font-medium"
-              >
-                {text.title}
-              </button>
+            <li key={change.kind} className="rounded-md border p-2">
+              <h4 className="font-medium">{text.title}</h4>
               <p className="mt-1 text-xs">
-                <span className="font-semibold">Effect 4</span> {text.effect4}
+                <span className="font-semibold">Effect 4:</span> {text.effect4}
               </p>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                <span className="font-semibold">Effect 3</span> {text.effect3}
+                <span className="font-semibold">Effect 3:</span> {text.effect3}
               </p>
               {rows.length > 0 && (
                 <p
@@ -216,11 +184,7 @@ export function FiberTreeView({
   const { fibers, rootFiber } = useFiberStore();
   const { events } = useTraceStore();
   const changes = traceChanges(events);
-  const panel = useChangesPanel(events);
-  const showChanges = panel.open && changes.length > 0;
-  const highlighted = new Set(
-    changes.find((change) => change.kind === panel.selected)?.fibers,
-  );
+  const showChanges = useChangesPanel(events) && changes.length > 0;
 
   // Build tree structure from root
   const tree = rootFiber ? buildFiberTree(fibers, rootFiber.id) : undefined;
@@ -289,7 +253,6 @@ export function FiberTreeView({
           <ChangesPanel
             changes={changes}
             events={events}
-            selected={panel.selected}
             linksActive={
               playbackState === "paused" || playbackState === "finished"
             }
@@ -310,7 +273,7 @@ export function FiberTreeView({
           </div>
         ) : (
           <div className="h-full overflow-y-auto">
-            <FiberNode node={tree} highlighted={highlighted} />
+            <FiberNode node={tree} />
           </div>
         )}
       </CardContent>

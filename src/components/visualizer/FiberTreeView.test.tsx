@@ -129,21 +129,6 @@ describe("FiberTreeView changes", () => {
     expect(screen.getAllByTestId("fiber-node")).toHaveLength(2);
   });
 
-  it("highlights the fibers of the selected change in the tree", async () => {
-    renderTree(twoChanges);
-    await userEvent.click(changesButton());
-    await userEvent.click(
-      screen.getByRole("button", { name: "A retry sleeps for zero" }),
-    );
-    await userEvent.click(changesButton());
-
-    const highlighted = screen
-      .getAllByTestId("fiber-node")
-      .filter((node) => node.hasAttribute("data-highlighted"))
-      .map((node) => node.textContent);
-    expect(highlighted).toEqual(["[running]#1"]);
-  });
-
   it("links each row to the log by the number the log shows, on the log tab", async () => {
     updateLogView({ hidden: new Set(["lifecycle"]) });
     setVisualizerTab("fibers");

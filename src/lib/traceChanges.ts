@@ -24,8 +24,6 @@ export interface TraceChange {
   kind: TraceChangeKind;
   /** Indices in the full trace of the rows that show the change, ascending. */
   rows: number[];
-  /** Fibers involved, in order of first appearance in the trace. */
-  fibers: string[];
 }
 
 /**
@@ -39,15 +37,11 @@ export interface TraceChange {
  * it relies on adjacency and must run on the full, unfiltered trace.
  */
 export function traceChanges(events: readonly TraceEvent[]): TraceChange[] {
-  const found = new Map<
-    TraceChangeKind,
-    { rows: Set<number>; fibers: Set<string> }
-  >();
-  const add = (kind: TraceChangeKind, rows: number[], fibers: string[]) => {
-    const entry = found.get(kind) ?? { rows: new Set(), fibers: new Set() };
+  const found = new Map<TraceChangeKind, Set<number>>();
+  const add = (kind: TraceChangeKind, rows: number[]) => {
+    const entry = found.get(kind) ?? new Set();
     found.set(kind, entry);
-    for (const row of rows) entry.rows.add(row);
-    for (const fiber of fibers) entry.fibers.add(fiber);
+    for (const row of rows) entry.add(row);
   };
 
   const parentOf = new Map<string, string>();
@@ -93,7 +87,7 @@ export function traceChanges(events: readonly TraceEvent[]): TraceChange[] {
           after !== undefined &&
           !(after.type === "fiber:interrupt" && after.fiberId === event.fiberId)
         ) {
-          add("fork-runs-at-once", [i, i + 1], [parent, event.fiberId]);
+          add("fork-runs-at-once", [i, i + 1]);
         }
         if (
           prev?.type === "fiber:end" &&
@@ -101,11 +95,7 @@ export function traceChanges(events: readonly TraceEvent[]): TraceChange[] {
           lastLifecycle.get(parent) === "fiber:suspend"
         ) {
           // Effect 3's workers took the next element themselves, with no fork.
-          add(
-            "fiber-per-element",
-            [i - 1, i],
-            [parent, prev.fiberId, event.fiberId],
-          );
+          add("fiber-per-element", [i - 1, i]);
         }
         break;
       }
@@ -120,13 +110,7 @@ export function traceChanges(events: readonly TraceEvent[]): TraceChange[] {
       case "fiber:end": {
         leave(event.fiberId);
         const queued = queuedBehindJoiner(events, i, parentOf, lastSuspend);
-        if (queued) {
-          add(
-            "joiner-runs-first",
-            [i, i + 1, queued.row],
-            [event.fiberId, queued.joiner, queued.fiberId],
-          );
-        }
+        if (queued !== undefined) add("joiner-runs-first", [i, i + 1, queued]);
         break;
       }
       case "fiber:interrupt": {
@@ -134,11 +118,7 @@ export function traceChanges(events: readonly TraceEvent[]): TraceChange[] {
         // stack by the time its target resumes, so the target has no host.
         const resumed = resumedInside.get(event.fiberId);
         if (resumed?.host !== undefined) {
-          add(
-            "synchronous-interruption",
-            [resumed.row, i],
-            [resumed.host, event.fiberId],
-          );
+          add("synchronous-interruption", [resumed.row, i]);
         }
         leave(event.fiberId);
         break;
@@ -150,7 +130,7 @@ export function traceChanges(events: readonly TraceEvent[]): TraceChange[] {
           suspended !== undefined &&
           sameInstant(events[suspended].timestamp, prev.timestamp)
         ) {
-          add("zero-sleep-retry", [suspended, i - 1], [event.fiberId]);
+          add("zero-sleep-retry", [suspended, i - 1]);
         }
         break;
       }
@@ -158,25 +138,15 @@ export function traceChanges(events: readonly TraceEvent[]): TraceChange[] {
     if (isLifecycle(event)) lastLifecycle.set(event.fiberId, event.type);
   });
 
-  const firstSeen = new Map<string, number>();
-  events.forEach((event, i) => {
-    if (!firstSeen.has(event.fiberId)) firstSeen.set(event.fiberId, i);
-  });
-  const appearance = (fiberId: string) => firstSeen.get(fiberId) ?? Infinity;
-
   return [...found]
-    .map(([kind, { rows, fibers }]) => ({
-      kind,
-      rows: [...rows].sort((a, b) => a - b),
-      fibers: [...fibers].sort((a, b) => appearance(a) - appearance(b)),
-    }))
+    .map(([kind, rows]) => ({ kind, rows: [...rows].sort((a, b) => a - b) }))
     .sort((a, b) => a.rows[0] - b.rows[0]);
 }
 
 /**
  * When the fiber ending at `end` resumes its parent, which joins it, on the
  * next row while another fiber had already yielded and was waiting for its
- * turn: that fiber and the row where it gets it. Effect 3 queued the joiner
+ * turn: the row where that fiber gets it. Effect 3 queued the joiner
  * behind it.
  *
  * A fiber was waiting for its turn when it suspended before `end` and resumes
@@ -189,7 +159,7 @@ function queuedBehindJoiner(
   end: number,
   parentOf: ReadonlyMap<string, string>,
   lastSuspend: ReadonlyMap<string, number>,
-): { joiner: string; fiberId: string; row: number } | undefined {
+): number | undefined {
   const ended = events[end];
   const resumed = events[end + 1];
   if (
@@ -209,7 +179,7 @@ function queuedBehindJoiner(
       joinerLeft(events, end + 2, row, resumed.fiberId) &&
       sameInstant(events[suspended].timestamp, after.timestamp)
     ) {
-      return { joiner: resumed.fiberId, fiberId, row };
+      return row;
     }
   }
   return undefined;

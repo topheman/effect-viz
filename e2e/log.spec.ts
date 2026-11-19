@@ -7,7 +7,6 @@ import {
   openApp,
   playbackStatus,
   startProgram,
-  fiberNode,
   logRow,
   test,
 } from "./utils";
@@ -61,21 +60,13 @@ test("ties a span that interruption ended to its fiber's interrupt row", async (
   expect(rows[Number(row) - 1].text).toBe(`fiber:interrupted ${fiberId}`);
 });
 
-test("the Fiber Tree's changes highlight their fibers and link to the log", async ({
-  page,
-}) => {
+test("the Fiber Tree's changes link to the log", async ({ page }) => {
   await runToEnd(page, "racing");
 
   await changesButton(page).click();
-  await page
-    .getByRole("button", { name: "Interruption is synchronous" })
-    .click();
-  await changesButton(page).click();
-  await expect(fiberNode(page, 1)).toHaveAttribute("data-highlighted");
-  await expect(fiberNode(page, 2)).not.toHaveAttribute("data-highlighted");
-  await expect(fiberNode(page, 3)).toHaveAttribute("data-highlighted");
-
-  await changesButton(page).click();
+  await expect(
+    page.getByRole("heading", { name: "Interruption is synchronous" }),
+  ).toBeVisible();
   await expect(logRow(page, 2)).not.toBeInViewport();
   await page
     .getByRole("button", { name: "Row 2 in the Execution Log" })

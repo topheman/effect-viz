@@ -113,12 +113,6 @@ export const logRow = (page: Page, n: number) =>
       .filter({ hasText: new RegExp(`^\\s*\\[${n}\\]`) }),
   );
 
-/** The Fiber Tree node of fiber `#n`, in the layout on screen. */
-export const fiberNode = (page: Page, n: number) =>
-  onScreen(
-    page.getByTestId("fiber-node").filter({ hasText: new RegExp(`#${n}$`) }),
-  );
-
 /** Opens the explanation on the first log row that reads `text` and returns it. */
 export async function explainRow(page: Page, text: string) {
   const button = onScreen(page.getByText(text, { exact: true })).locator(
