@@ -420,7 +420,7 @@ describe("example program hints", () => {
 /** Effect 3 → 4 changes of every example, with rows numbered from 1. */
 const expectedChanges: Record<
   keyof typeof programs,
-  { kind: string; rows: number[]; fibers: string[] }[]
+  { kind: string; rows: number[] }[]
 > = {
   basic: [],
   multiStep: [],
@@ -429,49 +429,42 @@ const expectedChanges: Record<
     {
       kind: "joiner-runs-first",
       rows: [30, 31, 33],
-      fibers: ["#1", "#2", "#3"],
     },
   ],
   racing: [
     {
       kind: "fork-runs-at-once",
       rows: [2, 3, 6, 7],
-      fibers: ["#1", "#2", "#3"],
     },
-    { kind: "synchronous-interruption", rows: [15, 17], fibers: ["#1", "#3"] },
+    { kind: "synchronous-interruption", rows: [15, 17] },
   ],
   boundedConcurrency: [
     {
       kind: "fork-runs-at-once",
       rows: [2, 3, 6, 7, 14, 15, 21, 22, 28, 29],
-      fibers: ["#1", "#2", "#3", "#4", "#5", "#6"],
     },
     {
       kind: "fiber-per-element",
       rows: [13, 14, 20, 21, 27, 28],
-      fibers: ["#1", "#2", "#3", "#4", "#5", "#6"],
     },
   ],
   structuredInterruption: [
     {
       kind: "synchronous-interruption",
       rows: [15, 17, 20, 21, 24, 25],
-      fibers: ["#1", "#2", "#3", "#4"],
     },
   ],
   failureAndRecovery: [],
-  retry: [{ kind: "zero-sleep-retry", rows: [3, 4, 6, 7], fibers: ["#1"] }],
+  retry: [{ kind: "zero-sleep-retry", rows: [3, 4, 6, 7] }],
   retryExponentialBackoff: [],
   timeout: [
     {
       kind: "fork-runs-at-once",
       rows: [2, 3, 6, 7, 16, 17, 20, 21],
-      fibers: ["#1", "#2", "#3", "#4", "#5"],
     },
     {
       kind: "synchronous-interruption",
       rows: [14, 15, 27, 29],
-      fibers: ["#1", "#3", "#4"],
     },
   ],
   basicFinalizers: [],

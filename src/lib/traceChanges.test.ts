@@ -92,7 +92,6 @@ describe("traceChanges", () => {
         {
           kind: "synchronous-interruption",
           rows: [6, 8],
-          fibers: ["#1", "#2"],
         },
       ]);
     });
@@ -151,9 +150,7 @@ describe("traceChanges", () => {
         interrupt("#2"),
         end("#1"),
       ]),
-    ).toEqual([
-      { kind: "synchronous-interruption", rows: [2, 3], fibers: ["#1", "#2"] },
-    ]);
+    ).toEqual([{ kind: "synchronous-interruption", rows: [2, 3] }]);
   });
 
   describe("joiner-runs-first", () => {
@@ -185,7 +182,6 @@ describe("traceChanges", () => {
         {
           kind: "joiner-runs-first",
           rows: [9, 10, 12],
-          fibers: ["#1", "#2", "#3"],
         },
       ]);
     });
@@ -299,9 +295,13 @@ describe("traceChanges", () => {
           end("#2"),
           end("#1"),
         ]),
-      ).toEqual([
-        { kind: "fork-runs-at-once", rows: [1, 2], fibers: ["#1", "#2"] },
-      ]);
+      ).toEqual([{ kind: "fork-runs-at-once", rows: [1, 2] }]);
+    });
+
+    it("waits for the row after the child's resume, which may interrupt it", () => {
+      expect(
+        traceChanges([fork("#1"), fork("#2", "#1"), resume("#2")]),
+      ).toEqual([]);
     });
 
     it("is not a fork that only queues its child", () => {
@@ -349,7 +349,7 @@ describe("traceChanges", () => {
 
     it("is a fork that follows a sibling's end while the parent is parked", () => {
       expect(traceChanges(pool(suspend("#1")))).toEqual([
-        { kind: "fiber-per-element", rows: [5, 6], fibers: ["#1", "#2", "#3"] },
+        { kind: "fiber-per-element", rows: [5, 6] },
       ]);
     });
 
@@ -384,7 +384,7 @@ describe("traceChanges", () => {
 
     it("is a suspend and resume in the same instant before an attempt", () => {
       expect(traceChanges(retry(0))).toEqual([
-        { kind: "zero-sleep-retry", rows: [1, 2], fibers: ["#1"] },
+        { kind: "zero-sleep-retry", rows: [1, 2] },
       ]);
     });
 

@@ -13,6 +13,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { targetedIndex, useLogTarget } from "@/hooks/useLogTarget";
 import { useLogView } from "@/hooks/useLogView";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { EVENT_GROUPS, type EventGroup, eventGroup } from "@/lib/eventGroups";
@@ -259,15 +260,40 @@ export function ExecutionLog() {
   };
   const indexWidth = `${String(visible.length).length + 2}ch`;
 
+  // A row another view links to, such as the Fiber Tree's changes.
+  const logTarget = useLogTarget();
+  const targeted = targetedIndex(logTarget, events);
+
   useEffect(() => {
     const ref = cardContentRef.current;
-    if (ref) {
+    if (!ref) return;
+    // `logTarget` is a new object per request, so asking for the same row
+    // again scrolls back to it.
+    const index = targetedIndex(logTarget, events);
+    const row =
+      index === undefined
+        ? null
+        : ref.querySelector<HTMLElement>(`[data-row-index="${index}"]`);
+    if (row) {
+      const rowBox = row.getBoundingClientRect();
+      const box = ref.getBoundingClientRect();
       ref.scrollTo({
-        top: ref.scrollHeight,
+        top:
+          ref.scrollTop +
+          rowBox.top -
+          box.top -
+          (ref.clientHeight - rowBox.height) / 2,
         behavior: "smooth",
       });
+      // The link that asked may be gone, unmounted with its tab.
+      row.focus({ preventScroll: true });
+      return;
     }
-  }, [events]);
+    ref.scrollTo({
+      top: ref.scrollHeight,
+      behavior: "smooth",
+    });
+  }, [events, logTarget]);
 
   return (
     <Card
@@ -415,10 +441,17 @@ export function ExecutionLog() {
               return (
                 <div
                   key={`${event.type}-${event.timestamp}-${index}`}
-                  className={`
-                    border-b border-border/50 py-1.5
-                    last:border-b-0
-                  `}
+                  data-testid="log-row"
+                  data-row-index={index}
+                  data-targeted={index === targeted || undefined}
+                  tabIndex={index === targeted ? -1 : undefined}
+                  className={cn(
+                    `
+                      border-b border-border/50 py-1.5
+                      last:border-b-0
+                    `,
+                    index === targeted && "bg-primary/15",
+                  )}
                   // On touch devices a tap anywhere on the row toggles its hint:
                   // the icon is too small a target for a finger. The browser
                   // sends no click once a touch turns into a scroll. With a

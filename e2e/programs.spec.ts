@@ -1,4 +1,5 @@
 import {
+  changesButton,
   expect,
   type LogRow,
   logRows,
@@ -181,6 +182,16 @@ test("covers every program in the picker", async ({ page }) => {
   );
 });
 
+/** How many kinds of Effect 3 → 4 change each example's trace shows; none for the others. */
+const changeCounts: Partial<Record<string, number>> = {
+  interleaving: 1,
+  racing: 2,
+  boundedConcurrency: 2,
+  structuredInterruption: 1,
+  retry: 1,
+  timeout: 2,
+};
+
 for (const [key, check] of Object.entries(programs)) {
   test(`${key} runs to the end`, async ({ page }) => {
     await openApp(page);
@@ -189,6 +200,15 @@ for (const [key, check] of Object.entries(programs)) {
       timeout: 30_000,
     });
     check(await logRows(page));
+
+    const changes = changeCounts[key];
+    if (changes === undefined) {
+      await expect(changesButton(page)).toHaveCount(0);
+    } else {
+      await expect(changesButton(page)).toHaveAccessibleName(
+        `What changed in Effect 4, ${changes} ${changes === 1 ? "change" : "changes"}`,
+      );
+    }
   });
 }
 
@@ -215,4 +235,5 @@ test("deadlock leaves Step nothing to run", async ({ page }) => {
   }).toPass({ timeout: 20_000 });
   await expect(playbackStatus(page)).toHaveText("paused");
   expect(count(await logRows(page), /^effect:ended /)).toBe(0);
+  await expect(changesButton(page)).toHaveCount(0);
 });

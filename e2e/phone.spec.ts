@@ -1,10 +1,13 @@
 import {
+  changesButton,
   expect,
   logRows,
   openApp,
   playbackStatus,
   runButton,
+  startProgram,
   stepButton,
+  logRow,
   test,
 } from "./utils";
 
@@ -56,6 +59,29 @@ test("a phone in landscape shows one view at a time", async ({
     "aria-selected",
     "true",
   );
+});
+
+test("a phone in landscape follows a change's row to the log tab", async ({
+  page,
+  viewport,
+}) => {
+  const { width, height } = viewport!;
+  await page.setViewportSize({ width: height, height: width });
+  await openApp(page);
+  await startProgram(page, "racing");
+  await expect(playbackStatus(page)).toHaveText("finished", {
+    timeout: 30_000,
+  });
+
+  await page.getByRole("tab", { name: "Fiber Tree" }).tap();
+  await changesButton(page).tap();
+  await page.getByRole("button", { name: "Row 2 in the Execution Log" }).tap();
+
+  await expect(
+    page.getByRole("tab", { name: "Execution Log" }),
+  ).toHaveAttribute("aria-selected", "true");
+  await expect(logRow(page, 2)).toHaveAttribute("data-targeted");
+  await expect(logRow(page, 2)).toBeInViewport();
 });
 
 test("a phone opens the version pill", async ({ page }) => {

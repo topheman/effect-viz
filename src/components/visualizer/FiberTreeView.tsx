@@ -1,3 +1,5 @@
+import { useId } from "react";
+
 import {
   Card,
   CardContent,
@@ -5,6 +7,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { toggleChangesPanel, useChangesPanel } from "@/hooks/useChangesPanel";
+import { targetLogRow } from "@/hooks/useLogTarget";
+import { useLogView } from "@/hooks/useLogView";
+import { setVisualizerTab } from "@/hooks/useVisualizerTab";
+import { eventGroup } from "@/lib/eventGroups";
+import type { PlaybackState } from "@/lib/playbackAvailability";
+import { type TraceChange, traceChanges } from "@/lib/traceChanges";
+import { TRACE_CHANGE_TEXT } from "@/lib/traceChangeText";
 import { cn } from "@/lib/utils";
 import {
   buildFiberTree,
@@ -12,6 +22,8 @@ import {
   getFiberStateColor,
   useFiberStore,
 } from "@/stores/fiberStore";
+import { useTraceStore } from "@/stores/traceStore";
+import type { TraceEvent } from "@/types/trace";
 
 /**
  * Renders a single fiber node and its children recursively.
@@ -29,6 +41,7 @@ function FiberNode({
   return (
     <div className="font-mono text-sm">
       <div
+        data-testid="fiber-node"
         className="flex items-center gap-2 py-1"
         style={{ paddingLeft: `${depth * 16}px` }}
       >
@@ -69,28 +82,182 @@ function FiberNode({
   );
 }
 
-export function FiberTreeView() {
+/** The Effect 3 → 4 changes the trace shows, one entry per kind, in place of the tree. */
+function ChangesPanel({
+  changes,
+  events,
+  linksActive,
+}: {
+  changes: TraceChange[];
+  events: TraceEvent[];
+  linksActive: boolean;
+}) {
+  const [{ hidden }] = useLogView();
+  // One per mounted copy: the layouts render the card more than once.
+  const headingId = useId();
+  const noteId = useId();
+  // The numbers the log shows, which skip its hidden rows.
+  const rowNumbers = new Map<number, number>();
+  for (const [index, event] of events.entries()) {
+    if (!hidden.has(eventGroup(event))) {
+      rowNumbers.set(index, rowNumbers.size + 1);
+    }
+  }
+  const followRow = (index: number) => {
+    if (!linksActive) return;
+    targetLogRow(events, index);
+    setVisualizerTab("log");
+  };
+
+  return (
+    <section
+      aria-labelledby={headingId}
+      className="h-full overflow-y-auto text-sm"
+    >
+      <h3 id={headingId} className="font-medium">
+        What changed in Effect 4
+      </h3>
+      {!linksActive && (
+        <p id={noteId} className="text-xs text-muted-foreground">
+          Pause to follow a row to the log.
+        </p>
+      )}
+      <ul className="mt-2 space-y-2">
+        {changes.map((change) => {
+          const text = TRACE_CHANGE_TEXT[change.kind];
+          const rows = change.rows.flatMap((index) => {
+            const number = rowNumbers.get(index);
+            return number === undefined ? [] : [{ index, number }];
+          });
+          return (
+            <li key={change.kind} className="rounded-md border p-2">
+              <h4 className="font-medium">{text.title}</h4>
+              <p className="mt-1 text-xs">
+                <span className="font-semibold">Effect 4:</span> {text.effect4}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                <span className="font-semibold">Effect 3:</span> {text.effect3}
+              </p>
+              {rows.length > 0 && (
+                <p
+                  className={`
+                    mt-1 flex flex-wrap items-center gap-x-1 font-mono text-xs
+                  `}
+                >
+                  <span className="font-sans text-muted-foreground">Rows</span>
+                  {rows.map(({ index, number }) => (
+                    <button
+                      key={index}
+                      type="button"
+                      // Still focusable, so the note saying why is read out.
+                      aria-disabled={!linksActive || undefined}
+                      aria-describedby={linksActive ? undefined : noteId}
+                      aria-label={`Row ${number} in the Execution Log`}
+                      onClick={() => followRow(index)}
+                      className={`
+                        inline-flex min-h-6 min-w-6 cursor-pointer items-center
+                        justify-center text-primary underline underline-offset-2
+                        aria-disabled:cursor-default
+                        aria-disabled:text-muted-foreground
+                        aria-disabled:no-underline
+                      `}
+                    >
+                      [{number}]
+                    </button>
+                  ))}
+                </p>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+export function FiberTreeView({
+  playbackState = "idle",
+}: {
+  /** Row links reach the log only once it stops following the newest row. */
+  playbackState?: PlaybackState;
+}) {
   const { fibers, rootFiber } = useFiberStore();
+  const { events } = useTraceStore();
+  const changes = traceChanges(events);
+  const showChanges = useChangesPanel(events) && changes.length > 0;
 
   // Build tree structure from root
   const tree = rootFiber ? buildFiberTree(fibers, rootFiber.id) : undefined;
 
   return (
-    <Card className="flex h-full flex-col">
+    <Card className="relative flex h-full flex-col">
+      {/* In the landscape tabs the title is hidden and the changes button
+          floats over the card, as the Execution Log's options button does. */}
       <CardHeader
         className={`
           shrink-0 pb-0
           md:pb-3
-          max-md:short:hidden
+          max-md:short:[container-type:normal] max-md:short:absolute
+          max-md:short:top-2.5 max-md:short:right-2.5 max-md:short:z-10
+          max-md:short:px-0
         `}
       >
-        <CardTitle className="text-base">Fiber Tree</CardTitle>
-        <CardDescription className={cn(tree ? "hidden" : "block", "md:block")}>
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle
+            className={`
+              text-base
+              max-md:short:hidden
+            `}
+          >
+            Fiber Tree
+          </CardTitle>
+          {changes.length > 0 && (
+            <button
+              type="button"
+              aria-pressed={showChanges}
+              aria-label={`What changed in Effect 4, ${changes.length} ${changes.length === 1 ? "change" : "changes"}`}
+              onClick={() => toggleChangesPanel(events)}
+              className={cn(
+                `
+                  -m-1.5 inline-flex shrink-0 cursor-pointer items-center
+                  rounded-md p-1.5 font-mono text-xs whitespace-nowrap
+                  transition-colors
+                  hover:text-foreground
+                  max-md:short:bg-card
+                `,
+                showChanges ? "text-foreground" : "text-muted-foreground",
+              )}
+            >
+              v3 → v4 · {changes.length}
+            </button>
+          )}
+        </div>
+        <CardDescription
+          className={cn(
+            showChanges
+              ? "hidden"
+              : cn(
+                  tree ? "hidden" : "block",
+                  `
+                    md:block
+                    max-md:short:hidden
+                  `,
+                ),
+          )}
+        >
           Visualize fiber hierarchy and relationships
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-1 overflow-hidden">
-        {!tree ? (
+        {showChanges ? (
+          <ChangesPanel
+            changes={changes}
+            events={events}
+            linksActive={
+              playbackState === "paused" || playbackState === "finished"
+            }
+          />
+        ) : !tree ? (
           <div
             className={`
               flex h-full items-center justify-center text-center
