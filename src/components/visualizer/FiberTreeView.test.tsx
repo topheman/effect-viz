@@ -121,7 +121,7 @@ describe("FiberTreeView changes", () => {
       screen.getByRole("heading", { name: "What changed in Effect 4" }),
     ).toBeVisible();
     expect(screen.queryAllByTestId("fiber-node")).toEqual([]);
-    expect(screen.getByText("A fork runs at once")).toBeVisible();
+    expect(screen.getByText("An operator's fork runs at once")).toBeVisible();
     expect(screen.getByText("A retry sleeps for zero")).toBeVisible();
 
     await userEvent.click(changesButton());

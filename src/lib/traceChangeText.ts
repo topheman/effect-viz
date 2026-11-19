@@ -7,7 +7,8 @@ export const TRACE_CHANGE_TEXT: Record<
 > = {
   "synchronous-interruption": {
     title: "Interruption is synchronous",
-    effect4: "The interrupter shuts its target down itself, without waiting.",
+    effect4:
+      "The target unwinds right away, inside the interrupter's own step.",
     effect3: "The interrupter suspended until its target had shut down.",
   },
   "joiner-runs-first": {
@@ -17,15 +18,17 @@ export const TRACE_CHANGE_TEXT: Record<
     effect3: "The joiner was queued behind the fibers already waiting.",
   },
   "fork-runs-at-once": {
-    title: "A fork runs at once",
-    effect4: "The child starts inside its parent's step.",
+    title: "An operator's fork runs at once",
+    effect4:
+      "Operators such as race and timeout start each child inside the parent's step.",
     effect3: "Every fork was queued and started on a later turn.",
   },
   "fiber-per-element": {
     title: "One fiber per task",
     effect4:
       "Each task gets its own fiber, and the next one starts when one ends.",
-    effect3: "A few worker fibers ran the tasks in turn, with no new fork.",
+    effect3:
+      "With a concurrency limit, a few worker fibers ran the tasks in turn.",
   },
   "zero-sleep-retry": {
     title: "A retry sleeps for zero",

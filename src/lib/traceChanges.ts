@@ -8,9 +8,9 @@ export type TraceChangeKind =
   | "synchronous-interruption"
   /** A joiner resumes inside its child's end, ahead of a fiber already queued. */
   | "joiner-runs-first"
-  /** A fork starts the child at once instead of queuing it, as `race`, `timeout` and concurrent `Effect.all` do. */
+  /** An operator's fork (`race`, `timeout`, concurrent `Effect.all`) starts the child at once; `forkChild` still queues it. */
   | "fork-runs-at-once"
-  /** A concurrent `Effect.all` or `forEach` forks a fiber per element, the next from the end of the last. */
+  /** A concurrent `Effect.all` or `forEach` forks a fiber per element, each new one when a running one ends. */
   | "fiber-per-element"
   /**
    * A retry with no delay still sleeps for zero, suspending between attempts.
