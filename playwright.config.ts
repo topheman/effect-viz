@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { cpus } from "node:os";
 
 import { defineConfig, devices } from "@playwright/test";
 
@@ -24,9 +25,9 @@ export default defineConfig({
   testDir: "e2e",
   fullyParallel: true,
   forbidOnly: true,
-  // Each worker boots its own WebContainer; past 4 the page's main thread
-  // starves and runs slow down without the suite finishing sooner.
-  workers: 4,
+  // Playwright's default of half the cores, capped at 4: each worker boots its
+  // own WebContainer, and past 4 the runs starve without the suite ending sooner.
+  workers: Math.min(4, Math.max(1, Math.floor(cpus().length / 2))),
   // A retry in CI absorbs a slow StackBlitz boot; the report still marks the
   // test as flaky.
   retries: process.env.CI ? 1 : 0,
