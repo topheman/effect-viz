@@ -6,6 +6,7 @@ import {
   isInterruption,
   makeFiberLifecycle,
 } from "@/runtime/fiberLifecycle";
+import type { SleepLog } from "@/runtime/fiberLifecycle";
 import type { Now } from "@/runtime/virtualClock";
 import type { TraceEvent } from "@/types/trace";
 
@@ -35,8 +36,9 @@ function toMillis(nanos: bigint, now: Now): number {
 export function makeVizTracer(
   onEmit: (event: TraceEvent) => void,
   now: Now,
+  sleeps?: SleepLog,
 ): Tracer.Tracer {
-  const lifecycle = makeFiberLifecycle(onEmit, now);
+  const lifecycle = makeFiberLifecycle(onEmit, now, sleeps);
 
   const span: Tracer.Tracer["span"] = (options) => {
     const id = randomUUID();

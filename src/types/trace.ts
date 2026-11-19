@@ -76,9 +76,19 @@ export interface FiberInterruptEvent {
   timestamp: number;
 }
 
+/** Why a fiber stopped, as the runtime saw it when the fiber handed back the thread. */
+export type SuspendReason =
+  /** `Effect.yieldNow`: the fiber goes back in the scheduler's queue at once. */
+  | { kind: "yield" }
+  /** A timer on the Clock, from `Effect.sleep` or a schedule's delay, in virtual ms. */
+  | { kind: "sleep"; duration: number }
+  /** Anything else it waits on: a join, a `Deferred`, a callback. */
+  | { kind: "wait" };
+
 export interface FiberSuspendEvent {
   type: "fiber:suspend";
   fiberId: string;
+  reason: SuspendReason;
   timestamp: number;
 }
 

@@ -6,7 +6,7 @@
 import { Cause, Clock, Effect, Exit, Layer, Scheduler, Tracer } from "effect";
 import type { Fiber } from "effect";
 
-import { InProgram } from "@/runtime/fiberLifecycle";
+import { InProgram, SleepLog } from "@/runtime/fiberLifecycle";
 import type { GatedScheduler } from "@/runtime/gatedScheduler";
 import { makeTraceEmitterLayer } from "@/runtime/tracedRunner";
 import type { VirtualClock } from "@/runtime/virtualClock";
@@ -47,6 +47,7 @@ export function withViz<A, E>(
   { onEmit, clock, scheduler, layers = [] }: VizOptions,
 ): Effect.Effect<A, E> {
   const now = () => clock.now();
+  const sleeps = new SleepLog();
   const layer: AnyLayer = layers.reduce<AnyLayer>(
     (built, next) => Layer.provideMerge(next, built),
     makeTraceEmitterLayer(onEmit),
@@ -57,10 +58,10 @@ export function withViz<A, E>(
     Effect.provideService(InProgram, false),
     Effect.provideService(
       Clock.Clock,
-      makeVizClock(clock, (resume) => scheduler.wake(resume)),
+      makeVizClock(clock, (resume) => scheduler.wake(resume), sleeps),
     ),
     Effect.provideService(Scheduler.Scheduler, scheduler),
-    Effect.provideService(Tracer.Tracer, makeVizTracer(onEmit, now)),
+    Effect.provideService(Tracer.Tracer, makeVizTracer(onEmit, now, sleeps)),
   ) as Effect.Effect<A, E>;
 }
 

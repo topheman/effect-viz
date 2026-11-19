@@ -1,4 +1,4 @@
-import type { TraceEvent } from "@/types/trace";
+import type { FiberSuspendEvent, TraceEvent } from "@/types/trace";
 
 import { eventDepth, fiberDepths } from "./fiberDepth";
 
@@ -49,13 +49,13 @@ export function traceHints(
 
   // Both hold the state before the row being read.
   const lastLifecycle = new Map<string, TraceEvent>();
-  const lastSuspend = new Map<string, TraceEvent>();
+  const lastSuspend = new Map<string, FiberSuspendEvent>();
 
   /**
    * Whether the resume at `i` is the runtime running the next fiber in its
-   * queue because the one before gave up the thread. A fiber whose own wait
-   * ended long ago woke on its own timer instead, merely after the other's
-   * suspend.
+   * queue because the one before gave up the thread: a fiber that yielded, or
+   * a queued fork's first run. A fiber that slept or waited woke on its own
+   * timer or callback instead, merely after the other's suspend.
    */
   const isQueueHandoff = (i: number) => {
     const prev = events[i - 1];
@@ -63,13 +63,12 @@ export function traceHints(
     if (
       prev?.type !== "fiber:suspend" ||
       event?.type !== "fiber:resume" ||
-      event.fiberId === prev.fiberId ||
-      !sameInstant(event.timestamp, prev.timestamp)
+      event.fiberId === prev.fiberId
     ) {
       return false;
     }
     const own = lastSuspend.get(event.fiberId);
-    return own === undefined || sameInstant(own.timestamp, event.timestamp);
+    return own === undefined || own.reason.kind === "yield";
   };
 
   const inFinalizerRun = (i: number) => {
@@ -113,7 +112,7 @@ export function traceHints(
         if (
           next?.type === "fiber:resume" &&
           next.fiberId === event.fiberId &&
-          sameInstant(next.timestamp, event.timestamp)
+          resumesAtOnce(event)
         ) {
           add(i, {
             text: "The fiber gave up the thread and got it back at [N], in the same instant: nothing else was ready to run.",
@@ -129,7 +128,7 @@ export function traceHints(
         break;
       }
       case "fiber:resume": {
-        const waited = lastSuspend.has(event.fiberId);
+        const own = lastSuspend.get(event.fiberId);
         if (prev?.type === "fiber:fork" && prev.fiberId === event.fiberId) {
           add(
             i,
@@ -140,11 +139,7 @@ export function traceHints(
             i,
             `${prev.fiberId} gave up the thread, so the runtime ran ${event.fiberId}, first in the queue.`,
           );
-        } else if (
-          waited &&
-          prev?.type === "fiber:end" &&
-          sameInstant(prev.timestamp, event.timestamp)
-        ) {
+        } else if (own?.reason.kind === "wait" && prev?.type === "fiber:end") {
           // The joiner's callback resumes it inside the end, with no scheduler
           // task between the two.
           add(
@@ -152,13 +147,13 @@ export function traceHints(
             `${prev.fiberId}'s end resumed ${event.fiberId}, which was waiting on it.`,
           );
         } else if (
-          waited &&
-          !sameInstant(
-            lastSuspend.get(event.fiberId)!.timestamp,
-            event.timestamp,
-          )
+          own !== undefined &&
+          !resumesAtOnce(own) &&
+          (own.reason.kind === "sleep" ||
+            !sameInstant(own.timestamp, event.timestamp))
         ) {
-          // A resume in the same instant as its suspend shows no wait to explain.
+          // Only the timestamps tell how long a wait lasted; one that ended in
+          // the same instant shows nothing to explain.
           add(i, "Time the fiber spent parked.");
         }
         break;
@@ -272,6 +267,17 @@ export function hintText(
  * sleep reads as instant.
  */
 const SAME_INSTANT_MS = 10;
+
+/**
+ * Whether a suspend asks for no time at all: a yield, or a sleep of zero. The
+ * fiber's resume may still come late, when the main thread is busy.
+ */
+export function resumesAtOnce({ reason }: FiberSuspendEvent): boolean {
+  return (
+    reason.kind === "yield" ||
+    (reason.kind === "sleep" && reason.duration === 0)
+  );
+}
 
 /** Whether two timestamps belong to one synchronous burst of the runtime. */
 export function sameInstant(a: number, b: number): boolean {

@@ -254,6 +254,39 @@ describe("makeVizTracer", () => {
     );
   });
 
+  it("says why each fiber suspends: a yield, a sleep or a wait", async () => {
+    const events: TraceEvent[] = [];
+    const { promise } = runProgramFork(
+      withViz(
+        Effect.gen(function* () {
+          const child = yield* Effect.forkChild(
+            Effect.yieldNow.pipe(Effect.andThen(Effect.sleep("20 millis"))),
+          );
+          yield* Fiber.join(child);
+        }),
+        {
+          onEmit: (event) => events.push(event),
+          clock: new VirtualClock({ rate: 1 }),
+          scheduler: new GatedScheduler(),
+        },
+      ),
+    );
+    await promise;
+
+    const [root, child] = events.flatMap((e) =>
+      e.type === "fiber:fork" ? [e.fiberId] : [],
+    );
+    expect(
+      events.flatMap((e) =>
+        e.type === "fiber:suspend" ? [[e.fiberId, e.reason]] : [],
+      ),
+    ).toEqual([
+      [root, { kind: "wait" }],
+      [child, { kind: "yield" }],
+      [child, { kind: "sleep", duration: 20 }],
+    ]);
+  });
+
   it("leaves out the fibers that build layers, not the program's", async () => {
     class Greeting extends Context.Service<Greeting, string>()("Greeting") {}
     const layer = Layer.effect(

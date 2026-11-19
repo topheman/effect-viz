@@ -34,8 +34,13 @@ type TraceEvent =
   | { type: "fiber:fork"; fiberId: string; parentId?: string }
   | { type: "fiber:end"; fiberId: string; result: "success" | "failure" }
   | { type: "fiber:interrupt"; fiberId: string }
-  | { type: "fiber:suspend"; fiberId: string; duration: number }
+  | { type: "fiber:suspend"; fiberId: string; reason: SuspendReason }
   | { type: "sleep:end"; fiberId: string }
+
+type SuspendReason =
+  | { kind: "yield" }
+  | { kind: "sleep"; duration: number }
+  | { kind: "wait" }
 ```
 
 ## Context Recovery (For Fresh Sessions)

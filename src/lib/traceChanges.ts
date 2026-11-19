@@ -1,6 +1,6 @@
-import type { TraceEvent } from "@/types/trace";
+import type { FiberSuspendEvent, TraceEvent } from "@/types/trace";
 
-import { sameInstant } from "./traceHints";
+import { resumesAtOnce } from "./traceHints";
 
 /** A way Effect 4's runtime orders or forks fibers differently from Effect 3's. */
 export type TraceChangeKind =
@@ -12,11 +12,7 @@ export type TraceChangeKind =
   | "fork-runs-at-once"
   /** A concurrent `Effect.all` or `forEach` forks a fiber per element, each new one when a running one ends. */
   | "fiber-per-element"
-  /**
-   * A retry with no delay still sleeps for zero, suspending between attempts.
-   * A delay shorter than `sameInstant`'s tolerance reads as zero too: the
-   * trace does not carry the delay.
-   */
+  /** A retry with no delay still sleeps for zero, suspending between attempts. */
   | "zero-sleep-retry";
 
 /** Every occurrence of one kind of change in a trace. */
@@ -53,7 +49,7 @@ export function traceChanges(events: readonly TraceEvent[]): TraceChange[] {
 
   // All hold the state before the row being read.
   const lastLifecycle = new Map<string, TraceEvent["type"]>();
-  const lastSuspend = new Map<string, number>();
+  const lastSuspend = new Map<string, Suspended>();
   // Fibers on the stack, innermost last: a fiber resumed while another runs
   // runs inside that fiber's step.
   const running: string[] = [];
@@ -105,7 +101,7 @@ export function traceChanges(events: readonly TraceEvent[]): TraceChange[] {
         break;
       case "fiber:suspend":
         leave(event.fiberId);
-        lastSuspend.set(event.fiberId, i);
+        lastSuspend.set(event.fiberId, { row: i, event });
         break;
       case "fiber:end": {
         leave(event.fiberId);
@@ -128,9 +124,9 @@ export function traceChanges(events: readonly TraceEvent[]): TraceChange[] {
         if (
           prev?.type === "fiber:resume" &&
           suspended !== undefined &&
-          sameInstant(events[suspended].timestamp, prev.timestamp)
+          resumesAtOnce(suspended.event)
         ) {
-          add("zero-sleep-retry", [suspended, i - 1]);
+          add("zero-sleep-retry", [suspended.row, i - 1]);
         }
         break;
       }
@@ -149,16 +145,16 @@ export function traceChanges(events: readonly TraceEvent[]): TraceChange[] {
  * turn: the row where that fiber gets it. Effect 3 queued the joiner
  * behind it.
  *
- * A fiber was waiting for its turn when it suspended before `end` and resumes
- * after it in the same instant as its suspend: a yield, not a timer. It must
- * get its turn once the joiner has left the stack; a fiber resumed inside the
- * joiner's step was woken by the joiner, not queued behind it.
+ * A fiber was waiting for its turn when it yielded before `end` and resumes
+ * after it. It must get its turn once the joiner has left the stack; a fiber
+ * resumed inside the joiner's step was woken by the joiner, not queued behind
+ * it.
  */
 function queuedBehindJoiner(
   events: readonly TraceEvent[],
   end: number,
   parentOf: ReadonlyMap<string, string>,
-  lastSuspend: ReadonlyMap<string, number>,
+  lastSuspend: ReadonlyMap<string, Suspended>,
 ): number | undefined {
   const ended = events[end];
   const resumed = events[end + 1];
@@ -176,13 +172,19 @@ function queuedBehindJoiner(
     const after = events[row];
     if (
       after.type === "fiber:resume" &&
-      joinerLeft(events, end + 2, row, resumed.fiberId) &&
-      sameInstant(events[suspended].timestamp, after.timestamp)
+      suspended.event.reason.kind === "yield" &&
+      joinerLeft(events, end + 2, row, resumed.fiberId)
     ) {
       return row;
     }
   }
   return undefined;
+}
+
+/** A fiber's last suspend and its row. */
+interface Suspended {
+  row: number;
+  event: FiberSuspendEvent;
 }
 
 /** Whether `fiberId` suspends or ends between rows `from` and `to`, `to` excluded. */
