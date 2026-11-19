@@ -21,6 +21,7 @@ import {
   structuredInterruptionExample,
   timeoutExample,
 } from "./programs";
+import { traceChanges } from "./traceChanges";
 import { hintText, traceHints } from "./traceHints";
 
 const fakeHost: VirtualClockHost = {
@@ -212,6 +213,19 @@ function renumberFibers(events: readonly TraceEvent[]): TraceEvent[] {
   );
 }
 
+/**
+ * An example's trace, renumbered, as the log shows it once the run settles.
+ * Deadlock never ends, so it is read before stopping it adds rows; the app's
+ * Reset clears the log rather than showing them.
+ */
+async function traceOf(program: (typeof programs)[keyof typeof programs]) {
+  const { events, fiber } = start(program.rootEffect, program.requirements);
+  await vi.advanceTimersByTimeAsync(10_000);
+  const trace = renumberFibers(events);
+  await Effect.runPromise(Fiber.interrupt(fiber));
+  return trace;
+}
+
 /** Hints of every example, keyed by row number with nothing filtered. */
 const expectedHints: Record<keyof typeof programs, Record<number, string>> = {
   basic: {
@@ -391,12 +405,7 @@ describe("example program hints", () => {
   });
 
   it.each(Object.entries(programs))("%s", async (name, program) => {
-    const { events, fiber } = start(program.rootEffect, program.requirements);
-    await vi.advanceTimersByTimeAsync(10_000);
-    // Deadlock never ends: read its trace before stopping it adds rows.
-    const trace = renumberFibers(events);
-    await Effect.runPromise(Fiber.interrupt(fiber));
-
+    const trace = await traceOf(program);
     const hints = traceHints(trace, { indentByFiber: true });
     const texts = Object.fromEntries(
       [...hints].map(([index, row]) => [
@@ -405,5 +414,89 @@ describe("example program hints", () => {
       ]),
     );
     expect(texts).toEqual(expectedHints[name as keyof typeof programs]);
+  });
+});
+
+/** Effect 3 → 4 changes of every example, with rows numbered from 1. */
+const expectedChanges: Record<
+  keyof typeof programs,
+  { kind: string; rows: number[]; fibers: string[] }[]
+> = {
+  basic: [],
+  multiStep: [],
+  nestedForks: [],
+  interleaving: [
+    {
+      kind: "joiner-runs-first",
+      rows: [30, 31, 33],
+      fibers: ["#1", "#2", "#3"],
+    },
+  ],
+  racing: [
+    {
+      kind: "fork-runs-at-once",
+      rows: [2, 3, 6, 7],
+      fibers: ["#1", "#2", "#3"],
+    },
+    { kind: "synchronous-interruption", rows: [15, 17], fibers: ["#1", "#3"] },
+  ],
+  boundedConcurrency: [
+    {
+      kind: "fork-runs-at-once",
+      rows: [2, 3, 6, 7, 14, 15, 21, 22, 28, 29],
+      fibers: ["#1", "#2", "#3", "#4", "#5", "#6"],
+    },
+    {
+      kind: "fiber-per-element",
+      rows: [13, 14, 20, 21, 27, 28],
+      fibers: ["#1", "#2", "#3", "#4", "#5", "#6"],
+    },
+  ],
+  structuredInterruption: [
+    {
+      kind: "synchronous-interruption",
+      rows: [15, 17, 20, 21, 24, 25],
+      fibers: ["#1", "#2", "#3", "#4"],
+    },
+  ],
+  failureAndRecovery: [],
+  retry: [{ kind: "zero-sleep-retry", rows: [3, 4, 6, 7], fibers: ["#1"] }],
+  retryExponentialBackoff: [],
+  timeout: [
+    {
+      kind: "fork-runs-at-once",
+      rows: [2, 3, 6, 7, 16, 17, 20, 21],
+      fibers: ["#1", "#2", "#3", "#4", "#5"],
+    },
+    {
+      kind: "synchronous-interruption",
+      rows: [14, 15, 27, 29],
+      fibers: ["#1", "#3", "#4"],
+    },
+  ],
+  basicFinalizers: [],
+  acquireRelease: [],
+  loggerWithRequirements: [],
+  // Its only interruption comes from stopping the run, whose rows Reset clears.
+  deadlock: [],
+};
+
+describe("example program changes from Effect 3", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it.each(Object.entries(programs))("%s", async (name, program) => {
+    const changes = traceChanges(await traceOf(program)).map((change) => ({
+      ...change,
+      rows: change.rows.map((index) => index + 1),
+    }));
+    expect(changes).toEqual(expectedChanges[name as keyof typeof programs]);
   });
 });
