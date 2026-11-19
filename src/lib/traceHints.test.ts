@@ -137,7 +137,22 @@ function hintsOf(events: TraceEvent[], indentByFiber = false) {
 
 describe("traceHints", () => {
   it("reads a yield resumed late, as WebKit does, like one resumed at once", () => {
-    expect(hintsOf(interleaving(15))).toEqual(hintsOf(interleaving(0)));
+    const late = hintsOf(interleaving(15));
+    expect(late).toEqual(hintsOf(interleaving(0)));
+    expect(Object.values(late)).toContain(
+      "#2 gave up the thread, so the runtime ran #3, first in the queue.",
+    );
+  });
+
+  it("does not time a sleep interrupted in the same instant it started", () => {
+    const hints = hintsOf([
+      fork("#0"),
+      fork("#1", "#0"),
+      resume("#1"),
+      suspend("#1", sleep(1000)),
+      resume("#1"),
+    ]);
+    expect(hints[4]).toBeUndefined();
   });
 
   // The Basic Example's shape: root forks one worker, joins it, the worker sleeps.

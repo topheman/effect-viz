@@ -1,6 +1,7 @@
-import { Context, Effect, Fiber, Layer } from "effect";
+import { Context, Effect, Fiber, Layer, Schedule } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 
+import { SleepLog } from "@/runtime/fiberLifecycle";
 import { GatedScheduler } from "@/runtime/gatedScheduler";
 import { runProgramFork, withViz } from "@/runtime/runProgram";
 import { VirtualClock } from "@/runtime/virtualClock";
@@ -13,6 +14,7 @@ async function trace<A>(program: Effect.Effect<A>) {
   const tracer = makeVizTracer(
     (event) => events.push(event),
     () => 0,
+    new SleepLog(),
   );
   const result = await Effect.runPromise(
     program.pipe(Effect.withTracer(tracer)),
@@ -254,13 +256,17 @@ describe("makeVizTracer", () => {
     );
   });
 
-  it("says why each fiber suspends: a yield, a sleep or a wait", async () => {
+  it("says why each fiber suspends: a yield, a sleep, a schedule's delay or a wait", async () => {
     const events: TraceEvent[] = [];
     const { promise } = runProgramFork(
       withViz(
         Effect.gen(function* () {
           const child = yield* Effect.forkChild(
-            Effect.yieldNow.pipe(Effect.andThen(Effect.sleep("20 millis"))),
+            Effect.gen(function* () {
+              yield* Effect.yieldNow;
+              yield* Effect.sleep("20 millis");
+              yield* Effect.repeat(Effect.void, Schedule.recurs(1));
+            }),
           );
           yield* Fiber.join(child);
         }),
@@ -284,6 +290,7 @@ describe("makeVizTracer", () => {
       [root, { kind: "wait" }],
       [child, { kind: "yield" }],
       [child, { kind: "sleep", duration: 20 }],
+      [child, { kind: "sleep", duration: 0 }],
     ]);
   });
 

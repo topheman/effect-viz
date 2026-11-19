@@ -58,7 +58,7 @@ export function withViz<A, E>(
     Effect.provideService(InProgram, false),
     Effect.provideService(
       Clock.Clock,
-      makeVizClock(clock, (resume) => scheduler.wake(resume), sleeps),
+      makeVizClock(clock, sleeps, (resume) => scheduler.wake(resume)),
     ),
     Effect.provideService(Scheduler.Scheduler, scheduler),
     Effect.provideService(Tracer.Tracer, makeVizTracer(onEmit, now, sleeps)),

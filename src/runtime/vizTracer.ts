@@ -36,7 +36,7 @@ function toMillis(nanos: bigint, now: Now): number {
 export function makeVizTracer(
   onEmit: (event: TraceEvent) => void,
   now: Now,
-  sleeps?: SleepLog,
+  sleeps: SleepLog,
 ): Tracer.Tracer {
   const lifecycle = makeFiberLifecycle(onEmit, now, sleeps);
 

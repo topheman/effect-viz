@@ -1,7 +1,5 @@
 import type { FiberSuspendEvent, TraceEvent } from "@/types/trace";
 
-import { resumesAtOnce } from "./traceHints";
-
 /** A way Effect 4's runtime orders or forks fibers differently from Effect 3's. */
 export type TraceChangeKind =
   /** A fiber resumes, unwinds and ends interrupted inside its interrupter's step. */
@@ -123,8 +121,8 @@ export function traceChanges(events: readonly TraceEvent[]): TraceChange[] {
         const suspended = lastSuspend.get(event.fiberId);
         if (
           prev?.type === "fiber:resume" &&
-          suspended !== undefined &&
-          resumesAtOnce(suspended.event)
+          suspended?.event.reason.kind === "sleep" &&
+          suspended.event.reason.duration === 0
         ) {
           add("zero-sleep-retry", [suspended.row, i - 1]);
         }

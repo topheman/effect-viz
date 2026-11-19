@@ -112,7 +112,7 @@ export interface FiberLifecycle {
 export function makeFiberLifecycle(
   onEmit: (event: TraceEvent) => void,
   now: Now,
-  sleeps: SleepLog = new SleepLog(),
+  sleeps: SleepLog,
 ): FiberLifecycle {
   /** Whether each known fiber is between a resume and a suspend. */
   const running = new Map<AnyFiber, boolean>();

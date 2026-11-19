@@ -22,8 +22,8 @@ const NANOS_PER_MILLI = 1_000_000;
  */
 export function makeVizClock(
   virtual: VirtualClock,
+  sleeps: SleepLog,
   wake: (resume: () => void) => void = (resume) => resume(),
-  sleeps?: SleepLog,
 ): Clock.Clock {
   const currentTimeMillisUnsafe = () => virtual.now();
   const currentTimeNanosUnsafe = () =>
@@ -41,7 +41,7 @@ export function makeVizClock(
     sleep: (duration: Duration.Duration) =>
       Effect.callback<void>((resume) => {
         const millis = Duration.toMillis(duration);
-        sleeps?.started(millis);
+        sleeps.started(millis);
         const cancel = virtual.sleep(millis, () =>
           wake(() => resume(Effect.void)),
         );

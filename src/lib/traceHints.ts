@@ -146,14 +146,7 @@ export function traceHints(
             i,
             `${prev.fiberId}'s end resumed ${event.fiberId}, which was waiting on it.`,
           );
-        } else if (
-          own !== undefined &&
-          !resumesAtOnce(own) &&
-          (own.reason.kind === "sleep" ||
-            !sameInstant(own.timestamp, event.timestamp))
-        ) {
-          // Only the timestamps tell how long a wait lasted; one that ended in
-          // the same instant shows nothing to explain.
+        } else if (own !== undefined && showsParkedTime(own, event.timestamp)) {
           add(i, "Time the fiber spent parked.");
         }
         break;
@@ -280,6 +273,14 @@ export function resumesAtOnce({ reason }: FiberSuspendEvent): boolean {
 }
 
 /** Whether two timestamps belong to one synchronous burst of the runtime. */
+/** Whether a resume at `resumedAt` ends a wait worth timing: not a yield or zero sleep, and not in the same instant. */
+export function showsParkedTime(
+  suspend: FiberSuspendEvent,
+  resumedAt: number,
+): boolean {
+  return !resumesAtOnce(suspend) && !sameInstant(suspend.timestamp, resumedAt);
+}
+
 export function sameInstant(a: number, b: number): boolean {
   return Math.abs(a - b) < SAME_INSTANT_MS;
 }
