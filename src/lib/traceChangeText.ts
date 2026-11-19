@@ -19,14 +19,13 @@ export const TRACE_CHANGE_TEXT: Record<
   },
   "fork-runs-at-once": {
     title: "A fork runs at once",
-    effect4:
-      "The child starts inside its parent's step, as `race`, `timeout` and concurrent `Effect.all` fork it.",
+    effect4: "The child starts inside its parent's step.",
     effect3: "Every fork was queued and started on a later turn.",
   },
   "fiber-per-element": {
     title: "One fiber per element",
     effect4:
-      "A concurrent `Effect.all` forks a fiber per element, the next when one ends.",
+      "Concurrent elements each get a fiber, the next forked when one ends.",
     effect3: "A few worker fibers took the elements in turn, with no new fork.",
   },
   "zero-sleep-retry": {

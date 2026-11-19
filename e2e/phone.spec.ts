@@ -7,7 +7,7 @@ import {
   runButton,
   startProgram,
   stepButton,
-  targetedLogRow,
+  logRow,
   test,
 } from "./utils";
 
@@ -75,13 +75,13 @@ test("a phone in landscape follows a change's row to the log tab", async ({
 
   await page.getByRole("tab", { name: "Fiber Tree" }).tap();
   await changesButton(page).tap();
-  await page.getByRole("button", { name: "Row 15 in the Execution Log" }).tap();
+  await page.getByRole("button", { name: "Row 2 in the Execution Log" }).tap();
 
   await expect(
     page.getByRole("tab", { name: "Execution Log" }),
   ).toHaveAttribute("aria-selected", "true");
-  await expect(targetedLogRow(page)).toBeInViewport();
-  await expect(targetedLogRow(page)).toContainText("[15]");
+  await expect(logRow(page, 2)).toHaveAttribute("data-targeted");
+  await expect(logRow(page, 2)).toBeInViewport();
 });
 
 test("a phone opens the version pill", async ({ page }) => {

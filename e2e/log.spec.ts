@@ -7,7 +7,8 @@ import {
   openApp,
   playbackStatus,
   startProgram,
-  targetedLogRow,
+  fiberNode,
+  logRow,
   test,
 } from "./utils";
 
@@ -70,17 +71,16 @@ test("the Fiber Tree's changes highlight their fibers and link to the log", asyn
     .getByRole("button", { name: "Interruption is synchronous" })
     .click();
   await changesButton(page).click();
-  await expect(
-    page
-      .getByTestId("fiber-node")
-      .filter({ visible: true })
-      .and(page.locator("[data-highlighted]")),
-  ).toHaveCount(2);
+  await expect(fiberNode(page, 1)).toHaveAttribute("data-highlighted");
+  await expect(fiberNode(page, 2)).not.toHaveAttribute("data-highlighted");
+  await expect(fiberNode(page, 3)).toHaveAttribute("data-highlighted");
 
   await changesButton(page).click();
+  await expect(logRow(page, 2)).not.toBeInViewport();
   await page
-    .getByRole("button", { name: "Row 15 in the Execution Log" })
+    .getByRole("button", { name: "Row 2 in the Execution Log" })
     .click();
-  await expect(targetedLogRow(page)).toBeInViewport();
-  await expect(targetedLogRow(page)).toContainText("[15]");
+  await expect(logRow(page, 2)).toHaveAttribute("data-targeted");
+  await expect(logRow(page, 2)).toBeInViewport();
+  await expect(logRow(page, 2)).toBeFocused();
 });

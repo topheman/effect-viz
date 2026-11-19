@@ -7,6 +7,7 @@
  */
 import { useSyncExternalStore } from "react";
 
+/** A view of the landscape tabs. */
 export type VisualizerTab = "fibers" | "log" | "timeline";
 
 const initial: VisualizerTab = "log";

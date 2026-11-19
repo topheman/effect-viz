@@ -105,9 +105,19 @@ export const logOptions = (page: Page) =>
 export const changesButton = (page: Page) =>
   page.getByRole("button", { name: /^What changed in Effect 4/ });
 
-/** The Execution Log row a row link scrolled to. */
-export const targetedLogRow = (page: Page) =>
-  onScreen(page.locator("[data-targeted]"));
+/** The Execution Log row numbered `n`, in the layout on screen. */
+export const logRow = (page: Page, n: number) =>
+  onScreen(
+    page
+      .getByTestId("log-row")
+      .filter({ hasText: new RegExp(`^\\s*\\[${n}\\]`) }),
+  );
+
+/** The Fiber Tree node of fiber `#n`, in the layout on screen. */
+export const fiberNode = (page: Page, n: number) =>
+  onScreen(
+    page.getByTestId("fiber-node").filter({ hasText: new RegExp(`#${n}$`) }),
+  );
 
 /** Opens the explanation on the first log row that reads `text` and returns it. */
 export async function explainRow(page: Page, text: string) {

@@ -98,15 +98,6 @@ function FiberNode({
   );
 }
 
-/** `text` with its backquoted spans set as code. */
-function WithCode({ text }: { text: string }) {
-  return text
-    .split("`")
-    .map((part, i) =>
-      i % 2 === 1 ? <code key={i}>{part}</code> : <span key={i}>{part}</span>,
-    );
-}
-
 /** The Effect 3 → 4 changes the trace shows, one entry per kind, in place of the tree. */
 function ChangesPanel({
   changes,
@@ -122,6 +113,7 @@ function ChangesPanel({
   const [{ hidden }] = useLogView();
   // One per mounted copy: the layouts render the card more than once.
   const headingId = useId();
+  const noteId = useId();
   // The numbers the log shows, which skip its hidden rows.
   const rowNumbers = new Map<number, number>();
   for (const [index, event] of events.entries()) {
@@ -130,6 +122,7 @@ function ChangesPanel({
     }
   }
   const followRow = (index: number) => {
+    if (!linksActive) return;
     targetLogRow(events, index);
     setVisualizerTab("log");
   };
@@ -143,7 +136,7 @@ function ChangesPanel({
         What changed in Effect 4
       </h3>
       {!linksActive && (
-        <p className="text-xs text-muted-foreground">
+        <p id={noteId} className="text-xs text-muted-foreground">
           Pause to follow a row to the log.
         </p>
       )}
@@ -172,12 +165,10 @@ function ChangesPanel({
                 {text.title}
               </button>
               <p className="mt-1 text-xs">
-                <span className="font-semibold">Effect 4</span>{" "}
-                <WithCode text={text.effect4} />
+                <span className="font-semibold">Effect 4</span> {text.effect4}
               </p>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                <span className="font-semibold">Effect 3</span>{" "}
-                <WithCode text={text.effect3} />
+                <span className="font-semibold">Effect 3</span> {text.effect3}
               </p>
               {rows.length > 0 && (
                 <p
@@ -190,14 +181,17 @@ function ChangesPanel({
                     <button
                       key={index}
                       type="button"
-                      disabled={!linksActive}
+                      // Still focusable, so the note saying why is read out.
+                      aria-disabled={!linksActive || undefined}
+                      aria-describedby={linksActive ? undefined : noteId}
                       aria-label={`Row ${number} in the Execution Log`}
                       onClick={() => followRow(index)}
                       className={`
                         inline-flex min-h-6 min-w-6 cursor-pointer items-center
                         justify-center text-primary underline underline-offset-2
-                        disabled:cursor-default disabled:text-muted-foreground
-                        disabled:no-underline
+                        aria-disabled:cursor-default
+                        aria-disabled:text-muted-foreground
+                        aria-disabled:no-underline
                       `}
                     >
                       [{number}]

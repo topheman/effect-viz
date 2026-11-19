@@ -423,4 +423,34 @@ describe("ExecutionLog linked row", () => {
     await userEvent.click(screen.getByRole("button", { name: "step" }));
     expect(targetedRows()).toEqual([]);
   });
+
+  it("moves focus to the linked row, again when the same row is asked twice", async () => {
+    const scrollTo = vi.spyOn(Element.prototype, "scrollTo");
+    render(
+      <TraceStoreProvider>
+        <Seed />
+        <ExecutionLog />
+        <Linker />
+      </TraceStoreProvider>,
+    );
+    const link = screen.getByRole("button", { name: "link" });
+
+    await userEvent.click(link);
+    expect(
+      screen
+        .getAllByTestId("log-row")
+        .find((row) => row.hasAttribute("data-targeted")),
+    ).toHaveFocus();
+
+    link.focus();
+    scrollTo.mockClear();
+    await userEvent.click(link);
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+    expect(
+      screen
+        .getAllByTestId("log-row")
+        .find((row) => row.hasAttribute("data-targeted")),
+    ).toHaveFocus();
+    scrollTo.mockRestore();
+  });
 });

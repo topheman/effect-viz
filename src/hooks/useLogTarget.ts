@@ -9,6 +9,7 @@ import { useSyncExternalStore } from "react";
 
 import type { TraceEvent } from "@/types/trace";
 
+/** A row of the log, tied to the trace it was asked on. */
 export type LogTarget = {
   /** The run's first event: a row index means nothing in the next run. */
   run: TraceEvent;
@@ -36,6 +37,7 @@ export function targetLogRow(events: readonly TraceEvent[], index: number) {
   for (const listener of listeners) listener();
 }
 
+/** Lets the log follow the newest row again. */
 export function clearLogTarget(): void {
   target = null;
   for (const listener of listeners) listener();
@@ -44,6 +46,7 @@ export function clearLogTarget(): void {
 /**
  * The full-trace index of the targeted row, while `events` is still the trace
  * it was asked on. A new event drops it: the log follows the newest row again.
+ * On a finished run it stays, highlighted, until the next run.
  */
 export function targetedIndex(
   target: LogTarget | null,
@@ -55,6 +58,7 @@ export function targetedIndex(
   return target.index;
 }
 
+/** The row last asked for, stale or not; `targetedIndex` says if it still applies. */
 export function useLogTarget(): LogTarget | null {
   return useSyncExternalStore(subscribe, getSnapshot);
 }

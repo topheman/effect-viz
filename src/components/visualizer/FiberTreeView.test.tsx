@@ -172,9 +172,14 @@ describe("FiberTreeView changes", () => {
     renderTree(twoChanges, "running");
     await userEvent.click(changesButton());
 
-    expect(
-      screen.getByRole("button", { name: "Row 2 in the Execution Log" }),
-    ).toBeDisabled();
-    expect(screen.getByText("Pause to follow a row to the log.")).toBeVisible();
+    const link = screen.getByRole("button", {
+      name: "Row 2 in the Execution Log",
+    });
+    expect(link).toHaveAttribute("aria-disabled", "true");
+    expect(link).toHaveAccessibleDescription(
+      "Pause to follow a row to the log.",
+    );
+    await userEvent.click(link);
+    expect(screen.getByTestId("probe")).toHaveTextContent(/ none$/);
   });
 });

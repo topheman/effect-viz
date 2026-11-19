@@ -304,6 +304,12 @@ describe("traceChanges", () => {
       ]);
     });
 
+    it("waits for the row after the child's resume, which may interrupt it", () => {
+      expect(
+        traceChanges([fork("#1"), fork("#2", "#1"), resume("#2")]),
+      ).toEqual([]);
+    });
+
     it("is not a fork that only queues its child", () => {
       expect(
         traceChanges([

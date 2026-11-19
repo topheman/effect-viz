@@ -83,14 +83,15 @@ export function traceChanges(events: readonly TraceEvent[]): TraceChange[] {
           break;
         }
         // A child interrupted before its first step resumes only to unwind:
-        // that is the interruption, not the fork running it.
+        // that is the interruption, not the fork running it. Until the row
+        // after the resume arrives, the trace cannot tell, and counting the
+        // fork then would take it back.
+        const after = events[i + 2];
         if (
           next?.type === "fiber:resume" &&
           next.fiberId === event.fiberId &&
-          !(
-            events[i + 2]?.type === "fiber:interrupt" &&
-            events[i + 2].fiberId === event.fiberId
-          )
+          after !== undefined &&
+          !(after.type === "fiber:interrupt" && after.fiberId === event.fiberId)
         ) {
           add("fork-runs-at-once", [i, i + 1], [parent, event.fiberId]);
         }

@@ -12,6 +12,7 @@ import { useSyncExternalStore } from "react";
 import type { TraceChangeKind } from "@/lib/traceChanges";
 import type { TraceEvent } from "@/types/trace";
 
+/** Whether the changes show in place of the tree, and the selected change. */
 export type ChangesPanel = {
   open: boolean;
   selected: TraceChangeKind | null;
@@ -39,7 +40,7 @@ function update(next: Stored): void {
 }
 
 /** The panel's state for the run that `events` holds. */
-export function changesPanelFor(
+function changesPanelFor(
   stored: Stored,
   events: readonly TraceEvent[],
 ): ChangesPanel {
@@ -65,6 +66,7 @@ export function selectChange(
   });
 }
 
+/** Back to the tree, with nothing selected. */
 export function resetChangesPanel(): void {
   update({ ...closed, run: undefined });
 }

@@ -109,6 +109,7 @@ export function VisualizerPanel({
 }: {
   /** Starting width of the timeline's time axis, for the selected program. */
   timelineDurationMs?: number;
+  /** Whether the program runs, so the Fiber Tree knows when its row links can reach the log. */
   playbackState: PlaybackState;
 }) {
   return (

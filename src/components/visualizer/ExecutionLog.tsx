@@ -267,8 +267,8 @@ export function ExecutionLog() {
   useEffect(() => {
     const ref = cardContentRef.current;
     if (!ref) return;
-    // Read here rather than from `targeted`, so asking for the same row again
-    // scrolls back to it.
+    // `logTarget` is a new object per request, so asking for the same row
+    // again scrolls back to it.
     const index = targetedIndex(logTarget, events);
     const row =
       index === undefined
@@ -285,6 +285,8 @@ export function ExecutionLog() {
           (ref.clientHeight - rowBox.height) / 2,
         behavior: "smooth",
       });
+      // The link that asked may be gone, unmounted with its tab.
+      row.focus({ preventScroll: true });
       return;
     }
     ref.scrollTo({
@@ -442,6 +444,7 @@ export function ExecutionLog() {
                   data-testid="log-row"
                   data-row-index={index}
                   data-targeted={index === targeted || undefined}
+                  tabIndex={index === targeted ? -1 : undefined}
                   className={cn(
                     `
                       border-b border-border/50 py-1.5
