@@ -3,7 +3,16 @@
  * TRACE_EVENT: lines from stdout. The runner imports program.js (rootEffect, requirements)
  * and injects the trace layer before running.
  */
-import { Deferred, Effect, Fiber, Option, Ref, Stream } from "effect";
+import {
+  Deferred,
+  Duration,
+  Effect,
+  Exit,
+  Fiber,
+  Option,
+  Ref,
+  Stream,
+} from "effect";
 
 import {
   CONTROL_REPLY_PREFIX,
@@ -19,8 +28,11 @@ import type { TraceEvent, TraceOrigin } from "@/types/trace";
 const TRACE_EVENT_PREFIX = "TRACE_EVENT:";
 const PERF_PREFIX = "PERF:";
 
-/** Longest wait, in ms, for the rest of stdout once the process has exited. */
-export const STDOUT_DRAIN_CAP = 1000;
+/** Longest wait for the rest of stdout once the process has exited. */
+export const STDOUT_DRAIN_CAP = Duration.seconds(1);
+
+/** Wait after the root's end for the runner's last lines, unless stdout ends first. */
+export const ROOT_END_GRACE = Duration.millis(150);
 
 /**
  * Enable with ?perf=1 in URL or sessionStorage.setItem('perf_play','1').
@@ -76,11 +88,12 @@ export interface ControlSink {
 }
 
 /**
- * Spawn pnpm exec tsx program.ts, parse TRACE_EVENT lines from stdout,
+ * Spawn `node runner.js`, parse TRACE_EVENT lines from stdout,
  * and push to the provided callbacks.
  *
  * Returns once the process has exited and its stdout is drained: the stream
- * has ended or the root fiber's end has been parsed, within `STDOUT_DRAIN_CAP`.
+ * has ended, or `ROOT_END_GRACE` has passed since the root fiber's end was
+ * parsed, within `STDOUT_DRAIN_CAP`.
  *
  * The process is killed when the Effect scope closes (e.g. on Reset).
  */
@@ -241,7 +254,9 @@ export function spawnAndParseTraceEvents({
             callbacks.processEvent(event);
           });
           if (event.type === "fiber:fork" && event.parentId === undefined) {
-            yield* Ref.set(rootIdRef, event.fiberId);
+            // The tracer also emits a parentless fork for a fiber it finds
+            // with no forker; the root is the first one.
+            yield* Ref.update(rootIdRef, (id) => id ?? event.fiberId);
           } else if (
             (event.type === "fiber:end" || event.type === "fiber:interrupt") &&
             event.fiberId === (yield* Ref.get(rootIdRef))
@@ -256,14 +271,22 @@ export function spawnAndParseTraceEvents({
     const tExit = performance.now();
     logPerf("exit", t0, tExit);
     // The exit notification and stdout reach the page on separate channels, so
-    // the exit can arrive while trace events are still in flight. Keep reading
-    // until the stream ends or the root fiber's own end is parsed: the runner
-    // writes every event in order, and structured concurrency settles the
-    // root's children before the root ends, so its end is the last event. The
-    // cap covers a stream that never closes on a program whose root never ran.
+    // the exit can arrive while stdout is still in flight. Keep reading until
+    // the stream ends. The root fiber's end is a fallback for a stream that
+    // does not close: structured concurrency settles the root's children before
+    // it, so no trace event of its tree follows it, and the grace covers the
+    // runner's result line written right after. The cap covers a stream that
+    // never closes on a program whose root never ran.
     const drained = yield* Effect.raceFirst(
-      Fiber.await(consumer).pipe(Effect.as("stream end")),
-      Deferred.await(rootEnded).pipe(Effect.as("root end")),
+      Fiber.await(consumer).pipe(
+        Effect.map((exit) =>
+          Exit.isSuccess(exit) ? "stream end" : "stream error",
+        ),
+      ),
+      Deferred.await(rootEnded).pipe(
+        Effect.andThen(Effect.sleep(ROOT_END_GRACE)),
+        Effect.as("root end"),
+      ),
     ).pipe(Effect.timeoutOption(STDOUT_DRAIN_CAP));
     logPerf(
       `exit→drained (${Option.getOrElse(drained, () => "cap")})`,
