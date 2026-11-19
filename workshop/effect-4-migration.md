@@ -66,3 +66,11 @@ Every example was run under both versions with the same virtual clock, and the t
 - **The timeout's work fiber is interrupted.** In `timeout`, the slow task's fiber ends with `fiber:interrupt` instead of `fiber:end` (see [Interruption](#interruption)).
 - **Interruption unwinds synchronously.** In `structuredInterruption`, `racing` and `deadlock`, an interrupted fiber resumes and ends while its interrupter is still running, so the interrupter's own suspend and resume around it are gone.
 - **A retry without a delay sleeps for zero.** `retry` shows a suspend and a resume between attempts (see [Retries](#retries)).
+
+## Seeing the changes in the app
+
+`traceChanges` in `src/lib/traceChanges.ts` reads a trace and returns each of these changes it can prove, with the rows that show it and the fibers involved. The Fiber Tree card puts them in front of the user. When a run shows at least one, a `v3 → v4 · N` button appears in the card's title row, N being the number of kinds found so far, so it grows as the run goes. In the phone's landscape tabs the title is hidden and the button floats top-right, like the Execution Log's options button.
+
+The button swaps the tree for "What changed in Effect 4": one entry per kind, each with what the Effect 4 trace shows and what Effect 3 did instead, from `src/lib/traceChangeText.ts`. Selecting an entry highlights its fibers, and the selection stays when the button goes back to the tree, so the highlighted fibers can be read in place. Each entry lists its rows by the numbers the Execution Log shows, skipping the rows its filters hide. Once the program is paused or finished, a row number scrolls the log to that row and highlights it; in the landscape tabs it also switches to the Execution Log tab. While the program runs the log follows the newest row, so the numbers stay inactive.
+
+Three small stores outside React carry this across layouts, since `VisualizerPanel` mounts the card and the log once per layout and CSS shows one of them: `useChangesPanel` holds the panel and its selection, keyed by the run's first event so a new run starts on the tree; `useLogTarget` holds the row asked for, which the next event drops; and `useVisualizerTab` holds the landscape tab.

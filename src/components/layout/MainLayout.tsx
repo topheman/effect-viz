@@ -496,6 +496,7 @@ export function MainLayout() {
             <div className="flex h-full flex-col">
               <div className="flex-1 overflow-hidden">
                 <VisualizerPanel
+                  playbackState={playbackState}
                   timelineDurationMs={
                     PROGRAM_TIMELINE_DURATION_MS[selectedProgram]
                   }
@@ -575,6 +576,7 @@ export function MainLayout() {
           <div className="flex h-full flex-col">
             <div className="flex-1 overflow-hidden">
               <VisualizerPanel
+                playbackState={playbackState}
                 timelineDurationMs={
                   PROGRAM_TIMELINE_DURATION_MS[selectedProgram]
                 }

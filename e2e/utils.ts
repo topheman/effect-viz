@@ -101,6 +101,14 @@ export const speedSelect = (page: Page) =>
 export const logOptions = (page: Page) =>
   onScreen(page.locator('[data-onboarding-step="logOptions"]'));
 
+/** The Fiber Tree's Effect 3 → 4 changes button, named after its count. */
+export const changesButton = (page: Page) =>
+  page.getByRole("button", { name: /^What changed in Effect 4/ });
+
+/** The Execution Log row a row link scrolled to. */
+export const targetedLogRow = (page: Page) =>
+  onScreen(page.locator("[data-targeted]"));
+
 /** Opens the explanation on the first log row that reads `text` and returns it. */
 export async function explainRow(page: Page, text: string) {
   const button = onScreen(page.getByText(text, { exact: true })).locator(

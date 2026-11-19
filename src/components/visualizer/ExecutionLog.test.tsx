@@ -10,6 +10,7 @@ import {
   vi,
 } from "vite-plus/test";
 
+import { clearLogTarget, targetLogRow } from "@/hooks/useLogTarget";
 import { resetLogView } from "@/hooks/useLogView";
 import { TraceStoreProvider, useTraceStore } from "@/stores/traceStore";
 import type { TraceEvent } from "@/types/trace";
@@ -71,6 +72,7 @@ function primaryPointer(pointer: "fine" | "coarse") {
 
 beforeEach(() => {
   resetLogView();
+  clearLogTarget();
   primaryPointer("fine");
 });
 
@@ -370,5 +372,55 @@ describe("ExecutionLog onboarding", () => {
 
     expect(trigger).not.toHaveClass("animate-onboarding-glow");
     localStorage.removeItem("effect-viz-onboarding");
+  });
+});
+
+describe("ExecutionLog linked row", () => {
+  beforeAll(() => {
+    Element.prototype.scrollTo ??= () => {};
+  });
+
+  /** Stands for another view linking to a row, then for the run going on. */
+  function Linker() {
+    const { events: trace, addEvent } = useTraceStore();
+    return (
+      <>
+        <button type="button" onClick={() => targetLogRow(trace, 2)}>
+          link
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            addEvent({ type: "fiber:suspend", fiberId: "#1", timestamp: 0 })
+          }
+        >
+          step
+        </button>
+      </>
+    );
+  }
+
+  const targetedRows = () =>
+    screen
+      .getAllByTestId("log-row")
+      .filter((row) => row.hasAttribute("data-targeted"))
+      .map((row) => row.textContent);
+
+  it("highlights the row another view links to, until the next event", async () => {
+    render(
+      <TraceStoreProvider>
+        <Seed />
+        <ExecutionLog />
+        <Linker />
+      </TraceStoreProvider>,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "link" }));
+    expect(targetedRows()).toEqual([
+      expect.stringContaining("fiber:forked #2 (parent #0)"),
+    ]);
+
+    await userEvent.click(screen.getByRole("button", { name: "step" }));
+    expect(targetedRows()).toEqual([]);
   });
 });
