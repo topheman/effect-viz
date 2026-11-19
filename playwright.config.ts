@@ -24,6 +24,9 @@ export default defineConfig({
   testDir: "e2e",
   fullyParallel: true,
   forbidOnly: true,
+  // Each worker boots its own WebContainer; past 4 the page's main thread
+  // starves and runs slow down without the suite finishing sooner.
+  workers: 4,
   // A retry in CI absorbs a slow StackBlitz boot; the report still marks the
   // test as flaky.
   retries: process.env.CI ? 1 : 0,
