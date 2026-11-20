@@ -46,8 +46,8 @@ const EVALUATE = "~effect/Effect/evaluate";
 
 /**
  * What a primitive returns to stop its fiber's run loop; Effect registers it
- * globally (`internal/core.ts`). No public type declares it, nor `IDENTIFIER` or
- * a fiber's `_yielded` below, which are read through casts.
+ * globally (`internal/core.ts`). No public type declares it, nor `IDENTIFIER`,
+ * nor a fiber's `_yielded` below, which are read through casts.
  */
 const YIELD = Symbol.for("effect/Effect/Yield");
 

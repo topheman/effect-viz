@@ -31,7 +31,8 @@ runtime code myself; that phase is over, and the rules below replace it.
 `timestamp`, in virtual milliseconds from the program's `Clock`. The tracer
 (`src/runtime/vizTracer.ts`) emits the span and fiber events; the
 `retryWithTrace`, `addFinalizerWithTrace` and `acquireReleaseWithTrace` wrappers
-(`src/runtime/tracedRunner.ts`) emit `retry:attempt`, `finalizer` and `acquire`.
+(`src/runtime/tracedRunner.ts`) emit `retry:attempt`, `finalizer` and `acquire`,
+and `retryWithTrace` its own `effect:start` and `effect:end`.
 
 ```ts
 type TraceEvent =
