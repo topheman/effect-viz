@@ -26,7 +26,7 @@ Each phase document covers:
 
 ### Version 1: Manual Instrumentation
 
-Learn Effect concepts through explicit tracing wrappers (`Effect.withSpan`, `sleepWithTrace`, etc.)
+Learn Effect concepts through explicit tracing: `Effect.withSpan`, and the `retryWithTrace`, `addFinalizerWithTrace` and `acquireReleaseWithTrace` wrappers.
 
 - [Phase 1: Lazy Evaluation](./phase-1.md) ✅
 - [Phase 2: Fibers](./phase-2.md) ✅
