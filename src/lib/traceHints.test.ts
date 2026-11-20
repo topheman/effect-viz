@@ -255,11 +255,11 @@ describe("traceHints", () => {
       resume("#0", 301),
     ];
     expect(hintsOf(events)).toEqual({
-      1: "The fiber gave up the thread and got it back at [3], in the same instant: nothing else was ready to run.",
+      1: "The fiber gave up the thread and got it back at [3]: nothing else was ready to run.",
     });
     const [[, hints]] = traceHints(events, { indentByFiber: false });
     expect(hintText(hints, () => undefined)).toBe(
-      "The fiber gave up the thread and got it back in the same instant: nothing else was ready to run.",
+      "The fiber gave up the thread and got it back straight away: nothing else was ready to run.",
     );
   });
 

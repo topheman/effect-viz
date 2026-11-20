@@ -115,11 +115,11 @@ export function traceHints(
           resumesAtOnce(event)
         ) {
           add(i, {
-            text: "The fiber gave up the thread and got it back at [N], in the same instant: nothing else was ready to run.",
+            text: "The fiber gave up the thread and got it back at [N]: nothing else was ready to run.",
             ref: {
               index: i + 1,
               whenHidden:
-                "The fiber gave up the thread and got it back in the same instant: nothing else was ready to run.",
+                "The fiber gave up the thread and got it back straight away: nothing else was ready to run.",
             },
           });
         } else if (!isQueueHandoff(i + 1)) {
