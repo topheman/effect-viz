@@ -84,8 +84,9 @@ test("a phone in landscape follows a change's row to the log tab", async ({
   await expect(logRow(page, 2)).toBeInViewport();
 });
 
-// WebKit resumes a yielded fiber well after its suspend, so the trace must say
-// why a fiber suspends rather than leave it to timestamps.
+// On the fallback path a yielded fiber can resume well after its suspend
+// (always in WebKit, under load in Chromium), so the trace must say why a fiber
+// suspends rather than leave it to timestamps.
 test("a phone shows the change Cooperative Interleaving makes", async ({
   page,
 }) => {
