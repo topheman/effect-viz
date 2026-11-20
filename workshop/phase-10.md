@@ -2,7 +2,7 @@
 
 **Status**: ✅ COMPLETE — all steps done. Follow-up work continues in [#18](https://github.com/topheman/effect-viz/issues/18) (Effect upgrade + trace audit)
 
-Steps 1 to 6 were built on Effect 3 and record that runtime (`Supervisor`, `Layer.setClock`); [ARCHITECTURE.md](./ARCHITECTURE.md) describes the design under Effect 4.
+Steps 1 to 6 were built on Effect 3 and record that runtime: `Supervisor`, `Layer.setClock`, a `shouldYield` that could not answer yes while paused, and a paused start that yielded before the program body. Step 7 describes the paused start under Effect 4, and [effect-4-migration.md](./effect-4-migration.md#scheduling) explains why the gate can answer yes there; [ARCHITECTURE.md](./ARCHITECTURE.md) describes the design under Effect 4.
 
 Issue [#13](https://github.com/topheman/effect-viz/issues/13) asks for a slow mode:
 _"It goes too fast so a slow stepper would be cool like Browser Debugger is."_

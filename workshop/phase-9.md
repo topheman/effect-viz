@@ -18,7 +18,7 @@ Effect's `Effect.retry(effect, schedule)` uses a **Schedule** to control retry p
 
 **Public APIs** match Effect's naming so programs feel native: `retry`, `addFinalizer`, `acquireRelease`.
 
-**Private APIs** (EffectViz internals: trace emitter, viz layers, tracer, runProgramFork) are prefixed with `_` so they don't clash with user imports from `@/runtime`.
+**Private APIs** (EffectViz internals: trace emitter, `withViz`, `runProgramFork`, scheduler, stepper, control channel) are prefixed with `_` so they don't clash with user imports from `@/runtime`.
 
 ## Implementation
 

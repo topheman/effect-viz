@@ -51,8 +51,8 @@ Invoked by the `/resume` skill (Claude Code) at the start of a fresh session.
 
 1. **[`MEMORY.md`](MEMORY.md)** ⭐ **START HERE**
    - Current phase and progress
-   - What's completed, what's next
-   - Key files and learning outcomes
+   - What's completed, design decisions
+   - Key files (learning outcomes live in each `workshop/phase-N.md`)
 
 2. **[`workshop/README.md`](workshop/README.md)**
    - Documentation structure

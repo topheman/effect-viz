@@ -4,7 +4,7 @@
 
 ## Current Phase
 
-**Effect 4**: the project runs on `effect` 4.1.4, on both run paths. Phases 1 to 11 were written on Effect 3 and their docs stay the record of each phase as it was built; [`workshop/effect-4-migration.md`](workshop/effect-4-migration.md) says what Effect 4 changed in the runtime, the traces and the app, and [`workshop/ARCHITECTURE.md`](workshop/ARCHITECTURE.md) describes the design as it is now.
+**Effect 4**: the project runs on `effect` 4.1.4, on both run paths. Phases 1 to 11 were written on Effect 3 and their docs record each phase as it was built, except phase 9's retry loop and phase 10's paused start, which describe the current code; [`workshop/effect-4-migration.md`](workshop/effect-4-migration.md) says what Effect 4 changed in the runtime, the traces and the app, and [`workshop/ARCHITECTURE.md`](workshop/ARCHITECTURE.md) describes the design as it is now.
 
 **Phase 11**: COMPLETE ✅ — speed is live during a run. The rate travels on the control channel alongside pause, resume and step, so a running program is retuned where it stands and a paused one resumes at the rate chosen while it was frozen. `VIZ_RATE` still sets the rate a run opens at.
 
@@ -46,7 +46,7 @@
 - `src/services/webcontainer.ts` - WebContainer service and `RUNNER_JS`
 - `src/types/trace.ts` - `TraceEvent` definitions
 - `src/stores/traceStore.tsx`, `src/stores/fiberStore.tsx` - event state, fiber state
-- `src/hooks/useEventHandlers.ts` - Play/Step/Reset on the fallback path
+- `src/hooks/useEventHandlers.ts` - Play/Step/Reset on both paths
 - `src/lib/programs.ts` - example programs with their source
 - `src/lib/traceHints.ts`, `src/lib/traceChanges.ts` - log hints, Effect 3 → 4 changes
 - `src/lib/mirroredClock.ts`, `src/lib/containerController.ts` - the page's side of the control channel
