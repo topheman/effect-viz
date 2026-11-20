@@ -10,7 +10,7 @@ The editor's type information moves too. Effect 4's declarations sit directly in
 
 ## Running a program
 
-`withViz` in `runProgram.ts` wraps the program in every service the visualizer needs, and `runProgramFork` starts the result with `Effect.runFork` and turns its exit into a promise. The services are plain `Effect.provideService` calls: Effect 4 reads the `Scheduler`, `Clock` and `Tracer` from the fiber's context, so there is no `withScheduler`, `Layer.setClock` or `Supervisor` to install any more. The tracer is outermost, so it sees the root fiber's very first primitive, before any layer is built.
+`withViz` in `runProgram.ts` wraps the program in every service the visualizer needs, and `runProgramFork` starts the result with `Effect.runFork` and turns its exit into a promise. The services are plain `Effect.provideService` calls: Effect 4 reads the `Scheduler`, `Clock` and `Tracer` from the fiber's context, so there is no `withScheduler`, `Layer.setClock` or `Supervisor` to install any more. The tracer is outermost, so it is in place before the scheduler, the clock and any layer.
 
 Fibers are numbered by a single global counter: `fiber.id` is a number, and the visualizer prints it as `#N`. A fresh WebContainer process starts its root at `#1`; the in-browser path carries on from whatever the page has already run.
 
@@ -31,6 +31,8 @@ Fibers that build the program's layers are still left out. Under Effect 3 they w
 
 Effect 4's `Scheduler` makes one dispatcher per fiber, takes continuations as tasks through `scheduleTask`, and answers `shouldYield` before each operation. `GatedScheduler` owns both: playing, it forwards everything to Effect's `MixedScheduler`; paused, it queues tasks and answers `shouldYield` with yes, so every fiber, whatever woke it, runs one operation and hands itself back to the queue.
 
+Answering yes while paused is what makes a paused program hold still, and it only works because of how the run loop resumes. A fiber the scheduler made yield comes back with `_autoYielded` set, and its run loop evaluates one primitive before it asks `shouldYield` again. A released task therefore always moves its fiber one operation forward before the gate takes it back. Without that, a released fiber would ask before doing anything, be told to yield, and queue the same task again, and the stepper would release it forever.
+
 That forced yield is invisible to the tracer: the run loop schedules the continuation without going through `Tracer.context`, so it is neither a suspend nor a resume. It does change the order of the queue, though. At full speed the yielding fiber would have kept running, so `GatedScheduler` puts its continuation ahead of the tasks already waiting, and stepping a paused program shows the same order as playing it. A step still releases tasks until the trace moves, and advances virtual time when nothing is runnable.
 
 ## Time and sleep
@@ -39,9 +41,11 @@ That forced yield is invisible to the tracer: the run loop schedules the continu
 
 ## Interruption
 
-Interruption is now synchronous. `Fiber.interrupt` calls the target's `interruptUnsafe`, and when the target is suspended it evaluates the interruption right there, inside the interrupting fiber's primitive. The target unwinds, runs its finalizers and interrupts its own children before `Fiber.interrupt` returns, so the interrupter never suspends to wait for it. In the trace, the interrupted fiber resumes, unwinds and ends while its interrupter is still running, and the interrupter carries on without a resume of its own.
+Interruption can complete synchronously. `Fiber.interrupt` calls the target's `interruptUnsafe`, and when the target is suspended it evaluates the interruption right there, inside the interrupting fiber's primitive. Then `Fiber.interrupt` waits for the target's exit with `fiberAwait`, which returns at once when the exit is already there. So when the target's cleanup is synchronous, it unwinds, runs its finalizers and interrupts its own children before `interruptUnsafe` returns, and the interrupter never suspends. In the trace, the interrupted fiber resumes, unwinds and ends while its interrupter is still running, and the interrupter carries on without a resume of its own. Racing, Timeout and Structured Interruption all interrupt this way.
 
-An interrupted fiber still ends with `fiber:interrupt`. One fiber ends differently, though: `Effect.timeout` now races the work against the deadline, so a work fiber that misses its deadline is interrupted and ends with `fiber:interrupt`, where Effect 3 reported it as ended.
+When the target cannot end on the spot, the interrupter waits as it did under Effect 3. A finalizer that sleeps or awaits something leaves the target unfinished when `interruptUnsafe` returns, and so does a target running uninterruptibly, which only records the interruption for later. `fiberAwait` then suspends the interrupter until the target's observer fires.
+
+An interrupted fiber still ends with `fiber:interrupt`. The work fiber of `Effect.timeout` that misses its deadline is one of them, which it was not under Effect 3. Both versions race the work against a sleep, but Effect 3 ran the work wrapped in `Effect.exit` under `uninterruptibleMask`, so its fiber ended normally and the trace showed `fiber:end`. Effect 4's `timeoutOption` is a plain `raceFirst` of the work against the sleep, and the work fiber that loses is interrupted like any race loser.
 
 ## Scopes and finalizers
 
@@ -49,7 +53,7 @@ An interrupted fiber still ends with `fiber:interrupt`. One fiber ends different
 
 ## Retries
 
-`Schedule.driver` is gone. `retryWithTrace` steps through the schedule with `Schedule.toStepWithSleep`, which consumes one error, sleeps for the delay the schedule computed and fails once the schedule is done. That sleep happens even when the delay is zero, as with `Schedule.recurs`, and a zero sleep still suspends the fiber until the clock fires it. Each retry without a delay therefore shows a suspend and a resume between two attempts, which Effect 3 skipped.
+`Schedule.driver` is gone. `retryWithTrace` steps through the schedule with `Schedule.toStepWithSleep`, which consumes one error, sleeps for the delay the schedule computed and fails once the schedule is done. That sleep happens even when the delay is zero, as with `Schedule.recurs`. Effect's default `Clock` turns a sleep of zero into `Effect.yieldNow`; the visualizer's `vizClock` starts a timer of zero on the virtual clock instead, and the fiber stays suspended until that timer fires. Each retry without a delay therefore shows a suspend, with a sleep of 0 ms as its reason, and a resume between two attempts, which Effect 3 skipped.
 
 ## Tracing
 

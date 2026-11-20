@@ -6,9 +6,9 @@
 
 Effect's `Effect.retry(effect, schedule)` uses a **Schedule** to control retry policy: how many times to retry, delays between attempts, and when to stop. The Schedule consumes the error and decides whether to continue (with optional delay) or stop.
 
-### Schedule.driver for Manual Control
+### Stepping through the schedule by hand
 
-`Schedule.driver(schedule)` returns a driver that lets us step through the schedule manually. We use a loop instead of `Effect.retry` so we can emit `retry:attempt` after each failure before retrying. The driver's `next(error)` returns an Effect that sleeps for the schedule's delay (if any) and yields the next output, or fails when the schedule is exhausted.
+`Schedule.toStepWithSleep(schedule)` turns the schedule into a step function that we call ourselves. We use a loop instead of `Effect.retry` so we can emit `retry:attempt` after each failure before retrying. The step takes the error, sleeps for the delay the schedule computed and returns its output, or fails once the schedule is done. It sleeps even when the delay is zero, as with `Schedule.recurs`, so each retry shows a suspend with a 0 ms sleep as its reason (see [effect-4-migration.md](./effect-4-migration.md#retries)).
 
 ### Same API as Effect.retry
 
@@ -24,12 +24,11 @@ Effect's `Effect.retry(effect, schedule)` uses a **Schedule** to control retry p
 
 ### Created/Modified Files
 
-| File                          | Changes                                                                                                                                   |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/runtime/tracedRunner.ts` | `retryWithTrace(effect, schedule, label)`; use `Schedule.driver` + loop; keep `emitStart`/`emitEnd`/`emitRetry` (same id for association) |
-| `src/runtime/index.ts`        | Export `retryWithTrace as retry` so programs use plain `retry`                                                                            |
-| `src/lib/programs.ts`         | `retry(flakyEffect, Schedule.recurs(3), "flaky-task")`; exponential backoff with `Schedule.addDelay(Schedule.recurs(5), ...)`             |
-| `public/fallback-types.d.ts`  | Add minimal Schedule types (`Schedule.recurs`, `Schedule.addDelay`) for fallback runtime                                                  |
+| File                          | Changes                                                                                                                                     |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/runtime/tracedRunner.ts` | `retryWithTrace(effect, schedule, label)`; `Schedule.toStepWithSleep` + loop; `emitStart`/`emitEnd`/`emitRetry` share one id                |
+| `src/runtime/index.ts`        | Export `retryWithTrace as retry` so programs use plain `retry`                                                                              |
+| `src/lib/programs.ts`         | `retry(flakyEffect, Schedule.recurs(3), "flaky-task")`; backoff with `Schedule.exponential("100 millis")` and `Schedule.upTo({ times: 5 })` |
 
 ### Key Function
 
@@ -46,13 +45,13 @@ export function retryWithTrace<A, E, R, X, R2>(
 
 1. Run effect
 2. On success: emit `effect:end`, return
-3. On failure: `driver.next(error)` — if success (schedule says continue), emit `retry:attempt`, loop; if failure (schedule exhausted), emit `effect:end` (failure), fail
+3. On failure: `step(error)` — if it succeeds (the schedule continues), emit `retry:attempt` and loop; if it fails (the schedule is done), emit `effect:end` (failure) and fail
 
 ## Key Learnings
 
 ### Schedule Consumes the Error
 
-The Schedule type is `Schedule<Out, In, R>`. For retry, `In` is the error type `E`. Each failure is fed to `driver.next(error)`; the schedule decides whether to continue or stop.
+The Schedule type is `Schedule<Out, In, R>`. For retry, `In` is the error type `E`. Each failure is fed to `step(error)`; the schedule decides whether to continue or stop.
 
 ### Keep TraceEmitter for Span Association
 
@@ -61,12 +60,13 @@ We keep `emitStart`, `emitEnd`, and `emitRetry` so all share the same `id`. This
 ### Built-in Schedules
 
 - `Schedule.recurs(n)` — recurs `n` times (equivalent to `n` retries)
-- `Schedule.addDelay(schedule, f)` — adds delay between attempts; use `"100 millis"` or `"1 second"` for timeline visibility
+- `Schedule.exponential(base)` — delays that double from `base`, forever; `"100 millis"` keeps them visible on the timeline
+- `Schedule.upTo({ times: n })` — stops a schedule after `n` recurrences
 
 ## Example Programs
 
 - **Retry** (`retry`): Ref-backed effect that fails on attempts 1 and 2, succeeds on 3; `retry(flakyEffect, Schedule.recurs(3), "flaky-task")` — two `retry:attempt` lines then `effect:end` success.
-- **Retry (Exponential Backoff)** (`retryExponentialBackoff`): Same as Retry but with `Schedule.addDelay(Schedule.recurs(5), (n) => ...)` — 100ms, 200ms, 400ms, ... between attempts; timeline shows fiber:suspend during delays.
+- **Retry (Exponential Backoff)** (`retryExponentialBackoff`): Fails four times, then succeeds, under `Schedule.exponential("100 millis").pipe(Schedule.upTo({ times: 5 }))` — 100ms, 200ms, 400ms, 800ms between attempts; the timeline shows `fiber:suspend` during the delays.
 
 ## What's Next
 

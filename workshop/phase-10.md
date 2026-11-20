@@ -2,6 +2,8 @@
 
 **Status**: ✅ COMPLETE — all steps done. Follow-up work continues in [#18](https://github.com/topheman/effect-viz/issues/18) (Effect upgrade + trace audit)
 
+Steps 1 to 6 were built on Effect 3 and record that runtime (`Supervisor`, `Layer.setClock`); [ARCHITECTURE.md](./ARCHITECTURE.md) describes the design under Effect 4.
+
 Issue [#13](https://github.com/topheman/effect-viz/issues/13) asks for a slow mode:
 _"It goes too fast so a slow stepper would be cool like Browser Debugger is."_
 
@@ -110,18 +112,18 @@ only be inferred by elimination.
 
 ## Implementation Steps
 
-| #   | Step                                                | Status |
-| --- | --------------------------------------------------- | ------ |
-| 1   | `VirtualClock` — shared virtual time source         | ✅     |
-| 2   | Effect `Clock` layer built on `VirtualClock`        | ✅     |
-| 3   | `Date` shim in the WebContainer runner              | ✅     |
-| 3b  | Virtual timestamps at every emit site               | ✅     |
-| 4a  | Gated `Scheduler` + step ladder                     | ✅     |
-| 4b  | Control channel for the WebContainer                | ✅     |
-| 5a  | UI: speed combo + playback state matrix             | ✅     |
-| 5b  | UI: ⏯️ ⏭️ stepper controls (fallback path)          | ✅     |
-| 6   | Example programs + explainers                       | ✅     |
-| 7   | Tag instrumentation events, with a show/hide toggle | ✅     |
+| #   | Step                                         | Status |
+| --- | -------------------------------------------- | ------ |
+| 1   | `VirtualClock` — shared virtual time source  | ✅     |
+| 2   | Effect `Clock` layer built on `VirtualClock` | ✅     |
+| 3   | `Date` shim in the WebContainer runner       | ✅     |
+| 3b  | Virtual timestamps at every emit site        | ✅     |
+| 4a  | Gated `Scheduler` + step ladder              | ✅     |
+| 4b  | Control channel for the WebContainer         | ✅     |
+| 5a  | UI: speed combo + playback state matrix      | ✅     |
+| 5b  | UI: ⏯️ ⏭️ stepper controls (fallback path)   | ✅     |
+| 6   | Example programs + explainers                | ✅     |
+| 7   | Paused start, control channel toggle         | ✅     |
 
 ## Step 1: VirtualClock ✅
 
@@ -828,106 +830,50 @@ replies are consumed where stdout is demultiplexed and never reach the trace
 store, so there is nothing to hide. What the channel did add is of a different
 kind: the terminal echoes every command back as console output.
 
-## Step 7: Origin tagging and the internals toggle ✅
+## Step 7: A paused start, and the control channel toggle ✅
 
-Two things in the visualizer are the tool talking rather than the program, and
-both were showing up as though the program had done them.
+Two things in the visualizer could make the tool look like the program: the way a run starts paused, and the commands the page sends the WebContainer.
 
-A paused start injects `Effect.yieldNow()` before the program body, so that the
-very first operation is handed to the gate rather than running on the fork's own
-stack. The runtime yields for real, so the Supervisor emits a `fiber:suspend` and
-a matching `fiber:resume (after 0ms)` that the program's author never wrote. The
-same program therefore reads slightly differently depending on whether it was
-started with Play or with Step. For the Basic Example, the marked lines are the
-injected yield:
+A run started with Step must hold the program before its first operation, yet trace the same as a run started with Play. The gate is closed before the program is forked, in both `useEventHandlers` and `RUNNER_JS`. `withViz` installs the tracer outside the scheduler, so the first primitive the tracer sees is the one that installs the gated scheduler: it runs inside `runFork`, and the tracer discovers the root and emits its fork. Before the next primitive, the run loop asks the gate's `shouldYield`, which answers yes while paused, and the root hands its continuation to the queue. That forced yield goes through no primitive, so the tracer sees neither a suspend nor a resume: the log opens with the root's fork alone, and the first step shows the program's first span.
 
-```diff
-[1] ⚡fiber:forked #2 (root)
-+ [2] ⏸️fiber:suspend #2
-+ [3] ▶️fiber:resume #2 (after 0ms)
-[4] 🚀effect:started initialization
-[5] ✅effect:ended initialization
+```
+[1] ⚡fiber:forked #1 (root)              ← paused here
+[2] 🚀effect:started initialization       ← first step
 ```
 
-`[2]` is the yield handing control back, `[3]` is the same yield returning once
-the first step releases it. It reads `after 0ms` because virtual time is frozen
-while paused, however long the user takes.
-
-The second is in the console rather than the trace. Every WebContainer process
-has a pseudoterminal attached, and a terminal echoes what is written to it, so
-each `{"cmd":"step"}` the page sends comes straight back on the process's output
-and lands in the log as though the program had printed it.
-
-Rather than choose between leaving them visible and filtering them away, both are
-tagged and the user decides.
+The console is the other case. Every WebContainer process has a pseudoterminal attached, and a terminal echoes what is written to it, so each `{"cmd":"step"}` the page sends comes straight back on the process's output, as though the program had printed it. Those lines are tagged and hidden unless the user asks for them.
 
 ### Created/Modified Files
 
-| File                                              | Changes                                                  |
-| ------------------------------------------------- | -------------------------------------------------------- |
-| `src/types/trace.ts`                              | `TraceOrigin`, `TraceEvent & { origin? }`, `isToolEvent` |
-| `src/runtime/traceOrigin.ts`                      | `makeOriginTagger` — finds the injected yield            |
-| `src/runtime/traceOrigin.test.ts`                 | 7 tests                                                  |
-| `src/hooks/useShowInternals.ts`                   | One preference, shared by both panels                    |
-| `src/effects/spawnAndParse.ts`                    | `onStdout` gains an origin; echoed commands classified   |
-| `src/components/visualizer/ExecutionLog.tsx`      | Filter, toggle, dimmed tool rows                         |
-| `src/components/editor/WebContainerLogsPanel.tsx` | Filter and toggle for control lines                      |
+| File                                              | Changes                                                       |
+| ------------------------------------------------- | ------------------------------------------------------------- |
+| `src/runtime/pausedStart.test.ts`                 | A paused run logs only the root's fork, then traces like Play |
+| `src/types/trace.ts`                              | `TraceOrigin`: who wrote a console line                       |
+| `src/effects/spawnAndParse.ts`                    | `onStdout` gains an origin; echoed commands are `"tool"`      |
+| `src/hooks/useShowInternals.ts`                   | The console's toggle, persisted                               |
+| `src/components/editor/WebContainerLogsPanel.tsx` | Hides `control` lines unless shown                            |
 
 ### Key Learnings
 
-#### Position identifies the yield, because nothing in the event does
+#### The gate holds the root without touching the program
 
-A yield is a yield: the pair the injection produces is indistinguishable from one
-the program earned, and the Supervisor reports both the same way. What we do know
-is where it sits — it is the first thing the root fiber does, because we put it
-there.
-
-So the tagger is a small state machine over the emit path. It learns the root's
-id from the first `fiber:fork` (the two runtimes number fibers differently, so it
-cannot be hardcoded), expects a suspend from that fiber, then its resume, and
-disarms. Anything else from the root — or any event naming no fiber at all, which
-means the program is already working — disarms it too, so a suspend the program
-earned is never hidden. A run started with Play arms nothing.
-
-#### Absent means the program's
-
-`origin` is optional and only ever set to `"tool"`. Every existing emit site, test
-and fixture keeps working untouched, and the common case stays unannotated. The
-filter asks `origin === "tool"`, so anything unrecognised is shown rather than
-hidden — the safe direction for a filter whose job is to hide things.
+Nothing is added to the program to start it paused. The fork shows because the tracer is in place one primitive before the gate is; everything after that primitive waits for a step. `pausedStart.test.ts` runs the Basic Example and Logger (custom requirements) on both paths, started paused and stepped to the end, and compares the trace with a run started with Play: they are identical, and no step shows more than one span event.
 
 #### The echo classifies itself
 
-Nothing else writes to that process's stdin, so a console line that `decodeCommand`
-accepts is one we sent. No heuristics, and no need for a second prefix on the way
-down.
+Nothing else writes to that process's stdin, so a console line that `decodeCommand` accepts is one the page sent. No heuristics, and no need for a second prefix on the way down. `spawnAndParse` reports it with the origin `"tool"`, the console stores it under the `control` label, and the panel offers "show control channel" when there is at least one.
 
-#### One preference, two panels
+#### The preference outlives a reload
 
-The Execution Log and the console ask independently but must agree, so the
-preference lives outside React in a module-level store read through
-`useSyncExternalStore`. From the user's side it is one question — am I looking at
-my program, or at the tool — and two checkboxes for it would have been two ways to
-ask the same thing.
-
-The Timeline and Fiber Tree still consume everything. A suspend that genuinely
-happened belongs on a timeline whoever caused it, and a fiber tree with a hole in
-it would be worse than one showing an extra yield.
+`useShowInternals` keeps the choice in a module store read through `useSyncExternalStore`, and in `localStorage`. Someone who turned the control channel on is usually looking into how the tool works, and will want it again.
 
 ### Verification
 
-Running the built runner under Node against the same program, once started paused
-and once with Play, gives traces that differ only by the tagged pair: the paused
-run marks the first suspend and resume `tool` and leaves the program's own sleep
-pairs alone, and the Play run tags nothing because nothing was injected.
+`pausedStart.test.ts` covers the start, and the end-to-end test "Step from idle starts the run paused, with only its root forked" checks the same on the page: one row after the first click, `effect:started` as the second row after the next.
 
 ### What this unlocks
 
-A trace that reads the same however the run was started, and a console showing the
-program's output rather than the protocol — with both available to anyone who
-wants to see how the visualizer works. That last part is worth keeping for step 6:
-turning the internals on and stepping is the clearest explanation of the control
-channel the app can give.
+A trace that reads the same however the run was started, and a console showing the program's output rather than the protocol, with the protocol one click away. That last part is worth keeping for step 6: turning the control channel on and stepping is the clearest explanation of how the page drives the container.
 
 ## Step 6: Example programs ✅
 
