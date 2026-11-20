@@ -27,15 +27,28 @@ runtime code myself; that phase is over, and the rules below replace it.
 
 ## Trace Event Model
 
+`src/types/trace.ts` holds the full type. Every event also carries a
+`timestamp`, in virtual milliseconds from the program's `Clock`. The tracer
+(`src/runtime/vizTracer.ts`) emits the span and fiber events; the
+`retryWithTrace`, `addFinalizerWithTrace` and `acquireReleaseWithTrace` wrappers
+(`src/runtime/tracedRunner.ts`) emit `retry:attempt`, `finalizer` and `acquire`,
+and `retryWithTrace` its own `effect:start` and `effect:end`.
+
 ```ts
 type TraceEvent =
-  | { type: "effect:start"; id: string; label: string }
-  | { type: "effect:end"; id: string; result: "success" | "failure" | "interrupted" }
-  | { type: "fiber:fork"; fiberId: string; parentId?: string }
+  | { type: "effect:start"; id: string; fiberId: string; label: string }
+  | { type: "effect:end"; id: string; fiberId: string; result: "success"; value: unknown }
+  | { type: "effect:end"; id: string; fiberId: string; result: "failure"; error: unknown }
+  | { type: "effect:end"; id: string; fiberId: string; result: "interrupted" }
+  | { type: "fiber:fork"; fiberId: string; parentId?: string; label: string }
   | { type: "fiber:end"; fiberId: string; result: "success" | "failure" }
   | { type: "fiber:interrupt"; fiberId: string }
   | { type: "fiber:suspend"; fiberId: string; reason: SuspendReason }
-  | { type: "sleep:end"; fiberId: string }
+  | { type: "fiber:resume"; fiberId: string }
+  | { type: "retry:attempt"; id: string; fiberId: string; label: string; attempt: number; lastError: unknown }
+  | { type: "finalizer"; id: string; fiberId: string; label: string }
+  | { type: "acquire"; id: string; fiberId: string; label: string; result: "success" }
+  | { type: "acquire"; id: string; fiberId: string; label: string; result: "failure"; error: unknown }
 
 type SuspendReason =
   | { kind: "yield" }
