@@ -8,6 +8,7 @@ import {
   vi,
 } from "vite-plus/test";
 
+import { SleepLog } from "@/runtime/fiberLifecycle";
 import { VirtualClock, type VirtualClockHost } from "@/runtime/virtualClock";
 import { makeVizClock } from "@/runtime/vizClock";
 
@@ -21,7 +22,10 @@ const fakeHost: VirtualClockHost = {
 
 function setup(rate: number) {
   const virtual = new VirtualClock({ rate, origin: 0, host: fakeHost });
-  const withClock = Effect.provideService(Clock.Clock, makeVizClock(virtual));
+  const withClock = Effect.provideService(
+    Clock.Clock,
+    makeVizClock(virtual, new SleepLog()),
+  );
   const run = <A>(effect: Effect.Effect<A>) =>
     Effect.runPromise(withClock(effect));
   const fork = <A>(effect: Effect.Effect<A>) =>

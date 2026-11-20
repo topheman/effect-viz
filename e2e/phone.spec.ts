@@ -84,6 +84,20 @@ test("a phone in landscape follows a change's row to the log tab", async ({
   await expect(logRow(page, 2)).toBeInViewport();
 });
 
+// WebKit resumes a yielded fiber well after its suspend, so the trace must say
+// why a fiber suspends rather than leave it to timestamps.
+test("a phone shows the change Cooperative Interleaving makes", async ({
+  page,
+}) => {
+  await openApp(page);
+  await startProgram(page, "interleaving");
+  await expect(playbackStatus(page)).toHaveText("finished", {
+    timeout: 30_000,
+  });
+
+  await expect(changesButton(page)).toHaveText(/v3 → v4 · 1/);
+});
+
 test("a phone opens the version pill", async ({ page }) => {
   await openApp(page);
   await page.getByRole("button", { name: /^Effect \d/ }).tap();

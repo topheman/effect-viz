@@ -200,7 +200,12 @@ describe("ExecutionLog hints", () => {
 
   it("names a row a hint points at by its visible number, or not at all when it is hidden", async () => {
     const handoff: TraceEvent[] = [
-      { type: "fiber:suspend", fiberId: "#0", timestamp: 0 },
+      {
+        type: "fiber:suspend",
+        fiberId: "#0",
+        reason: { kind: "yield" },
+        timestamp: 0,
+      },
       { type: "fiber:resume", fiberId: "#1", timestamp: 0 },
     ];
     render(
@@ -233,12 +238,22 @@ describe("ExecutionLog hints", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows how long a fiber was parked unless it resumed in the same instant", () => {
+  it("shows how long a fiber was parked unless it only yielded", () => {
     const resumes: TraceEvent[] = [
-      { type: "fiber:suspend", fiberId: "#0", timestamp: 0 },
-      { type: "fiber:resume", fiberId: "#0", timestamp: 1 },
-      { type: "fiber:suspend", fiberId: "#0", timestamp: 1 },
-      { type: "fiber:resume", fiberId: "#0", timestamp: 301 },
+      {
+        type: "fiber:suspend",
+        fiberId: "#0",
+        reason: { kind: "yield" },
+        timestamp: 0,
+      },
+      { type: "fiber:resume", fiberId: "#0", timestamp: 15 },
+      {
+        type: "fiber:suspend",
+        fiberId: "#0",
+        reason: { kind: "sleep", duration: 300 },
+        timestamp: 15,
+      },
+      { type: "fiber:resume", fiberId: "#0", timestamp: 315 },
     ];
     render(
       <TraceStoreProvider>
@@ -391,7 +406,12 @@ describe("ExecutionLog linked row", () => {
         <button
           type="button"
           onClick={() =>
-            addEvent({ type: "fiber:suspend", fiberId: "#1", timestamp: 0 })
+            addEvent({
+              type: "fiber:suspend",
+              fiberId: "#1",
+              reason: { kind: "wait" },
+              timestamp: 0,
+            })
           }
         >
           step

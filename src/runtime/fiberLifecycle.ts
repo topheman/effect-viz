@@ -23,6 +23,11 @@
  *   done yields its `Exit`, and is not suspended: the runtime may still
  *   evaluate it once more, to interrupt the children it leaves, before it
  *   ends. Otherwise the fiber's next primitive is its resume.
+ * - **Suspend reason**: the primitive that stopped the fiber tells a yield
+ *   (`Effect.yieldNow`'s op) from a wait; a wait is a sleep when the Clock
+ *   started a timer for that fiber inside the same primitive (`SleepLog`, which
+ *   `vizClock.ts` writes). Timestamps cannot tell them apart: a busy main
+ *   thread resumes a yield tens of milliseconds after its suspend.
  *
  * The run loop skips the tracer when the scheduler asks a fiber to yield, so a
  * forced yield (`Scheduler.shouldYield`) is neither a suspend nor a resume here:
@@ -32,7 +37,7 @@ import { Cause, Context, Exit, Fiber } from "effect";
 import type { Tracer } from "effect";
 
 import type { Now } from "@/runtime/virtualClock";
-import type { TraceEvent } from "@/types/trace";
+import type { SuspendReason, TraceEvent } from "@/types/trace";
 
 type AnyFiber = Fiber.Fiber<unknown, unknown>;
 
@@ -45,6 +50,9 @@ const EVALUATE = "~effect/Effect/evaluate";
  * (`internal/core.ts`).
  */
 const YIELD = Symbol.for("effect/Effect/Yield");
+
+/** The op a primitive is built with; `Effect.yieldNow`'s is `"Yield"` (`internal/effect.ts`). */
+const IDENTIFIER = "~effect/Effect/identifier";
 
 /** What a fiber handed the run loop with its last `Yield`; an `Exit` when it is done (`FiberImpl.yieldWith`). */
 const yieldedValue = (fiber: AnyFiber): unknown =>
@@ -75,6 +83,27 @@ export const InProgram = Context.Reference<boolean>("effect-viz/InProgram", {
 const isLayerBuild = (fiber: AnyFiber): boolean =>
   !Context.get(fiber.context, InProgram);
 
+/**
+ * The sleeps the Clock starts, by the fiber that starts them: what tells a
+ * fiber suspended on a timer from one waiting on anything else.
+ */
+export class SleepLog {
+  readonly #durations = new WeakMap<AnyFiber, number>();
+
+  /** Records a sleep of `durationMs` virtual ms, started by the running fiber. */
+  started(durationMs: number): void {
+    const fiber = Fiber.getCurrent();
+    if (fiber) this.#durations.set(fiber, durationMs);
+  }
+
+  /** The sleep `fiber` started since the last call, which this forgets. */
+  take(fiber: AnyFiber): number | undefined {
+    const duration = this.#durations.get(fiber);
+    this.#durations.delete(fiber);
+    return duration;
+  }
+}
+
 export interface FiberLifecycle {
   /** `Tracer.context`: evaluates the primitive and records what it did to its fiber. */
   readonly context: NonNullable<Tracer.Tracer["context"]>;
@@ -83,6 +112,7 @@ export interface FiberLifecycle {
 export function makeFiberLifecycle(
   onEmit: (event: TraceEvent) => void,
   now: Now,
+  sleeps: SleepLog,
 ): FiberLifecycle {
   /** Whether each known fiber is between a resume and a suspend. */
   const running = new Map<AnyFiber, boolean>();
@@ -159,6 +189,8 @@ export function makeFiberLifecycle(
       });
     }
 
+    // A sleep from an earlier primitive that resumed at once is not this one's.
+    sleeps.take(fiber);
     stack.push(fiber);
     let result: X;
     try {
@@ -175,6 +207,7 @@ export function makeFiberLifecycle(
         onEmit({
           type: "fiber:suspend",
           fiberId: fiberLabel(fiber),
+          reason: suspendReason(primitive, sleeps.take(fiber)),
           timestamp: now(),
         });
       }
@@ -199,4 +232,19 @@ export function makeFiberLifecycle(
   };
 
   return { context };
+}
+
+/** Why a fiber stopped on `primitive`, given the sleep it started there, if any. */
+function suspendReason(
+  primitive: Tracer.EffectPrimitive<unknown>,
+  sleep: number | undefined,
+): SuspendReason {
+  if (
+    (primitive as unknown as Record<string, unknown>)[IDENTIFIER] === "Yield"
+  ) {
+    return { kind: "yield" };
+  }
+  return sleep === undefined
+    ? { kind: "wait" }
+    : { kind: "sleep", duration: sleep };
 }

@@ -35,7 +35,12 @@ const twoChanges: TraceEvent[] = [
   fork("#1"),
   fork("#2", "#1"),
   { type: "fiber:resume", fiberId: "#2", timestamp: 0 },
-  { type: "fiber:suspend", fiberId: "#1", timestamp: 0 },
+  {
+    type: "fiber:suspend",
+    fiberId: "#1",
+    reason: { kind: "sleep", duration: 0 },
+    timestamp: 0,
+  },
   { type: "fiber:resume", fiberId: "#1", timestamp: 0 },
   {
     type: "retry:attempt",

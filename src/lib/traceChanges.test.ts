@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import type { TraceEvent } from "@/types/trace";
+import type { SuspendReason, TraceEvent } from "@/types/trace";
 
 import { traceChanges } from "./traceChanges";
 
@@ -11,9 +11,20 @@ const fork = (fiberId: string, parentId?: string): TraceEvent => ({
   label: fiberId,
   timestamp: 0,
 });
-const suspend = (fiberId: string, timestamp = 0): TraceEvent => ({
+const yieldNow: SuspendReason = { kind: "yield" };
+const wait: SuspendReason = { kind: "wait" };
+const sleep = (duration: number): SuspendReason => ({
+  kind: "sleep",
+  duration,
+});
+const suspend = (
+  fiberId: string,
+  reason: SuspendReason,
+  timestamp = 0,
+): TraceEvent => ({
   type: "fiber:suspend",
   fiberId,
+  reason,
   timestamp,
 });
 const resume = (fiberId: string, timestamp = 0): TraceEvent => ({
@@ -56,15 +67,47 @@ const retried = (fiberId: string, timestamp = 0): TraceEvent => ({
   timestamp,
 });
 
+/**
+ * Cooperative Interleaving: #1 forks #2 and #3, which take turns by yielding,
+ * then joins them. A busy main thread resumes each yield `lag` ms late.
+ */
+const interleaving = (lag: number) => [
+  fork("#1"),
+  fork("#2", "#1"),
+  fork("#3", "#1"),
+  suspend("#1", wait),
+  resume("#2"),
+  suspend("#2", yieldNow),
+  resume("#3", lag),
+  suspend("#3", yieldNow, lag),
+  resume("#2", 2 * lag),
+  end("#2", 2 * lag),
+  resume("#1", 2 * lag),
+  suspend("#1", wait, 2 * lag),
+  resume("#3", 3 * lag),
+  end("#3", 3 * lag),
+  resume("#1", 3 * lag),
+  end("#1", 3 * lag),
+];
+
 describe("traceChanges", () => {
+  it("reads a yield resumed late, as WebKit does, like one resumed at once", () => {
+    expect(traceChanges(interleaving(0))).toEqual([
+      { kind: "joiner-runs-first", rows: [9, 10, 12] },
+    ]);
+    expect(traceChanges(interleaving(15))).toEqual(
+      traceChanges(interleaving(0)),
+    );
+  });
+
   it("finds nothing in a trace Effect 3 would have drawn the same", () => {
     expect(
       traceChanges([
         fork("#1"),
         fork("#2", "#1"),
-        suspend("#1"),
+        suspend("#1", wait),
         resume("#2"),
-        suspend("#2"),
+        suspend("#2", sleep(500)),
         resume("#2", 500),
         end("#2", 500),
         resume("#1", 500),
@@ -79,9 +122,9 @@ describe("traceChanges", () => {
         traceChanges([
           fork("#1"),
           fork("#2", "#1"),
-          suspend("#1"),
+          suspend("#1", sleep(300)),
           resume("#2"),
-          suspend("#2"),
+          suspend("#2", sleep(1000)),
           resume("#1", 300),
           resume("#2", 300),
           finalizer("#2", 300),
@@ -101,11 +144,11 @@ describe("traceChanges", () => {
         traceChanges([
           fork("#1"),
           fork("#2", "#1"),
-          suspend("#1"),
+          suspend("#1", sleep(300)),
           resume("#2"),
-          suspend("#2"),
+          suspend("#2", sleep(1000)),
           resume("#1", 300),
-          suspend("#1", 300),
+          suspend("#1", wait, 300),
           resume("#2", 300),
           interrupt("#2", 300),
           resume("#1", 300),
@@ -119,10 +162,10 @@ describe("traceChanges", () => {
         traceChanges([
           fork("#1"),
           fork("#2", "#1"),
-          suspend("#1"),
+          suspend("#1", sleep(300)),
           resume("#1", 300),
           resume("#2", 300),
-          suspend("#2", 300),
+          suspend("#2", sleep(1000), 300),
           interrupt("#2", 400),
           end("#1", 400),
         ]),
@@ -133,7 +176,7 @@ describe("traceChanges", () => {
       expect(
         traceChanges([
           fork("#1"),
-          suspend("#1"),
+          suspend("#1", wait),
           resume("#1", 9),
           interrupt("#1", 9),
         ]),
@@ -158,11 +201,11 @@ describe("traceChanges", () => {
       fork("#1"),
       fork("#2", "#1"),
       fork("#3", "#1"),
-      suspend("#1"),
+      suspend("#1", wait),
       resume("#2"),
-      suspend("#2"),
+      suspend("#2", yieldNow),
       resume("#3"),
-      suspend("#3"),
+      suspend("#3", yieldNow),
       resume("#2", 1),
       end("#2", 1),
     ];
@@ -172,7 +215,7 @@ describe("traceChanges", () => {
         traceChanges([
           ...yielding,
           resume("#1", 1),
-          suspend("#1", 1),
+          suspend("#1", wait, 1),
           resume("#3", 1),
           end("#3", 1),
           resume("#1", 1),
@@ -204,15 +247,15 @@ describe("traceChanges", () => {
           fork("#1"),
           fork("#2", "#1"),
           fork("#3", "#1"),
-          suspend("#1"),
+          suspend("#1", wait),
           resume("#2"),
-          suspend("#2"),
+          suspend("#2", sleep(1000)),
           resume("#3"),
-          suspend("#3"),
+          suspend("#3", sleep(1500)),
           resume("#2", 1000),
           end("#2", 1000),
           resume("#1", 1000),
-          suspend("#1", 1000),
+          suspend("#1", wait, 1000),
           resume("#3", 1500),
           end("#3", 1500),
           resume("#1", 1500),
@@ -229,9 +272,9 @@ describe("traceChanges", () => {
           fork("#1"),
           fork("#2", "#1"),
           fork("#3", "#1"),
-          suspend("#1"),
+          suspend("#1", wait),
           resume("#2"),
-          suspend("#2"),
+          suspend("#2", sleep(1000)),
           resume("#3"),
           end("#3"),
           resume("#1"),
@@ -248,13 +291,13 @@ describe("traceChanges", () => {
           fork("#1"),
           fork("#2", "#1"),
           fork("#3", "#1"),
-          suspend("#3"),
+          suspend("#3", yieldNow),
           resume("#3"),
-          suspend("#1"),
+          suspend("#1", wait),
           resume("#2"),
           end("#2"),
           resume("#1"),
-          suspend("#1"),
+          suspend("#1", wait),
           start("work", "#3"),
           end("#3"),
           resume("#1"),
@@ -269,15 +312,15 @@ describe("traceChanges", () => {
           fork("#1"),
           fork("#2"),
           fork("#3", "#1"),
-          suspend("#1"),
+          suspend("#1", wait),
           resume("#2"),
-          suspend("#2"),
+          suspend("#2", yieldNow),
           resume("#3"),
-          suspend("#3"),
+          suspend("#3", yieldNow),
           resume("#2"),
           end("#2"),
           resume("#1"),
-          suspend("#1"),
+          suspend("#1", wait),
           resume("#3"),
           end("#3"),
         ]),
@@ -309,7 +352,7 @@ describe("traceChanges", () => {
         traceChanges([
           fork("#1"),
           fork("#2", "#1"),
-          suspend("#1"),
+          suspend("#1", wait),
           resume("#2"),
           end("#2"),
           resume("#1"),
@@ -324,9 +367,9 @@ describe("traceChanges", () => {
       traceChanges([
         fork("#1"),
         fork("#2", "#1"),
-        suspend("#1"),
+        suspend("#1", wait),
         resume("#2"),
-        suspend("#2"),
+        suspend("#2", sleep(500)),
         resume("#2", 500),
         end("#2", 500),
         fork("#3", "#2"),
@@ -340,7 +383,7 @@ describe("traceChanges", () => {
     const pool = (parentState: TraceEvent) => [
       fork("#1"),
       fork("#2", "#1"),
-      suspend("#2"),
+      suspend("#2", sleep(500)),
       parentState,
       resume("#2", 500),
       end("#2", 500),
@@ -348,7 +391,7 @@ describe("traceChanges", () => {
     ];
 
     it("is a fork that follows a sibling's end while the parent is parked", () => {
-      expect(traceChanges(pool(suspend("#1")))).toEqual([
+      expect(traceChanges(pool(suspend("#1", wait)))).toEqual([
         { kind: "fiber-per-element", rows: [5, 6] },
       ]);
     });
@@ -363,8 +406,8 @@ describe("traceChanges", () => {
           fork("#1"),
           fork("#9"),
           fork("#2", "#9"),
-          suspend("#2"),
-          suspend("#1"),
+          suspend("#2", sleep(500)),
+          suspend("#1", wait),
           resume("#2", 500),
           end("#2", 500),
           fork("#3", "#1"),
@@ -376,7 +419,7 @@ describe("traceChanges", () => {
   describe("zero-sleep-retry", () => {
     const retry = (delay: number) => [
       fork("#1"),
-      suspend("#1"),
+      suspend("#1", sleep(delay)),
       resume("#1", delay),
       retried("#1", delay),
       end("#1", delay),
@@ -396,7 +439,7 @@ describe("traceChanges", () => {
       expect(
         traceChanges([
           fork("#1"),
-          suspend("#1"),
+          suspend("#1", sleep(0)),
           resume("#1"),
           start("work", "#1"),
           retried("#1"),
@@ -410,9 +453,9 @@ describe("traceChanges", () => {
     const kinds = traceChanges([
       fork("#1"),
       fork("#2", "#1"),
-      suspend("#1"),
+      suspend("#1", wait),
       resume("#2"),
-      suspend("#2"),
+      suspend("#2", sleep(300)),
       resume("#1", 300),
       resume("#2", 300),
       fork("#3", "#2"),

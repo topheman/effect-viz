@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import type { TraceEvent } from "@/types/trace";
+import type { SuspendReason, TraceEvent } from "@/types/trace";
 
 import { hintText, traceHints } from "./traceHints";
 
@@ -11,9 +11,20 @@ const fork = (fiberId: string, parentId?: string): TraceEvent => ({
   label: fiberId,
   timestamp: 0,
 });
-const suspend = (fiberId: string, timestamp = 0): TraceEvent => ({
+const yieldNow: SuspendReason = { kind: "yield" };
+const wait: SuspendReason = { kind: "wait" };
+const sleep = (duration: number): SuspendReason => ({
+  kind: "sleep",
+  duration,
+});
+const suspend = (
+  fiberId: string,
+  reason: SuspendReason,
+  timestamp = 0,
+): TraceEvent => ({
   type: "fiber:suspend",
   fiberId,
+  reason,
   timestamp,
 });
 const resume = (fiberId: string, timestamp = 0): TraceEvent => ({
@@ -91,6 +102,29 @@ const finalizer = (
   timestamp,
 });
 
+/**
+ * Cooperative Interleaving: #1 forks #2 and #3, which take turns by yielding,
+ * then joins them. A busy main thread resumes each yield `lag` ms late.
+ */
+const interleaving = (lag: number) => [
+  fork("#1"),
+  fork("#2", "#1"),
+  fork("#3", "#1"),
+  suspend("#1", wait),
+  resume("#2"),
+  suspend("#2", yieldNow),
+  resume("#3", lag),
+  suspend("#3", yieldNow, lag),
+  resume("#2", 2 * lag),
+  end("#2", 2 * lag),
+  resume("#1", 2 * lag),
+  suspend("#1", wait, 2 * lag),
+  resume("#3", 3 * lag),
+  end("#3", 3 * lag),
+  resume("#1", 3 * lag),
+  end("#1", 3 * lag),
+];
+
 /** Each row's hint, with references resolved to row numbers when nothing is hidden. */
 function hintsOf(events: TraceEvent[], indentByFiber = false) {
   return Object.fromEntries(
@@ -102,13 +136,32 @@ function hintsOf(events: TraceEvent[], indentByFiber = false) {
 }
 
 describe("traceHints", () => {
+  it("reads a yield resumed late, as WebKit does, like one resumed at once", () => {
+    const late = hintsOf(interleaving(15));
+    expect(late).toEqual(hintsOf(interleaving(0)));
+    expect(Object.values(late)).toContain(
+      "#2 gave up the thread, so the runtime ran #3, first in the queue.",
+    );
+  });
+
+  it("does not time a sleep interrupted in the same instant it started", () => {
+    const hints = hintsOf([
+      fork("#0"),
+      fork("#1", "#0"),
+      resume("#1"),
+      suspend("#1", sleep(1000)),
+      resume("#1"),
+    ]);
+    expect(hints[4]).toBeUndefined();
+  });
+
   // The Basic Example's shape: root forks one worker, joins it, the worker sleeps.
   const basic = [
     fork("#0"),
     fork("#8", "#0"),
-    suspend("#0"),
+    suspend("#0", wait),
     resume("#8"),
-    suspend("#8"),
+    suspend("#8", sleep(1000)),
     resume("#8", 1000),
     end("#8", 1000),
     resume("#0", 1000),
@@ -137,7 +190,7 @@ describe("traceHints", () => {
       fork("#0"),
       fork("#1", "#0"),
       fork("#2", "#0"),
-      suspend("#0"),
+      suspend("#0", wait),
       resume("#1"),
       end("#1"),
       resume("#2"),
@@ -160,13 +213,13 @@ describe("traceHints", () => {
       fork("#0"),
       fork("#1", "#0"),
       resume("#1"),
-      suspend("#1"),
+      suspend("#1", yieldNow),
       fork("#2", "#0"),
       resume("#2"),
-      suspend("#2", 0),
+      suspend("#2", yieldNow, 0),
       resume("#1", 0),
-      suspend("#1", 0),
-      suspend("#2", 500),
+      suspend("#1", sleep(500), 0),
+      suspend("#2", wait, 500),
       resume("#1", 500),
     ]);
     expect(hints[7]).toBe(
@@ -184,10 +237,10 @@ describe("traceHints", () => {
       fork("#0"),
       fork("#1", "#0"),
       resume("#1"),
-      suspend("#1"),
+      suspend("#1", sleep(500)),
       fork("#2", "#0"),
       resume("#2"),
-      suspend("#2"),
+      suspend("#2", sleep(1000)),
       resume("#1", 500),
       end("#1", 500),
       resume("#2", 1000),
@@ -196,13 +249,17 @@ describe("traceHints", () => {
   });
 
   it("explains a suspend and resume in the same instant once, on the suspend", () => {
-    const events = [fork("#0"), suspend("#0", 300), resume("#0", 301)];
+    const events = [
+      fork("#0"),
+      suspend("#0", yieldNow, 300),
+      resume("#0", 301),
+    ];
     expect(hintsOf(events)).toEqual({
-      1: "The fiber gave up the thread and got it back at [3], in the same instant: nothing else was ready to run.",
+      1: "The fiber gave up the thread and got it back at [3]: nothing else was ready to run.",
     });
     const [[, hints]] = traceHints(events, { indentByFiber: false });
     expect(hintText(hints, () => undefined)).toBe(
-      "The fiber gave up the thread and got it back in the same instant: nothing else was ready to run.",
+      "The fiber gave up the thread and got it back straight away: nothing else was ready to run.",
     );
   });
 
@@ -210,7 +267,7 @@ describe("traceHints", () => {
     const hints = hintsOf([
       fork("#0"),
       start("span", "#0"),
-      suspend("#0", 300),
+      suspend("#0", yieldNow, 300),
       succeeded("span", "#0", 301),
       resume("#0", 302),
     ]);
@@ -220,7 +277,7 @@ describe("traceHints", () => {
   it("explains the start of a retry attempt after the schedule's delay", () => {
     const hints = hintsOf([
       fork("#0"),
-      suspend("#0"),
+      suspend("#0", sleep(100)),
       resume("#0", 100),
       attempt("#0", 100),
     ]);
@@ -236,12 +293,12 @@ describe("traceHints", () => {
       fork("#0"),
       fork("#1", "#0"),
       fork("#2", "#1"),
-      suspend("#0"),
+      suspend("#0", sleep(300)),
       resume("#1"),
-      suspend("#1"),
+      suspend("#1", wait),
       resume("#2"),
       start("child", "#2"),
-      suspend("#2"),
+      suspend("#2", sleep(1000)),
       resume("#0", 300),
       resume("#1", 300),
       finalizer("parent-cleanup", "#1", 300),
@@ -285,8 +342,8 @@ describe("traceHints", () => {
         fork("#0"),
         fork("#1", "#0"),
         resume("#1"),
-        suspend("#1"),
-        suspend("#0"),
+        suspend("#1", sleep(1000)),
+        suspend("#0", sleep(300)),
         resume("#0", 300),
         interrupt("#1", 300),
         start("next", "#0", 300),
@@ -299,8 +356,8 @@ describe("traceHints", () => {
         fork("#0"),
         fork("#1", "#0"),
         resume("#1"),
-        suspend("#1"),
-        suspend("#0"),
+        suspend("#1", sleep(1000)),
+        suspend("#0", sleep(300)),
         resume("#0", 300),
         interrupt("#1", 300),
       ]);
@@ -312,8 +369,8 @@ describe("traceHints", () => {
         fork("#0"),
         fork("#1", "#0"),
         resume("#1"),
-        suspend("#1"),
-        suspend("#0"),
+        suspend("#1", sleep(1000)),
+        suspend("#0", sleep(300)),
         interrupt("#1", 300),
         resume("#0", 300),
       ]);
@@ -339,7 +396,7 @@ describe("traceHints", () => {
         fork("#1", "#0"),
         start("child", "#1"),
         interrupted("child", "#1", 300),
-        suspend("#0", 320),
+        suspend("#0", wait, 320),
         finalizer("cleanup", "#1", 340),
         interrupt("#1", 380),
       ]);
@@ -401,8 +458,8 @@ describe("traceHints", () => {
       fork("#0"),
       fork("#1", "#0"),
       resume("#1"),
-      suspend("#1"),
-      suspend("#0"),
+      suspend("#1", sleep(500)),
+      suspend("#0", wait),
       resume("#1", 500),
       end("#1", 500),
       fork("#2", "#0"),
@@ -416,8 +473,8 @@ describe("traceHints", () => {
       fork("#0"),
       fork("#1", "#0"),
       resume("#1"),
-      suspend("#1"),
-      suspend("#0"),
+      suspend("#1", sleep(500)),
+      suspend("#0", sleep(500)),
       resume("#0", 500),
       end("#1", 500),
       fork("#2", "#0"),
@@ -428,7 +485,7 @@ describe("traceHints", () => {
       fork("#0"),
       fork("#9"),
       resume("#9"),
-      suspend("#0"),
+      suspend("#0", wait),
       end("#9", 500),
       fork("#2", "#0"),
       resume("#2", 500),

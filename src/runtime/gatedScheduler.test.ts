@@ -8,6 +8,7 @@ import {
   vi,
 } from "vite-plus/test";
 
+import { SleepLog } from "@/runtime/fiberLifecycle";
 import { GatedScheduler } from "@/runtime/gatedScheduler";
 import { VirtualClock, type VirtualClockHost } from "@/runtime/virtualClock";
 import { makeVizClock } from "@/runtime/vizClock";
@@ -27,7 +28,9 @@ function setup(rate = 1) {
       effect.pipe(
         Effect.provideService(
           Clock.Clock,
-          makeVizClock(virtual, (resume) => scheduler.wake(resume)),
+          makeVizClock(virtual, new SleepLog(), (resume) =>
+            scheduler.wake(resume),
+          ),
         ),
         Effect.provideService(Scheduler.Scheduler, scheduler),
       ),

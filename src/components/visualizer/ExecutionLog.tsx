@@ -18,7 +18,7 @@ import { useLogView } from "@/hooks/useLogView";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { EVENT_GROUPS, type EventGroup, eventGroup } from "@/lib/eventGroups";
 import { eventDepth, fiberDepths } from "@/lib/fiberDepth";
-import { hintText, sameInstant, traceHints } from "@/lib/traceHints";
+import { hintText, showsParkedTime, traceHints } from "@/lib/traceHints";
 import { cn } from "@/lib/utils";
 import { useTraceStore } from "@/stores/traceStore";
 import type {
@@ -90,8 +90,7 @@ function formatEvent(
           (e): e is FiberSuspendEvent =>
             e.type === "fiber:suspend" && e.fiberId === event.fiberId,
         );
-      // A resume in the same instant as its suspend waited for nothing.
-      if (!lastSuspend || sameInstant(lastSuspend.timestamp, event.timestamp)) {
+      if (!lastSuspend || !showsParkedTime(lastSuspend, event.timestamp)) {
         return `fiber:resume ${event.fiberId}`;
       }
       const durationMs = event.timestamp - lastSuspend.timestamp;

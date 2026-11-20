@@ -337,9 +337,9 @@ const expectedHints: Record<keyof typeof programs, Record<number, string>> = {
     5: "The failure was handled: the fiber carries on.",
   },
   retry: {
-    3: "The fiber gave up the thread and got it back at [4], in the same instant: nothing else was ready to run.",
+    3: "The fiber gave up the thread and got it back at [4]: nothing else was ready to run.",
     5: "The schedule's delay is over: the next attempt starts here.",
-    6: "The fiber gave up the thread and got it back at [7], in the same instant: nothing else was ready to run.",
+    6: "The fiber gave up the thread and got it back at [7]: nothing else was ready to run.",
     8: "The schedule's delay is over: the next attempt starts here.",
   },
   retryExponentialBackoff: {

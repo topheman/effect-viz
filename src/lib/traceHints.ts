@@ -1,4 +1,4 @@
-import type { TraceEvent } from "@/types/trace";
+import type { FiberSuspendEvent, TraceEvent } from "@/types/trace";
 
 import { eventDepth, fiberDepths } from "./fiberDepth";
 
@@ -49,13 +49,13 @@ export function traceHints(
 
   // Both hold the state before the row being read.
   const lastLifecycle = new Map<string, TraceEvent>();
-  const lastSuspend = new Map<string, TraceEvent>();
+  const lastSuspend = new Map<string, FiberSuspendEvent>();
 
   /**
    * Whether the resume at `i` is the runtime running the next fiber in its
-   * queue because the one before gave up the thread. A fiber whose own wait
-   * ended long ago woke on its own timer instead, merely after the other's
-   * suspend.
+   * queue because the one before gave up the thread: a fiber that yielded, or
+   * a queued fork's first run. A fiber that slept or waited woke on its own
+   * timer or callback instead, merely after the other's suspend.
    */
   const isQueueHandoff = (i: number) => {
     const prev = events[i - 1];
@@ -63,13 +63,12 @@ export function traceHints(
     if (
       prev?.type !== "fiber:suspend" ||
       event?.type !== "fiber:resume" ||
-      event.fiberId === prev.fiberId ||
-      !sameInstant(event.timestamp, prev.timestamp)
+      event.fiberId === prev.fiberId
     ) {
       return false;
     }
     const own = lastSuspend.get(event.fiberId);
-    return own === undefined || sameInstant(own.timestamp, event.timestamp);
+    return own === undefined || own.reason.kind === "yield";
   };
 
   const inFinalizerRun = (i: number) => {
@@ -113,14 +112,14 @@ export function traceHints(
         if (
           next?.type === "fiber:resume" &&
           next.fiberId === event.fiberId &&
-          sameInstant(next.timestamp, event.timestamp)
+          resumesAtOnce(event)
         ) {
           add(i, {
-            text: "The fiber gave up the thread and got it back at [N], in the same instant: nothing else was ready to run.",
+            text: "The fiber gave up the thread and got it back at [N]: nothing else was ready to run.",
             ref: {
               index: i + 1,
               whenHidden:
-                "The fiber gave up the thread and got it back in the same instant: nothing else was ready to run.",
+                "The fiber gave up the thread and got it back straight away: nothing else was ready to run.",
             },
           });
         } else if (!isQueueHandoff(i + 1)) {
@@ -129,7 +128,7 @@ export function traceHints(
         break;
       }
       case "fiber:resume": {
-        const waited = lastSuspend.has(event.fiberId);
+        const own = lastSuspend.get(event.fiberId);
         if (prev?.type === "fiber:fork" && prev.fiberId === event.fiberId) {
           add(
             i,
@@ -140,25 +139,14 @@ export function traceHints(
             i,
             `${prev.fiberId} gave up the thread, so the runtime ran ${event.fiberId}, first in the queue.`,
           );
-        } else if (
-          waited &&
-          prev?.type === "fiber:end" &&
-          sameInstant(prev.timestamp, event.timestamp)
-        ) {
+        } else if (own?.reason.kind === "wait" && prev?.type === "fiber:end") {
           // The joiner's callback resumes it inside the end, with no scheduler
           // task between the two.
           add(
             i,
             `${prev.fiberId}'s end resumed ${event.fiberId}, which was waiting on it.`,
           );
-        } else if (
-          waited &&
-          !sameInstant(
-            lastSuspend.get(event.fiberId)!.timestamp,
-            event.timestamp,
-          )
-        ) {
-          // A resume in the same instant as its suspend shows no wait to explain.
+        } else if (own !== undefined && showsParkedTime(own, event.timestamp)) {
           add(i, "Time the fiber spent parked.");
         }
         break;
@@ -273,7 +261,26 @@ export function hintText(
  */
 const SAME_INSTANT_MS = 10;
 
+/**
+ * Whether a suspend asks for no time at all: a yield, or a sleep of zero. The
+ * fiber's resume may still come late, when the main thread is busy.
+ */
+export function resumesAtOnce({ reason }: FiberSuspendEvent): boolean {
+  return (
+    reason.kind === "yield" ||
+    (reason.kind === "sleep" && reason.duration === 0)
+  );
+}
+
 /** Whether two timestamps belong to one synchronous burst of the runtime. */
+/** Whether a resume at `resumedAt` ends a wait worth timing: not a yield or zero sleep, and not in the same instant. */
+export function showsParkedTime(
+  suspend: FiberSuspendEvent,
+  resumedAt: number,
+): boolean {
+  return !resumesAtOnce(suspend) && !sameInstant(suspend.timestamp, resumedAt);
+}
+
 export function sameInstant(a: number, b: number): boolean {
   return Math.abs(a - b) < SAME_INSTANT_MS;
 }
