@@ -1,13 +1,19 @@
 name: E2E
 
 # The suite is slow and depends on StackBlitz, so it runs only on the `e2e`
-# label, a manual run, a production deployment, and PRs whose base is not
-# `master`, such as a migration branch.
+# label, a manual run, a deployment of `v3`, and PRs whose base is not
+# `master`, which covers every PR to `v3`.
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled]
   deployment_status:
   workflow_dispatch:
+    inputs:
+      target:
+        description: A local build, or the deployed v3 site
+        type: choice
+        options: [build, deployed]
+        default: build
 
 permissions:
   contents: read
@@ -17,15 +23,36 @@ env:
   VP_GIT_HOOKS: 0
 
 jobs:
-  e2e:
+  # Vercel deploys `v3` to Preview, like the pull requests to it: the line's
+  # own deployment is the one whose SHA is the head of `v3`.
+  v3-head:
     if: >-
-      (github.event_name == 'pull_request' &&
-        (github.event.label.name == 'e2e' ||
-          (github.event.action != 'labeled' && github.base_ref != 'master'))) ||
-      (github.event_name == 'deployment_status' &&
-        github.event.deployment_status.state == 'success' &&
-        github.event.deployment.environment == 'Production') ||
-      github.event_name == 'workflow_dispatch'
+      github.event_name == 'deployment_status' &&
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment.environment == 'Preview'
+    runs-on: ubuntu-latest
+    outputs:
+      deployed: ${{ steps.compare.outputs.deployed }}
+    steps:
+      - id: compare
+        run: |
+          head="$(gh api "repos/$GITHUB_REPOSITORY/branches/v3" --jq .commit.sha)"
+          echo "deployed=$([ "$head" = "$DEPLOYED_SHA" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOYED_SHA: ${{ github.event.deployment.sha }}
+
+  e2e:
+    needs: v3-head
+    # `!cancelled()` lets the job run when `v3-head` was skipped.
+    if: >-
+      !cancelled() && (
+        (github.event_name == 'pull_request' &&
+          (github.event.label.name == 'e2e' ||
+            (github.event.action != 'labeled' && github.base_ref != 'master'))) ||
+        (github.event_name == 'deployment_status' &&
+          needs.v3-head.outputs.deployed == 'true') ||
+        github.event_name == 'workflow_dispatch')
     # At job level, so an event that skips the job cancels nothing. A push
     # cancels its PR's previous run; other runs each get their own group.
     concurrency:
@@ -51,16 +78,15 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium webkit
 
       - name: Test a build
-        if: github.event_name != 'deployment_status'
+        if: github.event_name != 'deployment_status' && inputs.target != 'deployed'
         run: pnpm run e2e
 
-      # The production domain, not the event's per-deployment URL, which
-      # Vercel's deployment protection puts behind a login.
-      - name: Test the production deployment
-        if: github.event_name == 'deployment_status'
+      # The v3 domain, which serves the latest deployment of `v3`.
+      - name: Test the deployed v3 site
+        if: github.event_name == 'deployment_status' || inputs.target == 'deployed'
         run: pnpm exec playwright test
         env:
-          E2E_BASE_URL: https://effect-viz.vercel.app
+          E2E_BASE_URL: https://effect-viz-v3.vercel.app
 
       # Kept on green runs too: it holds the traces of flaky tests.
       - name: Upload report

@@ -15,12 +15,12 @@ To test a server that is already running, the deployed app for instance, skip bo
 E2E_BASE_URL=https://effect-viz.vercel.app pnpm exec playwright test
 ```
 
-Each test boots its own WebContainer, which takes 5 to 15 seconds and needs network access to StackBlitz. That makes the suite too slow for every push to `master`, so CI runs it in these cases (`.github/workflows/e2e.yml`):
+Each test boots its own WebContainer, which takes 5 to 15 seconds and needs network access to StackBlitz. That makes the suite too slow for every push, so CI runs it in these cases (`.github/workflows/e2e.yml`):
 
 - adding the `e2e` label to a pull request, which tests that pull request once; remove and re-add the label to test later commits;
-- a manual run from the Actions tab, or `gh workflow run e2e.yml --ref <branch>`;
-- each successful production deployment on Vercel, against `https://effect-viz.vercel.app`;
-- every push to a pull request whose base is not `master`, such as a migration branch, where a new push cancels the run it replaces.
+- a manual run from the Actions tab, or `gh workflow run e2e.yml --ref <branch>`, against a local build; with `-f target=deployed`, against `https://effect-viz-v3.vercel.app`;
+- each successful deployment of `v3` on Vercel, against `https://effect-viz-v3.vercel.app`. Vercel deploys `v3` to its Preview environment, like the pull requests to it, so a first job checks that the deployed commit is the head of `v3`;
+- every push to a pull request whose base is not `master`, which covers every pull request to `v3`, where a new push cancels the run it replaces.
 
 Failed and flaky tests show up as annotations on the run. Every run also uploads the HTML report, with the traces of those tests, as the `playwright-report` artifact: `gh run download <run-id> -n playwright-report -D playwright-report`, then `pnpm exec playwright show-report`.
 
