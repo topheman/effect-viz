@@ -12,7 +12,7 @@ pnpm run e2e
 To test a server that is already running, the deployed app for instance, skip both the build and the server:
 
 ```sh
-E2E_BASE_URL=https://effect-viz.vercel.app pnpm exec playwright test
+E2E_BASE_URL=https://effect-viz-v3.vercel.app pnpm exec playwright test
 ```
 
 Each test boots its own WebContainer, which takes 5 to 15 seconds and needs network access to StackBlitz. That makes the suite too slow for every push, so CI runs it in these cases (`.github/workflows/e2e.yml`):
