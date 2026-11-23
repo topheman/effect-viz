@@ -1,0 +1,21 @@
+# Keeps the Effect 3 site tested while nothing is pushed to `v3`: once a month,
+# starts `v3`'s own e2e workflow against https://effect-viz-v3.vercel.app.
+# Schedules only run from the default branch, hence this file on `master`.
+name: E2E v3 watch
+
+on:
+  schedule:
+    - cron: "0 6 1 * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run the e2e of the deployed v3 site
+        run: gh workflow run e2e.yml --repo "$GITHUB_REPOSITORY" --ref v3 -f target=deployed
+        env:
+          GH_TOKEN: ${{ github.token }}
