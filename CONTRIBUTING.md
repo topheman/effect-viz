@@ -1,5 +1,9 @@
 # Contributing
 
+## Branches
+
+`v3` is EffectViz on Effect 3, deployed at [effect-viz-v3.vercel.app](https://effect-viz-v3.vercel.app); `master` is the Effect 4 version. A change to this line branches from `v3` and its pull request targets `v3`. The two lines share no commits after the split: nothing is merged or cherry-picked between them.
+
 ## Prerequisites
 
 - Node.js, at the major version in [`.nvmrc`](.nvmrc).
@@ -65,7 +69,7 @@ pnpm run playwright:install   # once per machine
 pnpm run e2e
 ```
 
-The e2e tests run the real app in Chromium, and in WebKit as a phone, against a production build. They need network access. CI runs them on a production deployment, on pull requests labeled `e2e` or whose base is not `master`, and on manual runs. See [`e2e/README.md`](e2e/README.md).
+The e2e tests run the real app in Chromium, and in WebKit as a phone, against a production build. They need network access. CI runs them on each deployment of `v3`, on every pull request to `v3`, and on manual runs. See [`e2e/README.md`](e2e/README.md).
 
 ## Demo recording
 

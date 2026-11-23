@@ -5,6 +5,13 @@ runtime actually does with fibers, scheduling, errors and scopes.
 
 You can read the project intent [here](.cursor/prompts/PROJECT_INTENT.md).
 
+## Branch
+
+This is the `v3` branch: EffectViz on Effect 3, deployed at
+`https://effect-viz-v3.vercel.app`. `master` holds the Effect 4 version. Work on
+this line branches from `v3` and its pull requests target `v3`. Nothing is merged
+or cherry-picked between `v3` and `master`.
+
 ## How We Work
 
 We pair on this project. I am here to learn Effect deeply, and you write the

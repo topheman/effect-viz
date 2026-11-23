@@ -36,3 +36,11 @@ test("dragging where two handles meet resizes both", async ({ page }) => {
   );
   await expect(rows).not.toHaveAttribute("aria-valuenow", rowsBefore ?? "");
 });
+
+test("the version pill opens the list of EffectViz sites", async ({ page }) => {
+  await openApp(page);
+  await page.getByRole("button", { name: /^Effect \d/ }).click();
+  const versions = page.getByRole("navigation", { name: "Effect versions" });
+  await expect(versions.getByRole("link")).toHaveCount(1);
+  await expect(versions.getByRole("listitem")).toHaveCount(2);
+});

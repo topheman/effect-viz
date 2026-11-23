@@ -1,6 +1,8 @@
 # Effect runtime visualizer
 
-[![Demo](https://img.shields.io/badge/demo-online-blue.svg)](https://effect-viz.vercel.app)
+[![Demo](https://img.shields.io/badge/demo-online-blue.svg)](https://effect-viz-v3.vercel.app)
+
+> This is the Effect 3 line of EffectViz, on the `v3` branch and online at [effect-viz-v3.vercel.app](https://effect-viz-v3.vercel.app). The Effect 4 version is on [`master`](https://github.com/topheman/effect-viz) and at [effect-viz.vercel.app](https://effect-viz.vercel.app).
 
 This is a visualizer for Effect runtime.
 

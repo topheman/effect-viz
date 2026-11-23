@@ -56,3 +56,11 @@ test("a phone in landscape shows one view at a time", async ({
     "true",
   );
 });
+
+test("a phone opens the version pill", async ({ page }) => {
+  await openApp(page);
+  await page.getByRole("button", { name: /^Effect \d/ }).tap();
+  await expect(
+    page.getByRole("navigation", { name: "Effect versions" }).getByRole("link"),
+  ).toBeVisible();
+});
