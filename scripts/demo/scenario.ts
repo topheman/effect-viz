@@ -5,8 +5,8 @@
  * Beats are deliberate: every click is followed by a hold long enough for a
  * viewer to read what changed before the pointer moves on.
  *
- * The tour is budgeted to stay under a minute, so each act earns its place by
- * showing something the others do not. `mark()` prints where the acts fall, to
+ * The tour is kept short, so each act earns its place by showing something
+ * the others do not. `mark()` prints where the acts fall, to
  * make trimming a matter of measurement rather than guesswork.
  */
 
@@ -214,6 +214,10 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
     .locator('select[data-onboarding-step="programSelect"]')
     .first();
   const status = page.getByTestId("playback-status");
+  const versionPill = page
+    .getByRole("button", { name: /^Effect \d/ })
+    .filter({ visible: true })
+    .first();
   // Each panel title exists several times over: the desktop and mobile layouts
   // are both rendered, and only one of them is on screen.
   const panelTitle = (name: string) =>
@@ -288,6 +292,20 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
   );
   mark("ready");
   await cursor.pause(650);
+
+  // --- Act 0: one site per Effect major -------------------------------------
+  // The pill names the exact Effect version this build runs, and opens the
+  // links to the other sites. The pointer moves off the pill onto the Effect 4
+  // link, so the version stays readable; Escape closes the list.
+  await cursor.click(versionPill);
+  await cursor.pause(400);
+  await cursor.moveToLocator(
+    page.getByRole("link", { name: "Effect 4" }).filter({ visible: true }),
+  );
+  await cursor.pause(1200);
+  await page.keyboard.press("Escape");
+  await cursor.pause(300);
+  mark("act 0 — the Effect version");
 
   // --- Act 1: run it once at full speed and read the three views -----------
   await cursor.click(runButton);
