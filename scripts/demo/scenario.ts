@@ -5,8 +5,8 @@
  * Beats are deliberate: every click is followed by a hold long enough for a
  * viewer to read what changed before the pointer moves on.
  *
- * The tour is kept short, so each act earns its place by
- * showing something the others do not. `mark()` prints where the acts fall, to
+ * The tour is kept short, so each act earns its place by showing something
+ * the others do not. `mark()` prints where the acts fall, to
  * make trimming a matter of measurement rather than guesswork.
  */
 
@@ -299,8 +299,8 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
 
   // --- Act 0: one site per Effect major -------------------------------------
   // The pill names the exact Effect version this build runs, and opens the
-  // links to the other sites. The pointer moves on to the Effect 3 link so the
-  // version it clicked is not left under it; Escape closes the list.
+  // links to the other sites. The pointer moves off the pill onto the Effect 3
+  // link, so the version stays readable; Escape closes the list.
   await cursor.click(versionPill);
   await cursor.pause(400);
   await cursor.moveToLocator(
@@ -426,7 +426,7 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
   await cursor.pause(1100);
   mark("act 3 — explain and filter the log");
 
-  // --- The Effect 3 → 4 changes this trace shows ----------------------------
+  // --- Act 3b: the Effect 3 → 4 changes this trace shows -------------------
   // Racing still runs at the quarter speed act 2 left behind: the fast runner
   // wins after a virtual second, four on screen, long enough to watch the slow
   // one be interrupted. The panel's row links only follow once the run stops.
@@ -434,8 +434,8 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
   await untilStatus("finished");
   await cursor.pause(500);
 
-  // The changes replace the tree in its card, a paragraph per change: the
-  // width act 3 gave the log goes back to the Fiber Tree to hold them.
+  // Hands the width act 3 gave the log back to the Fiber Tree, whose card the
+  // changes replace with a paragraph each.
   await cursor.drag(
     await handleBefore(page, "Step-by-step execution events"),
     { x: 150, y: 0 },
@@ -444,12 +444,16 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
   await cursor.click(changesButton);
   await cursor.pause(2600);
 
-  // The last link is the interruption: Effect 4 interrupts the loser inside
-  // the winner's step. The log scrolls to the row and highlights it.
+  // Effect 4 interrupts the loser inside the winner's step. Its row link
+  // scrolls the log to that row and highlights it.
   await cursor.click(
     page
-      .getByRole("button", { name: /^Row \d+ in the Execution Log$/ })
+      .getByRole("listitem")
+      .filter({
+        has: page.getByRole("heading", { name: "Interruption is synchronous" }),
+      })
       .filter({ visible: true })
+      .getByRole("button", { name: /^Row \d+ in the Execution Log$/ })
       .last(),
   );
   await cursor.pause(1800);

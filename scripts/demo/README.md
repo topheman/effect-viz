@@ -77,7 +77,8 @@ ready:
 
 ```
     0.0s  ready
-   16.1s  act 1 — run and inspect
+    4.2s  act 0 — the Effect version
+   14.7s  act 1 — run and inspect
    ...
 ```
 
