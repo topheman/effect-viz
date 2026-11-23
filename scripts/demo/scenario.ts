@@ -5,7 +5,7 @@
  * Beats are deliberate: every click is followed by a hold long enough for a
  * viewer to read what changed before the pointer moves on.
  *
- * The tour is budgeted to stay under a minute, so each act earns its place by
+ * The tour is kept short, so each act earns its place by
  * showing something the others do not. `mark()` prints where the acts fall, to
  * make trimming a matter of measurement rather than guesswork.
  */
@@ -214,6 +214,14 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
     .locator('select[data-onboarding-step="programSelect"]')
     .first();
   const status = page.getByTestId("playback-status");
+  const versionPill = page
+    .getByRole("button", { name: /^Effect \d/ })
+    .filter({ visible: true })
+    .first();
+  const changesButton = page
+    .getByRole("button", { name: /^What changed in Effect 4/ })
+    .filter({ visible: true })
+    .first();
   // Each panel title exists several times over: the desktop and mobile layouts
   // are both rendered, and only one of them is on screen.
   const panelTitle = (name: string) =>
@@ -288,6 +296,20 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
   );
   mark("ready");
   await cursor.pause(650);
+
+  // --- Act 0: one site per Effect major -------------------------------------
+  // The pill names the exact Effect version this build runs, and opens the
+  // links to the other sites. The pointer moves on to the Effect 3 link so the
+  // version it clicked is not left under it; Escape closes the list.
+  await cursor.click(versionPill);
+  await cursor.pause(400);
+  await cursor.moveToLocator(
+    page.getByRole("link", { name: "Effect 3" }).filter({ visible: true }),
+  );
+  await cursor.pause(1200);
+  await page.keyboard.press("Escape");
+  await cursor.pause(300);
+  mark("act 0 — the Effect version");
 
   // --- Act 1: run it once at full speed and read the three views -----------
   await cursor.click(runButton);
@@ -403,6 +425,35 @@ export async function runScenario({ page, cursor, mark }: ScenarioContext) {
   await cursor.moveToLocator(logList);
   await cursor.pause(1100);
   mark("act 3 — explain and filter the log");
+
+  // --- The Effect 3 → 4 changes this trace shows ----------------------------
+  // Racing still runs at the quarter speed act 2 left behind: the fast runner
+  // wins after a virtual second, four on screen, long enough to watch the slow
+  // one be interrupted. The panel's row links only follow once the run stops.
+  await cursor.select(programSelect, "racing");
+  await untilStatus("finished");
+  await cursor.pause(500);
+
+  // The changes replace the tree in its card, a paragraph per change: the
+  // width act 3 gave the log goes back to the Fiber Tree to hold them.
+  await cursor.drag(
+    await handleBefore(page, "Step-by-step execution events"),
+    { x: 150, y: 0 },
+    { duration: 600 },
+  );
+  await cursor.click(changesButton);
+  await cursor.pause(2600);
+
+  // The last link is the interruption: Effect 4 interrupts the loser inside
+  // the winner's step. The log scrolls to the row and highlights it.
+  await cursor.click(
+    page
+      .getByRole("button", { name: /^Row \d+ in the Execution Log$/ })
+      .filter({ visible: true })
+      .last(),
+  );
+  await cursor.pause(1800);
+  mark("act 3b — what changed in Effect 4");
 
   // --- Act 4: break the retry policy and watch the run go red --------------
   // Back to full speed on the live run: it retunes where it stands, and the
